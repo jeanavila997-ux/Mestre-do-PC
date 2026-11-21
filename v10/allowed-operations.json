@@ -3081,6 +3081,94 @@
       "description": "Abre o Pi Coding Agent num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
     },
     {
+      "id": "cli_agentes_abrir_antigravity",
+      "title": "Abrir Antigravity CLI (agy)",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action antigravity",
+      "description": "Abre o Antigravity CLI (agy) num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "cli_agentes_abrir_ori",
+      "title": "Abrir Ori (OpenRouter)",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action ori",
+      "description": "Abre o Ori (OpenRouter) num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "cli_agentes_abrir_openhands",
+      "title": "Abrir OpenHands",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action openhands",
+      "description": "Abre o OpenHands num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "cli_agentes_abrir_interpreter",
+      "title": "Abrir Open Interpreter",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action interpreter",
+      "description": "Abre o Open Interpreter num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "cli_agentes_abrir_continue",
+      "title": "Abrir Continue CLI (cn)",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action continue",
+      "description": "Abre o Continue CLI (cn) num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "cli_agentes_abrir_plandex",
+      "title": "Abrir Plandex",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action plandex",
+      "description": "Abre o Plandex num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "cli_agentes_abrir_kimi",
+      "title": "Abrir Kimi Code",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action kimi",
+      "description": "Abre o Kimi Code num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "cli_agentes_abrir_gptme",
+      "title": "Abrir gptme",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action gptme",
+      "description": "Abre o gptme num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "cli_agentes_abrir_kiro",
+      "title": "Abrir Kiro CLI",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action kiro",
+      "description": "Abre o Kiro CLI num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "cli_agentes_abrir_amp",
+      "title": "Abrir Amp",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action amp",
+      "description": "Abre o Amp num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "cli_agentes_abrir_droid",
+      "title": "Abrir Droid (Factory)",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action droid",
+      "description": "Abre o Droid (Factory) num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
       "id": "skill_typesafe_ai",
       "title": "skill typesafe-ai",
       "category": "Destrutiva",

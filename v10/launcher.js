@@ -47,7 +47,7 @@ const JOB_TIMEOUT_MS = 15 * 60 * 1000;
 const JOB_RETENTION_MS = 30 * 60 * 1000;
 const MAX_CMD_LENGTH = 32768;
 // Agentes CLI do menu (mesmos ids do catálogo em scripts/cli-agents.ps1). Nunca instala nada.
-const CLI_AGENT_IDS = ["claude","opencode","codex","gemini","qwen","aider","copilot","cursor","grok","dsh","hermes","goose","kilo","cline","crush","pi","omp"];
+const CLI_AGENT_IDS = ["claude","opencode","codex","gemini","qwen","aider","copilot","cursor","grok","dsh","hermes","goose","kilo","cline","crush","pi","antigravity","ori","openhands","interpreter","continue","plandex","kimi","gptme","kiro","amp","droid","omp"];
 let cliAgentsCache = { at: 0, data: null };
 
 // ===== Modo Livre — execução de comandos fora da whitelist =====

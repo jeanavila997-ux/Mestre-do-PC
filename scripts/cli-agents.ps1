@@ -21,7 +21,8 @@ param(
     'install-opencode',
     'llamacpp-status',
     'claude', 'opencode', 'codex', 'gemini', 'qwen', 'aider', 'copilot', 'cursor',
-    'grok', 'dsh', 'hermes', 'goose', 'kilo', 'cline', 'crush', 'pi', 'omp'
+    'grok', 'dsh', 'hermes', 'goose', 'kilo', 'cline', 'crush', 'pi',
+    'antigravity', 'ori', 'openhands', 'interpreter', 'continue', 'plandex', 'kimi', 'gptme', 'kiro', 'amp', 'droid', 'omp'
   )]
   [string] $Action
 )
@@ -33,22 +34,33 @@ $Project = if ($env:MESTRE_PROJETO_PATH) { $env:MESTRE_PROJETO_PATH } else {
 
 # id = nome da ação/rota; cmds = executáveis procurados (em ordem); abrir = linha de comando no terminal.
 $Agentes = @(
-  [ordered]@{ id = 'claude';   nome = 'Claude Code';        cmds = @('claude');                 abrir = 'claude';   instalar = 'https://docs.anthropic.com/en/docs/claude-code/setup' }
-  [ordered]@{ id = 'opencode'; nome = 'OpenCode';           cmds = @('opencode');               abrir = 'opencode'; instalar = 'https://opencode.ai/docs/' }
+  [ordered]@{ id = 'claude';   nome = 'Claude Code';        cmds = @('claude');                 abrir = 'claude';   instalar = 'https://github.com/anthropics/claude-code' }
+  [ordered]@{ id = 'opencode'; nome = 'OpenCode';           cmds = @('opencode');               abrir = 'opencode'; instalar = 'https://github.com/anomalyco/opencode' }
   [ordered]@{ id = 'codex';    nome = 'Codex CLI (OpenAI)'; cmds = @('codex');                  abrir = 'codex';    instalar = 'https://github.com/openai/codex' }
   [ordered]@{ id = 'gemini';   nome = 'Gemini CLI';         cmds = @('gemini');                 abrir = 'gemini';   instalar = 'https://github.com/google-gemini/gemini-cli' }
   [ordered]@{ id = 'qwen';     nome = 'Qwen Code';          cmds = @('qwen');                   abrir = 'qwen';     instalar = 'https://github.com/QwenLM/qwen-code' }
-  [ordered]@{ id = 'aider';    nome = 'Aider';              cmds = @('aider');                  abrir = 'aider';    instalar = 'https://aider.chat/docs/install.html' }
+  [ordered]@{ id = 'aider';    nome = 'Aider';              cmds = @('aider');                  abrir = 'aider';    instalar = 'https://github.com/Aider-AI/aider' }
   [ordered]@{ id = 'copilot';  nome = 'GitHub Copilot CLI'; cmds = @('copilot');                abrir = 'copilot';  instalar = 'https://github.com/github/copilot-cli' }
   [ordered]@{ id = 'cursor';   nome = 'Cursor Agent';       cmds = @('cursor-agent');           abrir = 'cursor-agent'; instalar = 'https://cursor.com/cli' }
-  [ordered]@{ id = 'grok';     nome = 'Grok CLI';           cmds = @('grok');                   abrir = 'grok';     instalar = 'https://docs.x.ai/' }
-  [ordered]@{ id = 'dsh';      nome = 'DeepSeek Harness (dsh)'; cmds = @('dsh');                abrir = 'dsh';      instalar = 'https://www.npmjs.com/package/@deepseek-ai/dsh' }
+  [ordered]@{ id = 'grok';     nome = 'Grok CLI';           cmds = @('grok');                   abrir = 'grok';     instalar = 'https://github.com/xai-org/grok-build' }
+  [ordered]@{ id = 'dsh';      nome = 'DeepSeek Harness (dsh)'; cmds = @('dsh');                abrir = 'dsh';      instalar = 'https://github.com/deepseek-ai/deepseek-harness' }
   [ordered]@{ id = 'hermes';   nome = 'Hermes Agent';       cmds = @('hermes');                 abrir = 'hermes';   instalar = 'https://github.com/NousResearch/hermes-agent' }
-  [ordered]@{ id = 'goose';    nome = 'Goose';              cmds = @('goose');                  abrir = 'goose session'; instalar = 'https://block.github.io/goose/docs/getting-started/installation' }
-  [ordered]@{ id = 'kilo';     nome = 'Kilo Code CLI';      cmds = @('kilocode', 'kilo');       abrir = 'kilocode'; instalar = 'https://kilocode.ai/docs/cli' }
-  [ordered]@{ id = 'cline';    nome = 'Cline CLI';          cmds = @('cline');                  abrir = 'cline';    instalar = 'https://docs.cline.bot/' }
+  [ordered]@{ id = 'goose';    nome = 'Goose';              cmds = @('goose');                  abrir = 'goose session'; instalar = 'https://github.com/aaif-goose/goose' }
+  [ordered]@{ id = 'kilo';     nome = 'Kilo Code CLI';      cmds = @('kilo', 'kilocode');       abrir = 'kilo'; instalar = 'https://github.com/Kilo-Org/kilocode' }
+  [ordered]@{ id = 'cline';    nome = 'Cline CLI';          cmds = @('cline');                  abrir = 'cline';    instalar = 'https://github.com/cline/cline' }
   [ordered]@{ id = 'crush';    nome = 'Crush (Charm)';      cmds = @('crush');                  abrir = 'crush';    instalar = 'https://github.com/charmbracelet/crush' }
-  [ordered]@{ id = 'pi';       nome = 'Pi Coding Agent';    cmds = @('pi');                     abrir = 'pi';       instalar = 'https://www.npmjs.com/package/@earendil-works/pi-coding-agent' }
+  [ordered]@{ id = 'pi';       nome = 'Pi Coding Agent';    cmds = @('pi');                     abrir = 'pi';       instalar = 'https://github.com/earendil-works/pi' }
+  [ordered]@{ id = 'antigravity'; nome = 'Antigravity CLI (agy)'; cmds = @('agy'); abrir = 'agy'; instalar = 'https://github.com/google-antigravity/antigravity-cli' }
+  [ordered]@{ id = 'ori'; nome = 'Ori (OpenRouter)'; cmds = @('ori'); abrir = 'ori code'; instalar = 'https://github.com/OpenRouterLabs/ori-releases' }
+  [ordered]@{ id = 'openhands'; nome = 'OpenHands'; cmds = @('openhands'); abrir = 'openhands'; instalar = 'https://github.com/OpenHands/OpenHands' }
+  [ordered]@{ id = 'interpreter'; nome = 'Open Interpreter'; cmds = @('interpreter'); abrir = 'interpreter'; instalar = 'https://github.com/openinterpreter/openinterpreter' }
+  [ordered]@{ id = 'continue'; nome = 'Continue CLI (cn)'; cmds = @('cn'); abrir = 'cn'; instalar = 'https://github.com/continuedev/continue' }
+  [ordered]@{ id = 'plandex'; nome = 'Plandex'; cmds = @('plandex'); abrir = 'plandex'; instalar = 'https://github.com/plandex-ai/plandex' }
+  [ordered]@{ id = 'kimi'; nome = 'Kimi Code'; cmds = @('kimi'); abrir = 'kimi'; instalar = 'https://github.com/MoonshotAI/kimi-code' }
+  [ordered]@{ id = 'gptme'; nome = 'gptme'; cmds = @('gptme'); abrir = 'gptme'; instalar = 'https://github.com/gptme/gptme' }
+  [ordered]@{ id = 'kiro'; nome = 'Kiro CLI'; cmds = @('kiro-cli'); abrir = 'kiro-cli'; instalar = 'https://github.com/kirodotdev/Kiro' }
+  [ordered]@{ id = 'amp'; nome = 'Amp'; cmds = @('amp'); abrir = 'amp'; instalar = 'https://ampcode.com' }
+  [ordered]@{ id = 'droid'; nome = 'Droid (Factory)'; cmds = @('droid'); abrir = 'droid'; instalar = 'https://github.com/Factory-AI/factory' }
   [ordered]@{ id = 'omp';      nome = 'OMP';                cmds = @('omp');                    abrir = 'omp --model qwen2.5-coder:3b-instruct'; instalar = '' }
 )
 

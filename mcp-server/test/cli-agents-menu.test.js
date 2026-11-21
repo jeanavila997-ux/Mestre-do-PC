@@ -9,7 +9,7 @@ import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
-const ESPERADOS = ["claude", "opencode", "codex", "gemini", "qwen", "aider", "copilot", "cursor", "grok", "dsh", "hermes", "goose", "kilo", "cline", "crush", "pi", "omp"];
+const ESPERADOS = ["claude",  "opencode",  "codex",  "gemini",  "qwen",  "aider",  "copilot",  "cursor",  "grok",  "dsh",  "hermes",  "goose",  "kilo",  "cline",  "crush",  "pi",  "antigravity",  "ori",  "openhands",  "interpreter",  "continue",  "plandex",  "kimi",  "gptme",  "kiro",  "amp",  "droid",  "omp"];
 
 async function idsDoScript() {
   const s = await readFile(join(root, "scripts", "cli-agents.ps1"), "utf8");
