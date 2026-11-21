@@ -2921,6 +2921,22 @@
       "description": "Copia o caminho da extensão, abre a pasta e edge://extensions."
     },
     {
+      "id": "browser_enviar_f12",
+      "title": "Apertar F12 no navegador",
+      "category": "Navegador",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\browser-devtools.ps1') -Action enviar-f12",
+      "description": "Pedido da extensão: aperta F12 na janela em foco só se ela for um navegador (Edge, Chrome, Firefox, Brave, Opera, Vivaldi)."
+    },
+    {
+      "id": "browser_abrir_onenote",
+      "title": "Abrir OneNote",
+      "category": "Navegador",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\browser-devtools.ps1') -Action abrir-onenote",
+      "description": "Abre o app do OneNote; sem o app, abre o OneNote na web."
+    },
+    {
       "id": "cli_agentes_status",
       "title": "Status dos agentes CLI",
       "category": "Agentes CLI",
@@ -3248,6 +3264,259 @@
       "destructive": true,
       "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\turbo-pc.ps1') -Modo otimizar -Confirmar",
       "description": "Limpa temporários (>24h), crash dumps antigos, miniaturas e caches pnpm/pip/uv; Alto desempenho na tomada; IA na RTX e navegadores no iGPU; Modo de Jogo; efeitos visuais para desempenho. Cria backup, desfazer.ps1 e rodar-como-admin.ps1 em Projetos\\_arquivo\\turbo-AAAAMMDD. Nunca esvazia a Lixeira nem apaga arquivos pessoais, modelos ou o cache npm."
+    },
+    {
+      "id": "admin_reiniciar_mestre",
+      "title": "Reiniciar o Mestre do PC",
+      "category": "Administração",
+      "destructive": true,
+      "classe": "execucao",
+      "elevado": true,
+      "confirmacao": "simples",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action reiniciar-mestre",
+      "description": "Abre uma janela de administrador (UAC) que encerra o launcher travado na porta 7777, sobe de novo pela tarefa MestreDoPC_Admin_Launcher e confere o /ping."
+    },
+    {
+      "id": "admin_criar_ponto_restauracao",
+      "title": "Criar ponto de restauração",
+      "category": "Administração",
+      "destructive": true,
+      "classe": "execucao",
+      "elevado": true,
+      "confirmacao": "simples",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action criar-ponto-restauracao",
+      "description": "Abre uma janela de administrador (UAC) e cria um ponto de restauração do Windows no C:. Não apaga nada."
+    },
+    {
+      "id": "admin_turbo_admin",
+      "title": "Turbo admin (Temp do Windows, DISM, Windows Update, retrim)",
+      "category": "Administração",
+      "destructive": true,
+      "classe": "destrutiva",
+      "elevado": true,
+      "confirmacao": "simples",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action turbo-admin",
+      "description": "Janela de administrador (UAC): cria ponto de restauração, apaga arquivos de C:\\Windows\\Temp com mais de 24 h, limpa componentes do Windows Update (DISM) e o cache de download do Windows Update, e faz retrim do SSD C:. Não mexe na Lixeira nem em arquivos pessoais."
+    },
+    {
+      "id": "admin_sfc_verificar",
+      "title": "SFC: só verificar",
+      "category": "Administração",
+      "destructive": true,
+      "classe": "leitura",
+      "elevado": true,
+      "confirmacao": "simples",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action sfc-verificar",
+      "description": "Janela de administrador (UAC) com sfc /verifyonly: procura arquivos do sistema corrompidos sem consertar."
+    },
+    {
+      "id": "admin_sfc_reparar",
+      "title": "SFC: verificar e reparar",
+      "category": "Administração",
+      "destructive": true,
+      "classe": "execucao",
+      "elevado": true,
+      "confirmacao": "simples",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action sfc-reparar",
+      "description": "Janela de administrador (UAC) com sfc /scannow: verifica e substitui arquivos do sistema corrompidos. Leva de 10 a 30 min."
+    },
+    {
+      "id": "admin_dism_verificar",
+      "title": "DISM: só verificar a imagem",
+      "category": "Administração",
+      "destructive": true,
+      "classe": "leitura",
+      "elevado": true,
+      "confirmacao": "simples",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action dism-verificar",
+      "description": "Janela de administrador (UAC) com DISM /CheckHealth e /ScanHealth: verifica a imagem do Windows sem consertar."
+    },
+    {
+      "id": "admin_dism_reparar",
+      "title": "DISM: reparar a imagem (RestoreHealth)",
+      "category": "Administração",
+      "destructive": true,
+      "classe": "execucao",
+      "elevado": true,
+      "confirmacao": "simples",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action dism-reparar",
+      "description": "Janela de administrador (UAC) com DISM /Online /Cleanup-Image /RestoreHealth: baixa e repõe componentes do Windows. Precisa de internet."
+    },
+    {
+      "id": "admin_winget_listar",
+      "title": "Listar atualizações (winget)",
+      "category": "Administração",
+      "destructive": false,
+      "classe": "leitura",
+      "elevado": false,
+      "confirmacao": "nenhuma",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action winget-listar",
+      "description": "Mostra os apps com versão nova no winget. Não instala nada."
+    },
+    {
+      "id": "admin_winget_atualizar_tudo",
+      "title": "Atualizar todos os apps (winget)",
+      "category": "Administração",
+      "destructive": true,
+      "classe": "execucao",
+      "elevado": true,
+      "confirmacao": "simples",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action winget-atualizar-tudo",
+      "description": "Janela de administrador (UAC) com winget upgrade --all. Pode fechar e reabrir apps que estiverem sendo atualizados."
+    },
+    {
+      "id": "admin_reiniciar_ollama",
+      "title": "Reiniciar o Ollama",
+      "category": "Administração",
+      "destructive": true,
+      "classe": "execucao",
+      "elevado": false,
+      "confirmacao": "simples",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action reiniciar-ollama",
+      "description": "Fecha o Ollama e abre de novo como usuário normal. Descarrega os modelos da memória."
+    },
+    {
+      "id": "admin_reiniciar_spooler",
+      "title": "Reiniciar o spooler de impressão",
+      "category": "Administração",
+      "destructive": true,
+      "classe": "execucao",
+      "elevado": true,
+      "confirmacao": "simples",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action reiniciar-spooler",
+      "description": "Janela de administrador (UAC) que reinicia o serviço Spooler. Trabalhos de impressão presos podem ser perdidos."
+    },
+    {
+      "id": "admin_flush_dns",
+      "title": "Limpar cache DNS",
+      "category": "Administração",
+      "destructive": true,
+      "classe": "execucao",
+      "elevado": false,
+      "confirmacao": "simples",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action flush-dns",
+      "description": "Roda ipconfig /flushdns. A internet não cai."
+    },
+    {
+      "id": "admin_renovar_rede",
+      "title": "Rede: limpar DNS e renovar IP",
+      "category": "Administração",
+      "destructive": true,
+      "classe": "execucao",
+      "elevado": true,
+      "confirmacao": "simples",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action renovar-rede",
+      "description": "Janela de administrador (UAC) com ipconfig /flushdns, /release e /renew. A internet cai por alguns segundos."
+    },
+    {
+      "id": "admin_abrir_gerenciador_tarefas",
+      "title": "Abrir Gerenciador de Tarefas",
+      "category": "Administração",
+      "destructive": false,
+      "classe": "leitura",
+      "elevado": false,
+      "confirmacao": "nenhuma",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action abrir-gerenciador-tarefas",
+      "description": "Abre o Gerenciador de Tarefas."
+    },
+    {
+      "id": "admin_abrir_servicos",
+      "title": "Abrir Serviços",
+      "category": "Administração",
+      "destructive": false,
+      "classe": "leitura",
+      "elevado": false,
+      "confirmacao": "nenhuma",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action abrir-servicos",
+      "description": "Abre services.msc."
+    },
+    {
+      "id": "admin_abrir_eventos",
+      "title": "Abrir Visualizador de Eventos",
+      "category": "Administração",
+      "destructive": false,
+      "classe": "leitura",
+      "elevado": false,
+      "confirmacao": "nenhuma",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action abrir-eventos",
+      "description": "Abre eventvwr.msc."
+    },
+    {
+      "id": "admin_abrir_disco",
+      "title": "Abrir Gerenciamento de Disco",
+      "category": "Administração",
+      "destructive": false,
+      "classe": "leitura",
+      "elevado": false,
+      "confirmacao": "nenhuma",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action abrir-disco",
+      "description": "Abre diskmgmt.msc (só abre; nada é formatado)."
+    },
+    {
+      "id": "admin_apps_inicializacao",
+      "title": "Ver apps de inicialização",
+      "category": "Administração",
+      "destructive": false,
+      "classe": "leitura",
+      "elevado": false,
+      "confirmacao": "nenhuma",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action apps-inicializacao",
+      "description": "Lista o que abre com o Windows (Run do usuário e da máquina, pasta Inicializar e itens desativados). Não muda nada."
+    },
+    {
+      "id": "admin_defender_status",
+      "title": "Status do Microsoft Defender",
+      "category": "Administração",
+      "destructive": false,
+      "classe": "leitura",
+      "elevado": false,
+      "confirmacao": "nenhuma",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action defender-status",
+      "description": "Mostra proteção em tempo real, assinaturas e última verificação."
+    },
+    {
+      "id": "admin_defender_verificacao_rapida",
+      "title": "Defender: verificação rápida",
+      "category": "Administração",
+      "destructive": true,
+      "classe": "execucao",
+      "elevado": true,
+      "confirmacao": "simples",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action defender-verificacao-rapida",
+      "description": "Janela de administrador (UAC) com Start-MpScan -ScanType QuickScan. Leva alguns minutos."
+    },
+    {
+      "id": "admin_reiniciar_pc",
+      "title": "Reiniciar o PC (em 60 s)",
+      "category": "Administração",
+      "destructive": true,
+      "classe": "destrutiva",
+      "elevado": false,
+      "confirmacao": "dupla",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action reiniciar-pc",
+      "description": "Agenda o reinício em 60 segundos (shutdown /r /t 60). Salve seus trabalhos. Dá para cancelar com 'Cancelar reinício/desligamento'."
+    },
+    {
+      "id": "admin_desligar_pc",
+      "title": "Desligar o PC (em 60 s)",
+      "category": "Administração",
+      "destructive": true,
+      "classe": "destrutiva",
+      "elevado": false,
+      "confirmacao": "dupla",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action desligar-pc",
+      "description": "Agenda o desligamento em 60 segundos (shutdown /s /t 60). Salve seus trabalhos. Dá para cancelar com 'Cancelar reinício/desligamento'."
+    },
+    {
+      "id": "admin_cancelar_desligamento",
+      "title": "Cancelar reinício/desligamento",
+      "category": "Administração",
+      "destructive": false,
+      "classe": "execucao",
+      "elevado": false,
+      "confirmacao": "nenhuma",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action cancelar-desligamento",
+      "description": "Roda shutdown /a e cancela um reinício ou desligamento agendado."
     }
   ],
   "templates": [
