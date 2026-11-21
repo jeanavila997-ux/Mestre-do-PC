@@ -5,7 +5,7 @@
 // V10.1: suporta operações parametrizadas via {id, params} e templates seguros.
 
 import http from "node:http";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import { readFile, mkdir, writeFile } from "node:fs/promises";
 import { existsSync, readFileSync } from "node:fs";
@@ -202,6 +202,19 @@ function cors(res, origin = BASE_URL) {
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", CORS_ALLOW_HEADERS);
   res.setHeader("Vary", "Origin");
+}
+
+// Encerra o PowerShell do job e os filhos dele (pwsh, winget...). Só kill()
+// deixava netos vivos depois do /shutdown.
+function killProcessTree(child) {
+  if (!child?.pid) return;
+  if (process.platform === "win32") {
+    try {
+      spawnSync("taskkill.exe", ["/PID", String(child.pid), "/T", "/F"], { windowsHide: true, timeout: 5000 });
+      return;
+    } catch { /* cai no kill() */ }
+  }
+  try { child.kill(); } catch { /* processo já saiu */ }
 }
 
 function isExtensionOrigin(origin) {
@@ -1003,12 +1016,12 @@ const server = http.createServer(async (req, res) => {
       res.on("finish", () => {
         console.log(`Encerrando launcher por solicitação da interface (jobs ativos: ${ativos}).`);
         for (const job of jobs.values()) {
-          if (job.state === "running" && job.child) {
-            try { job.child.kill(); } catch { /* processo já saiu */ }
-          }
+          if (job.state === "running" && job.child) killProcessTree(job.child);
         }
         server.close(() => process.exit(0));
-        // Rede de segurança: se alguma conexão keep-alive travar o close.
+        // Conexões keep-alive (navegador, extensão) seguravam o close e a porta 7777.
+        server.closeAllConnections?.();
+        // Rede de segurança: sai mesmo que algo ainda segure o loop.
         setTimeout(() => process.exit(0), 1500).unref();
       });
       return;
