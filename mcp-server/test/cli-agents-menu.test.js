@@ -80,3 +80,10 @@ test("GET /cli-agents exige cliente autorizado", async (t) => {
   const res = await fetch(base + "/cli-agents");
   assert.equal(res.status, 403);
 });
+
+test("launcher acha o pwsh por caminho completo (launcher elevado sem WindowsApps no PATH)", async () => {
+  const launcher = await readFile(join(root, "v10", "launcher.js"), "utf8");
+  assert.match(launcher, /function resolvePwsh\(\)/);
+  assert.match(launcher, /WindowsApps", "pwsh\.exe"/);
+  assert.doesNotMatch(launcher, /spawn\("pwsh\.exe"/);
+});

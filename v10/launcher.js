@@ -49,6 +49,18 @@ const MAX_CMD_LENGTH = 32768;
 // Agentes CLI do menu (mesmos ids do catálogo em scripts/cli-agents.ps1). Nunca instala nada.
 const CLI_AGENT_IDS = ["claude","opencode","codex","gemini","qwen","aider","copilot","cursor","grok","dsh","hermes","goose","kilo","cline","crush","pi","antigravity","ori","openhands","interpreter","continue","plandex","kimi","gptme","kiro","amp","droid","omp"];
 let cliAgentsCache = { at: 0, data: null };
+// pwsh 7 costuma vir só como alias da Microsoft Store (WindowsApps). O launcher
+// elevado (tarefa MestreDoPC_Admin_Launcher) nem sempre tem essa pasta no PATH,
+// então "pwsh.exe" sozinho falha; tenta caminhos completos antes.
+function resolvePwsh() {
+  const candidatos = [
+    process.env.MESTRE_PWSH_PATH,
+    "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+    process.env.LOCALAPPDATA && join(process.env.LOCALAPPDATA, "Microsoft", "WindowsApps", "pwsh.exe"),
+    process.env.USERPROFILE && join(process.env.USERPROFILE, "AppData", "Local", "Microsoft", "WindowsApps", "pwsh.exe"),
+  ].filter(Boolean);
+  return candidatos.find((p) => existsSync(p)) || "pwsh.exe";
+}
 
 // ===== Modo Livre — execução de comandos fora da whitelist =====
 // Opt-in e reversível: por padrão desligado. Quando ligado, /run-free aceita
@@ -1012,7 +1024,7 @@ const server = http.createServer(async (req, res) => {
       const script = join(PROJECT_DIR, "scripts", "cli-agents.ps1");
       const agents = await new Promise((resolveAgents) => {
         let out = "";
-        const child = spawn("pwsh.exe", ["-NoProfile", "-File", script, "-Action", "status-json"], {
+        const child = spawn(resolvePwsh(), ["-NoProfile", "-File", script, "-Action", "status-json"], {
           windowsHide: true,
           env: { ...process.env, MESTRE_PROJETO_PATH: PROJECT_DIR },
         });
@@ -1043,7 +1055,7 @@ const server = http.createServer(async (req, res) => {
       } else {
         const script = join(PROJECT_DIR, "scripts", "cli-agents.ps1");
         const action = agent === "llamacpp" ? "llamacpp-status" : agent;
-        spawn("pwsh.exe", ["-NoProfile", "-File", script, "-Action", action], {
+        spawn(resolvePwsh(), ["-NoProfile", "-File", script, "-Action", action], {
           windowsHide: false,
           detached: true,
           stdio: "ignore",
