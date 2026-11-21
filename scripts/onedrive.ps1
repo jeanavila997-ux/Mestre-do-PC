@@ -1,4 +1,4 @@
-#Requires -Version 7
+﻿#Requires -Version 7
 <#
 .SYNOPSIS
   Ações fixas do cliente OneDrive para a whitelist do Mestre do PC.

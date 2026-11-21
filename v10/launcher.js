@@ -222,6 +222,23 @@ function warnMcpSemToken() {
   console.warn("[SEGURANÇA] Cliente 'mcp' aceito sem token (MESTRE_ALLOW_LEGACY_MCP=1).");
 }
 
+// /mcp (Streamable HTTP): todo POST exige o token local, aceito em
+// X-Mestre-Mcp-Token ou Authorization: Bearer. Sem token configurado é
+// fail-closed; o modo legado (MESTRE_ALLOW_LEGACY_MCP=1) só vale para
+// chamadas diretas do próprio PC, sem origin de navegador.
+function isMcpHttpAuthorized(req) {
+  const origin = req.headers.origin || "";
+  if (origin && !isAllowedWebOrigin(origin, BASE_URL)) return false;
+  if (isLocalMcpEnabled()) {
+    const bearer = headerValue(req, "authorization").replace(/^Bearer\s+/i, "");
+    const token = headerValue(req, "x-mestre-mcp-token") || bearer;
+    return validateLocalMcpToken(token).valid;
+  }
+  if (!isLegacyMcpAllowed()) return false;
+  warnMcpSemToken();
+  return !origin && isDirectLoopback(req);
+}
+
 function isAuthorized(req) {
   const origin = req.headers.origin || "";
   const client = req.headers["x-mestre-client"] || "";
@@ -829,6 +846,17 @@ const server = http.createServer(async (req, res) => {
         });
         res.end();
         return;
+      }
+      if (req.method === "POST") {
+        // Só JSON: bloqueia POST "simples" (text/plain, form) que uma página web
+        // conseguiria enviar sem preflight de CORS.
+        const contentType = headerValue(req, "content-type").toLowerCase();
+        if (!contentType.startsWith("application/json")) {
+          return sendJson(res, 415, { jsonrpc: "2.0", id: null, error: { code: -32600, message: "Content-Type precisa ser application/json." } }, allowedOrigin);
+        }
+        if (!isMcpHttpAuthorized(req)) {
+          return sendJson(res, 401, { jsonrpc: "2.0", id: null, error: { code: -32001, message: "Token MCP ausente ou inválido. Envie X-Mestre-Mcp-Token (ou Authorization: Bearer) com o MESTRE_LOCAL_MCP_TOKEN." } }, allowedOrigin);
+        }
       }
       return handleMcpHttpEndpoint(req, res, { allowedOrigin, readBody, runAllowedOperation });
     }

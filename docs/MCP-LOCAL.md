@@ -143,3 +143,15 @@ node --test test/local-mcp-db.test.js
 - `mcp-server/db/migrations/` — migrações versionadas.
 - `mcp-server/auth/local-token.js` — lógica de token.
 - `mcp-server/db/connector.js` — pool de conexões MySQL.
+
+## Endpoint HTTP `/mcp` do launcher (porta 7777)
+
+Desde 20/11/2026, todo `POST /mcp` exige o token local:
+
+- cabeçalho `X-Mestre-Mcp-Token: <MESTRE_LOCAL_MCP_TOKEN>` (ou `Authorization: Bearer <token>`);
+- `Content-Type: application/json` (outros tipos recebem 415, para bloquear POST "simples" de páginas web);
+- sem token ou com token errado: HTTP 401 e erro JSON-RPC `-32001`.
+
+`GET /mcp` e `GET /mcp-status` continuam públicos e só mostram o status.
+O token fica no `.env.local` (fora do git). Clientes conhecidos: MULT-CHAT-HUB lite (`MESTRE_MCP_TOKEN`).
+Claude Desktop e OpenCode usam o `mcp-server/index.js` por stdio e não passam por este endpoint.
