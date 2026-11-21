@@ -620,7 +620,7 @@ async function handleNppAction(action, payload) {
 const SYSTEM_STATUS_TTL_MS = 5000;
 const SYSTEM_STATUS_PS_TIMEOUT_MS = 8000;
 const SYSTEM_STATUS_RESPONSE_TIMEOUT_MS = 10000;
-const SYSTEM_STATUS_EMPTY = { cpu: 0, ramFree: 0, ramTotal: 0, diskFree: 0, diskUsed: 0, uptimeSec: 0 };
+const SYSTEM_STATUS_EMPTY = { cpu: 0, cpuCount: 0, ramFree: 0, ramTotal: 0, diskFree: 0, diskUsed: 0, uptimeSec: 0 };
 let systemStatusCache = { data: null, at: 0 };
 let systemStatusInflight = null;
 
@@ -632,12 +632,13 @@ $os = Get-WmiObject Win32_OperatingSystem
 $ramFree = [math]::Round($os.FreePhysicalMemory/1MB, 2)
 $ramTotal = [math]::Round($os.TotalVisibleMemorySize/1MB, 2)
 $cpu = (Get-WmiObject Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average
+$cpuCount = (Get-WmiObject Win32_ComputerSystem).NumberOfLogicalProcessors
 $disk = Get-PSDrive C
 $diskFree = [math]::Round($disk.Free/1GB, 2)
 $diskUsed = [math]::Round($disk.Used/1GB, 2)
 $boot = [Management.ManagementDateTimeConverter]::ToDateTime($os.LastBootUpTime)
 $uptime = [int]((Get-Date) - $boot).TotalSeconds
-@{cpu=[math]::Round($cpu,1);ramFree=$ramFree;ramTotal=$ramTotal;diskFree=$diskFree;diskUsed=$diskUsed;uptimeSec=$uptime} | ConvertTo-Json -Compress
+@{cpu=[math]::Round($cpu,1);cpuCount=$cpuCount;ramFree=$ramFree;ramTotal=$ramTotal;diskFree=$diskFree;diskUsed=$diskUsed;uptimeSec=$uptime} | ConvertTo-Json -Compress
 `], { windowsHide: true, env: cleanPSEnv() });
     const killTimer = setTimeout(() => { try { ps.kill(); } catch {} }, SYSTEM_STATUS_PS_TIMEOUT_MS);
     killTimer.unref();
