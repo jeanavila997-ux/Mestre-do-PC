@@ -46,6 +46,9 @@ const MAX_CONCURRENT_JOBS = 3;
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
 const JOB_RETENTION_MS = 30 * 60 * 1000;
 const MAX_CMD_LENGTH = 32768;
+// Agentes CLI do menu (mesmos ids do catálogo em scripts/cli-agents.ps1). Nunca instala nada.
+const CLI_AGENT_IDS = ["claude","opencode","codex","gemini","qwen","aider","copilot","cursor","grok","dsh","hermes","goose","kilo","cline","crush","pi","omp"];
+let cliAgentsCache = { at: 0, data: null };
 
 // ===== Modo Livre — execução de comandos fora da whitelist =====
 // Opt-in e reversível: por padrão desligado. Quando ligado, /run-free aceita
@@ -999,11 +1002,39 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // Agentes CLI: detecção, versão, comando e link de instalação (só leitura).
+    if (path === "/cli-agents" && req.method === "GET") {
+      if (!isAuthorized(req)) return sendJson(res, 403, { success: false, output: "Cliente não autorizado." }, allowedOrigin);
+      const fresh = url.searchParams.get("refresh") === "1";
+      if (!fresh && cliAgentsCache.data && Date.now() - cliAgentsCache.at < 60000) {
+        return sendJson(res, 200, { success: true, agents: cliAgentsCache.data, cached: true }, allowedOrigin);
+      }
+      const script = join(PROJECT_DIR, "scripts", "cli-agents.ps1");
+      const agents = await new Promise((resolveAgents) => {
+        let out = "";
+        const child = spawn("pwsh.exe", ["-NoProfile", "-File", script, "-Action", "status-json"], {
+          windowsHide: true,
+          env: { ...process.env, MESTRE_PROJETO_PATH: PROJECT_DIR },
+        });
+        const timer = setTimeout(() => { try { child.kill(); } catch {} resolveAgents(null); }, 30000);
+        child.stdout.on("data", (d) => (out += d.toString("utf8")));
+        child.on("error", () => { clearTimeout(timer); resolveAgents(null); });
+        child.on("close", () => {
+          clearTimeout(timer);
+          try { const parsed = JSON.parse(out.slice(Math.max(0, out.indexOf("[")))); resolveAgents(Array.isArray(parsed) ? parsed : [parsed]); }
+          catch { resolveAgents(null); }
+        });
+      });
+      if (!agents) return sendJson(res, 500, { success: false, output: "Falha ao consultar os agentes CLI (pwsh 7 instalado?)." }, allowedOrigin);
+      cliAgentsCache = { at: Date.now(), data: agents };
+      return sendJson(res, 200, { success: true, agents }, allowedOrigin);
+    }
+
     if (path === "/open-terminal" && req.method === "POST") {
       if (!isAuthorized(req)) return sendJson(res, 403, { success: false, output: "Cliente não autorizado." }, allowedOrigin);
       const body = await readBody(req, 16 * 1024);
       const agent = String(body.agent || "pwsh").toLowerCase();
-      const allowedAgents = new Set(["pwsh", "opencode", "grok", "omp", "copilot", "claude", "llamacpp"]);
+      const allowedAgents = new Set(["pwsh", "llamacpp", ...CLI_AGENT_IDS]);
       if (!allowedAgents.has(agent)) {
         return sendJson(res, 400, { success: false, output: "Agente de terminal não permitido: " + agent }, allowedOrigin);
       }

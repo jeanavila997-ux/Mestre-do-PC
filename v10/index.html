@@ -895,6 +895,7 @@
           <button class="btn-open-ps" onclick="openAgent('grok')" title="Abrir Grok CLI no terminal">Grok CLI</button>
           <button class="btn-open-ps" onclick="openAgent('copilot')" title="Abrir GitHub Copilot CLI">Copilot</button>
           <button class="btn-open-ps" onclick="openAgent('claude')" title="Abrir Claude Code no terminal">Claude</button>
+          <button class="btn-open-ps" onclick="openCliAgentsMenu()" title="Todos os agentes CLI: instalado, versão, abrir ou link de instalação">🧰 Agentes CLI</button>
           <button class="btn-open-ps btn-ia-local" onclick="mestreChat.open()">🤖 IA Local</button>
           <button class="btn-open-ps btn-stop" id="btnPower" onclick="togglePower()" title="Parar o launcher (encerra o servidor local)">⏻ Parar</button>
         </div>
@@ -2278,6 +2279,47 @@
           if (res.ok === false || data.success !== true) throw new Error(data.output || "Falha ao abrir o terminal.");
           showToast("✅ Terminal " + label + " aberto.", "var(--accent2)");
         } catch (err) { showToast("❌ " + err.message, "#f85149"); }
+      }
+      // ===== MENU DE AGENTES CLI =====
+      // Lista vem de GET /cli-agents (scripts/cli-agents.ps1 -Action status-json).
+      // Instalado: botão Abrir. Ausente: link oficial de instalação (o Mestre nunca instala sozinho).
+      async function openCliAgentsMenu(refresh) {
+        if (serverOnline === false) { showToast("ℹ️ Inicie o Launcher primeiro.", "#00d4ff"); checkServer(); return; }
+        let box = document.getElementById("cliAgentsModal");
+        if (!box) {
+          box = document.createElement("div");
+          box.id = "cliAgentsModal";
+          box.setAttribute("role", "dialog");
+          box.setAttribute("aria-label", "Agentes CLI");
+          box.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center";
+          box.addEventListener("click", (e) => { if (e.target === box) box.remove(); });
+          document.body.appendChild(box);
+        }
+        box.innerHTML = '<div style="background:var(--card,#161b22);color:var(--text,#e6edf3);border:1px solid #30363d;border-radius:12px;padding:18px;width:min(760px,94vw);max-height:84vh;overflow:auto"><h2 style="margin:0 0 10px">🧰 Agentes CLI</h2><p>Consultando o PC…</p></div>';
+        try {
+          const res = await fetch(API + "/cli-agents" + (refresh ? "?refresh=1" : ""), { headers: PRIVILEGED_HEADERS, signal: AbortSignal.timeout(40000) });
+          const data = await res.json();
+          if (!res.ok || !data.success) throw new Error(data.output || "Falha ao listar os agentes CLI.");
+          const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+          const linhas = data.agents.map((a) => {
+            const acao = a.instalado
+              ? '<button class="btn-open-ps" data-agent="' + esc(a.id) + '">Abrir</button>'
+              : (a.instalar ? '<a href="' + esc(a.instalar) + '" target="_blank" rel="noopener noreferrer">Como instalar ↗</a>' : "—");
+            return '<tr><td style="padding:6px 8px"><b>' + esc(a.nome) + '</b></td><td style="padding:6px 8px">' +
+              (a.instalado ? "✅ " + esc(a.versao || "instalado") : "⚪ não instalado") +
+              '</td><td style="padding:6px 8px"><code>' + esc(a.comando) + '</code></td><td style="padding:6px 8px">' + acao + "</td></tr>";
+          }).join("");
+          const instalados = data.agents.filter((a) => a.instalado).length;
+          box.firstChild.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 style="margin:0">🧰 Agentes CLI</h2><span>' + instalados + " de " + data.agents.length + ' instalados</span><span><button class="btn-open-ps" id="cliAgentsRefresh">↻ Atualizar</button> <button class="btn-open-ps" id="cliAgentsClose">✕</button></span></div>' +
+            '<p style="opacity:.8;margin:8px 0">Abrir usa o terminal na pasta do projeto. Nada é instalado automaticamente.</p>' +
+            '<table style="width:100%;border-collapse:collapse"><thead><tr><th align="left">Agente</th><th align="left">Status</th><th align="left">Comando</th><th align="left"></th></tr></thead><tbody>' + linhas + "</tbody></table>";
+          box.querySelectorAll("button[data-agent]").forEach((b) => b.addEventListener("click", () => openAgent(b.dataset.agent)));
+          box.querySelector("#cliAgentsRefresh").addEventListener("click", () => openCliAgentsMenu(true));
+          box.querySelector("#cliAgentsClose").addEventListener("click", () => box.remove());
+        } catch (err) {
+          box.remove();
+          showToast("❌ " + err.message, "#f85149");
+        }
       }
       // ===== LIGA/DESLIGA DO LAUNCHER =====
       // Um botão só, que troca de papel conforme o estado do servidor.
