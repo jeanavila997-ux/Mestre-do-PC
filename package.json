@@ -18,7 +18,9 @@
     "build:package": "node scripts/build-package.cjs",
     "install:computer-use": "node scripts/install-computer-use.js",
     "ia": "node scripts/mestre-cli.js ia",
-    "cli:status": "node scripts/mestre-cli.js status"
+    "cli:status": "node scripts/mestre-cli.js status",
+    "turbo:diagnostico": "node scripts/mestre-cli.js turbo diagnostico",
+    "turbo:otimizar": "node scripts/mestre-cli.js turbo otimizar"
   },
   "keywords": [
     "mcp",

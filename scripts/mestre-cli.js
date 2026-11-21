@@ -14,6 +14,8 @@ MESTRE EXTENSSAO — CLI local com IA
 Uso:
   npm run cli:status
   npm run ia -- "sua pergunta"
+  node scripts/mestre-cli.js turbo diagnostico     (só leitura, JSON em pt-BR)
+  node scripts/mestre-cli.js turbo otimizar --confirmar   (backup + desfazer.ps1)
 
 Opções do comando ia:
   --model <modelo>   Escolhe o modelo Ollama (padrão: MESTRE_CLI_MODEL, depois OLLAMA_MODEL, depois qwen3.5:4b-text)
@@ -118,11 +120,45 @@ async function executarIA(args) {
   }
 }
 
+function lerArgumentosTurbo(lista) {
+  const [modo = "diagnostico", ...resto] = lista;
+  if (modo !== "diagnostico" && modo !== "otimizar") throw new Error(`Modo do turbo inválido: ${modo}. Use diagnostico ou otimizar.`);
+  const opcoes = { modo, confirmar: false };
+  for (const atual of resto) {
+    if (atual === "--confirmar") opcoes.confirmar = true;
+    else throw new Error(`Opção desconhecida: ${atual}`);
+  }
+  if (modo === "otimizar" && !opcoes.confirmar) {
+    throw new Error("O turbo otimizar muda configurações e apaga temporários. Rode de novo com --confirmar para aplicar.");
+  }
+  return opcoes;
+}
+
+function executarTurbo(lista) {
+  const { modo, confirmar } = lerArgumentosTurbo(lista);
+  const path = require("node:path");
+  const { spawn } = require("node:child_process");
+  const script = path.join(__dirname, "turbo-pc.ps1");
+  const args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script, "-Modo", modo];
+  if (confirmar) args.push("-Confirmar");
+  logger.info("Turbo PC iniciado", { modo });
+  return new Promise((resolve, reject) => {
+    const filho = spawn("powershell.exe", args, { stdio: "inherit", windowsHide: true });
+    filho.on("error", reject);
+    filho.on("close", (code) => {
+      logger.info("Turbo PC concluído", { modo, code });
+      if (code === 0) resolve();
+      else reject(new Error(`turbo-pc.ps1 terminou com código ${code}`));
+    });
+  });
+}
+
 async function main() {
   const [, , comando, ...restante] = process.argv;
   if (!comando || comando === "--help" || comando === "-h") return mostrarAjuda();
   if (comando === "status") return status();
   if (comando === "ia") return executarIA(lerArgumentos(restante));
+  if (comando === "turbo") return executarTurbo(restante);
   throw new Error(`Comando desconhecido: ${comando}`);
 }
 
@@ -134,4 +170,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { executarIA, lerArgumentos, mostrarAjuda, obterConfig, status };
+module.exports = { executarIA, executarTurbo, lerArgumentos, lerArgumentosTurbo, mostrarAjuda, obterConfig, status };

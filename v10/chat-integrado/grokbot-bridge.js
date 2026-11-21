@@ -1,4 +1,5 @@
 import { formatSystemStatusPtBr } from "./system-status-format.js";
+import { turboToolsDefinition, isTurboTool, callTurboTool } from "./turbo-pc.js";
 import { readFileSync as __rf } from "node:fs";
 function readLocal9RouterKey() { try { const p = new URL("../data/providers.json", import.meta.url); return JSON.parse(__rf(p, "utf8")).providers?.["9router"]?.apiKey || ""; } catch { return ""; } }
 /**
@@ -600,6 +601,8 @@ export async function callGrokBotTool(toolName, rawArgs = {}) {
 
 async function getMcpToolsDefinition() {
   return [
+    // Turbo PC: diagnóstico (leitura) e otimizar (destrutiva, exige confirmar=true).
+    ...turboToolsDefinition(),
     {
       name: "mestre_system_status",
       description: "Estado atual do PC Windows em pt-BR, já formatado: processadores_logicos, uso_cpu_pct, ram_total_gb, ram_livre_gb, ram_uso_pct, disco_livre_gb, disco_total_gb, tempo_ligado e um resumo pronto. Copie os valores como vieram.",
@@ -724,6 +727,9 @@ async function executeMcpToolCall(name, args = {}, runOperationCallback = null) 
       return await callGrokBotTool("grokbot__chat", args);
 
     default:
+      if (isTurboTool(name)) {
+        return await callTurboTool(name, args);
+      }
       if (isGrokBotTool(name)) {
         return await callGrokBotTool(name, args);
       }

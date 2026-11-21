@@ -135,3 +135,13 @@ test("opção sem valor é recusada", async () => {
     fs.rmSync(pasta, { recursive: true, force: true });
   }
 });
+
+test("turbo otimizar sem --confirmar recusa antes de executar qualquer coisa", async () => {
+  const r = await executarCli(["turbo", "otimizar"]);
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /--confirmar/);
+  const { lerArgumentosTurbo } = require("../scripts/mestre-cli.js");
+  assert.deepEqual(lerArgumentosTurbo([]), { modo: "diagnostico", confirmar: false });
+  assert.deepEqual(lerArgumentosTurbo(["otimizar", "--confirmar"]), { modo: "otimizar", confirmar: true });
+  assert.throws(() => lerArgumentosTurbo(["formatar"]), /inválido/);
+});
