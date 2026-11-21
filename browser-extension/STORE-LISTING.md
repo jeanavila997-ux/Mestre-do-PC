@@ -1,6 +1,6 @@
 # Materiais da Chrome Web Store - Mestre do PC
 
-Rascunho para versão 1.0.2. Não enviado à loja.
+Rascunho para versão 1.2.0. Não enviado à loja.
 
 ## Cadastro sugerido
 
@@ -19,6 +19,18 @@ com Chat Hub para verificar disponibilidade.
 Com sua autorização, envie título, URL e texto selecionado da aba ao app para
 análise com IA. O envio ocorre somente quando você aciona o botão ou menu de contexto.
 A extensão não lê páginas continuamente nem envia automaticamente o histórico.
+
+Ferramentas (v1.2.0): extraia tabelas, listas, links, e-mails, telefones, preços e
+títulos da página para CSV ou JSON; veja JSON formatado e gere um resumo em JSON da
+página; mude o visual (temas escuro, neon ciano, leitura e alto contraste, fonte,
+largura, esconder anúncios) só com CSS e salvo por site; painel de modo dev
+(frameworks, erros do console, tempos, nomes de cookies e chaves de armazenamento
+sem valores); atalhos para DevTools, extensões de desenvolvedor, NotebookLM e OneNote.
+Tudo roda no navegador e só quando você aciona.
+
+Administração do PC: operações fixas do launcher (ponto de restauração, SFC, DISM,
+winget, serviços, Defender, ferramentas do Windows). O que eleva abre o UAC do Windows
+e exige confirmação na extensão; reiniciar/desligar exigem confirmação dupla.
 
 Requer Mestre do PC V10 instalado e iniciado no Windows, token configurado e ID da
 extensão autorizado no launcher. IA exige Ollama e modelo compatível disponíveis.
@@ -73,7 +85,11 @@ apenas porque o destino inicial é local.
 Justificativas: `storage` conserva configuração local; `activeTab` e `scripting`
 extraem conteúdo solicitado; `contextMenus` oferece ações; `notifications` mostra
 resultados e erros; permissões de host conectam os apps locais. Portas adicionais
-exigem concessão opcional. Não há login Google; autenticação usa token do launcher.
+exigem concessão opcional. A permissão opcional `http(s)://*/*` só é pedida se o usuário
+ligar a reaplicação automática do design salvo (injeta apenas CSS). Extração, JSON,
+modo dev e limpeza de dados do site usam `activeTab` + `scripting` após clique e não
+enviam conteúdo para fora; só o "resumo em JSON → IA" vai ao launcher local, com o
+mesmo consentimento do envio de página. Não há login Google; autenticação usa token do launcher.
 
 ## Pendências antes do envio
 

@@ -11,6 +11,8 @@ import {
   discardInactiveTabs,
   openSpeedtest,
 } from "./tab-actions.js";
+import { ADMIN_CLASS_LABEL, ADMIN_OPS, APP_LINKS } from "./tools-core.js";
+import { applySavedDesign, openToolsWindow } from "./tools-actions.js";
 
 const UI = {
   launcherDot: document.getElementById("launcherDot"),
@@ -168,9 +170,54 @@ async function sendPageToAI(settings) {
   }
 }
 
+async function activeTab() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  return tab || null;
+}
+
+function renderAdminButtons() {
+  const box = document.getElementById("adminButtons");
+  let group = "";
+  for (const op of ADMIN_OPS) {
+    if (op.grupo !== group) {
+      group = op.grupo;
+      const h = document.createElement("h4");
+      h.textContent = group;
+      box.append(h);
+    }
+    const b = document.createElement("button");
+    b.dataset.tool = "admin";
+    b.dataset.op = op.id;
+    b.textContent = op.titulo;
+    const tag = document.createElement("span");
+    tag.className = "tag";
+    tag.textContent = ADMIN_CLASS_LABEL[op.classe] + (op.elevado ? " · UAC" : "");
+    b.append(tag);
+    box.append(b);
+  }
+}
+
+function wireTools() {
+  // Ferramentas e Administração abrem o painel; nada roda direto do popup.
+  document.body.addEventListener("click", async (e) => {
+    const btn = e.target.closest("button[data-tool]");
+    if (!btn) return;
+    try {
+      const tab = await activeTab();
+      await openToolsWindow(btn.dataset.tool, tab, btn.dataset.op ? { op: btn.dataset.op } : {});
+      window.close();
+    } catch (error) { showMessage(error.message); }
+  });
+  document.getElementById("btnNotebookLM").addEventListener("click", async () => {
+    try { await chrome.tabs.create({ url: APP_LINKS.notebooklm }); } catch (error) { showMessage(error.message); }
+  });
+}
+
 function wireActions() {
   if (wireActions.done) return;
   wireActions.done = true;
+  renderAdminButtons();
+  wireTools();
   UI.btnDiagnostico.addEventListener("click", async () => {
     try {
       const settings = await getSettings();
@@ -236,6 +283,8 @@ function wireActions() {
 
 async function init() {
   wireActions();
+  // Abrir o popup concede activeTab: reaplica o design salvo deste site.
+  activeTab().then((tab) => tab?.id != null && applySavedDesign(tab.id, tab.url || "")).catch(() => {});
   try {
     const settings = await getSettings();
     await Promise.all([checkLauncher(settings), checkOllama(settings), checkChatHub(settings)]);

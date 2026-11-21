@@ -11,6 +11,18 @@ import {
   discardInactiveTabs,
   openSpeedtest,
 } from "./tab-actions.js";
+import { ADMIN_OPS } from "./tools-core.js";
+import { applySavedDesign, hasAutoDesignPermission, openToolsWindow } from "./tools-actions.js";
+
+const TOOL_MENU = [
+  { id: "extrair", title: "📋 Extrair lista de informações" },
+  { id: "json", title: "🧾 JSON / resumo em JSON" },
+  { id: "design", title: "🎨 Mudar design da página" },
+  { id: "dev", title: "🧪 Modo dev" },
+  { id: "devtools", title: "🛠️ DevTools e extensões de dev" },
+  { id: "notebooklm", title: "📓 Abrir NotebookLM" },
+  { id: "apps", title: "🗒️ OneNote e nota da página" },
+];
 
 async function sendToLauncher(id, params = {}) {
   const settings = await getSettings();
@@ -85,10 +97,45 @@ chrome.runtime.onInstalled.addListener(async () => {
   for (const item of items) {
     chrome.contextMenus.create(item);
   }
+  chrome.contextMenus.create({ id: "mestre-ferramentas", title: "🧰 Mestre do PC: Ferramentas", contexts: ["page", "selection"] });
+  for (const t of TOOL_MENU) {
+    chrome.contextMenus.create({ id: "mestre-tool-" + t.id, parentId: "mestre-ferramentas", title: t.title, contexts: ["page", "selection"] });
+  }
+  chrome.contextMenus.create({ id: "mestre-admin", title: "🛡️ Mestre do PC: Administração", contexts: ["page", "selection"] });
+  chrome.contextMenus.create({ id: "mestre-admin-painel", parentId: "mestre-admin", title: "Abrir painel de administração", contexts: ["page", "selection"] });
+  for (const op of ADMIN_OPS) {
+    chrome.contextMenus.create({ id: "mestre-admin-op-" + op.id, parentId: "mestre-admin", title: op.titulo, contexts: ["page", "selection"] });
+  }
+});
+
+// Com a permissão opcional concedida, reaplica o design salvo a cada carregamento.
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  if (changeInfo.status !== "complete" || !tab?.url) return;
+  try {
+    if (await hasAutoDesignPermission()) await applySavedDesign(tabId, tab.url);
+  } catch { /* sem permissão para esta aba */ }
 });
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   try {
+    const menuId = String(info.menuItemId);
+    if (menuId === "mestre-tool-notebooklm") {
+      await chrome.tabs.create({ url: "https://notebooklm.google.com/" });
+      return;
+    }
+    if (menuId.startsWith("mestre-tool-")) {
+      await openToolsWindow(menuId.slice("mestre-tool-".length), tab);
+      return;
+    }
+    if (menuId === "mestre-admin-painel") {
+      await openToolsWindow("admin", tab);
+      return;
+    }
+    if (menuId.startsWith("mestre-admin-op-")) {
+      // A confirmação acontece no painel; aqui só abre com a operação escolhida.
+      await openToolsWindow("admin", tab, { op: menuId.slice("mestre-admin-op-".length) });
+      return;
+    }
     if (info.menuItemId === "mestre-diagnostico") {
       await sendToLauncher("diagnostico_completo");
       await notify("Mestre do PC", "Diagnóstico iniciado no app local.");

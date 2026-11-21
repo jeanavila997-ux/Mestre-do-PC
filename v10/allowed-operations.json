@@ -2921,6 +2921,22 @@
       "description": "Copia o caminho da extensão, abre a pasta e edge://extensions."
     },
     {
+      "id": "browser_enviar_f12",
+      "title": "Apertar F12 no navegador",
+      "category": "Navegador",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\browser-devtools.ps1') -Action enviar-f12",
+      "description": "Pedido da extensão: aperta F12 na janela em foco só se ela for um navegador (Edge, Chrome, Firefox, Brave, Opera, Vivaldi)."
+    },
+    {
+      "id": "browser_abrir_onenote",
+      "title": "Abrir OneNote",
+      "category": "Navegador",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\browser-devtools.ps1') -Action abrir-onenote",
+      "description": "Abre o app do OneNote; sem o app, abre o OneNote na web."
+    },
+    {
       "id": "cli_agentes_status",
       "title": "Status dos agentes CLI",
       "category": "Agentes CLI",
