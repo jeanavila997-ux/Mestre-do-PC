@@ -229,6 +229,7 @@ test("dsh: cascata avança para o próximo provedor quando o primeiro falha", as
         run,
         env: { XAI_API_KEY: segredo, DEEPSEEK_API_KEY: "outra-chave" },
         envFile: null,
+        providersFile: null,
         home,
         sleep: async () => {},
       },
@@ -269,7 +270,7 @@ test("dsh: cascata avança para o próximo provedor quando o primeiro falha", as
 
 test("dsh: exit 0 não basta — exige final completed na última linha", async () => {
   const home = await mkdtemp(join(tmpdir(), "mpc-dsh-test-"));
-  const deps = { env: { XAI_API_KEY: "k" }, envFile: null, home, sleep: async () => {} };
+  const deps = { env: { XAI_API_KEY: "k" }, envFile: null, providersFile: null, home, sleep: async () => {} };
   const finalError = JSON.stringify({ type: "final", text: "", reason: { kind: "error" } });
   const finalOk = JSON.stringify({ type: "final", text: "ok", reason: { kind: "completed" } });
   try {
@@ -377,6 +378,7 @@ test("dsh: retry repete a cadeia com espera de 300s entre rodadas", async () => 
         run,
         env: { XAI_API_KEY: "k", MPC_DSH_RETRY_ROUNDS: "1" },
         envFile: null,
+        providersFile: null,
         home,
         sleep: async (ms) => {
           esperas.push(ms);
