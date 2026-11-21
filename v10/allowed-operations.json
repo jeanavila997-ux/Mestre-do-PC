@@ -2992,6 +2992,62 @@
       "command": "npx -y skills add typesafe-ai/skills --skill typesafe-ai",
       "description": "instalar skills typesafe",
       "enabled": true
+    },
+    {
+      "id": "onedrive_status",
+      "title": "OneDrive: ver se está rodando",
+      "category": "OneDrive",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\onedrive.ps1') -Action status",
+      "description": "Mostra o executável, a versão, a pasta e se o OneDrive.exe está em execução."
+    },
+    {
+      "id": "onedrive_abrir",
+      "title": "OneDrive: abrir o cliente",
+      "category": "OneDrive",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\onedrive.ps1') -Action abrir",
+      "description": "Sobe o cliente de sincronização com /background. Sem esse argumento o Explorador abre a pasta e o sincronizador não inicia."
+    },
+    {
+      "id": "onedrive_config",
+      "title": "OneDrive: abrir configurações",
+      "category": "OneDrive",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\onedrive.ps1') -Action config",
+      "description": "Pede o painel do cliente com /settings. Esse argumento não é oficial; se a janela não abrir, use o ícone da bandeja."
+    },
+    {
+      "id": "onedrive_pasta",
+      "title": "OneDrive: abrir a pasta",
+      "category": "OneDrive",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\onedrive.ps1') -Action pasta",
+      "description": "Abre %USERPROFILE%\\OneDrive no Explorador de Arquivos."
+    },
+    {
+      "id": "onedrive_web",
+      "title": "OneDrive: abrir o site",
+      "category": "OneDrive",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\onedrive.ps1') -Action web",
+      "description": "Abre https://onedrive.live.com no navegador."
+    },
+    {
+      "id": "onedrive_armazenamento",
+      "title": "OneDrive: armazenamento",
+      "category": "OneDrive",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\onedrive.ps1') -Action armazenamento",
+      "description": "Abre o painel de armazenamento em https://onedrive.live.com/?v=managestorage."
+    },
+    {
+      "id": "onedrive_reiniciar",
+      "title": "OneDrive: reiniciar e sincronizar",
+      "category": "OneDrive",
+      "destructive": true,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\onedrive.ps1') -Action reiniciar",
+      "description": "Encerra o cliente com /shutdown e sobe de novo com /background. Se não sair em 20 s, força só o OneDrive.exe. Religar o cliente é o que dispara a sincronização."
     }
   ],
   "templates": [

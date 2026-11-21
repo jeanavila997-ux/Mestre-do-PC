@@ -51,6 +51,13 @@
     { id: "browser_melhorar_velocidade", title: "Melhorar velocidade do navegador", category: "Navegador", description: "Flush DNS + relatório", destructive: false },
     { id: "browser_listar_abas", title: "Listar abas (CDP)", category: "Navegador", description: "Abas via DevTools Protocol", destructive: false },
     { id: "browser_abrir_extensao_pasta", title: "Instalar extensão do Mestre", category: "Navegador", description: "Abre pasta unpacked", destructive: false },
+    { id: "onedrive_status", title: "OneDrive: ver se está rodando", category: "OneDrive", description: "Cliente, pasta e processo", destructive: false },
+    { id: "onedrive_abrir", title: "OneDrive: abrir o cliente", category: "OneDrive", description: "Sobe a sincronização", destructive: false },
+    { id: "onedrive_config", title: "OneDrive: abrir configurações", category: "OneDrive", description: "Painel do cliente", destructive: false },
+    { id: "onedrive_pasta", title: "OneDrive: abrir a pasta", category: "OneDrive", description: "Explorador na pasta", destructive: false },
+    { id: "onedrive_web", title: "OneDrive: abrir o site", category: "OneDrive", description: "onedrive.live.com", destructive: false },
+    { id: "onedrive_armazenamento", title: "OneDrive: armazenamento", category: "OneDrive", description: "Painel de espaço", destructive: false },
+    { id: "onedrive_reiniciar", title: "OneDrive: reiniciar e sincronizar", category: "OneDrive", description: "Religa o cliente", destructive: true },
   ];
   /** Prompts já no menu (Mais → Prontos) e chips do Chat. */
   const BUILTIN_PROMPTS = [
