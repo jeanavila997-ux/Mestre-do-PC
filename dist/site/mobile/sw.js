@@ -1,4 +1,4 @@
-const CACHE = "mestre-mobile-v12-shell-5";
+const CACHE = "mestre-mobile-v12-shell-6";
 const SHELL = [
   "index.html",
   "styles.css",
@@ -6,7 +6,6 @@ const SHELL = [
   "manifest.json",
   "icon-192.png",
   "icon-512.png",
-  "icon.svg",
   "sw.js",
 ];
 
