@@ -104,6 +104,7 @@ const state = {
   modeloAtivo: "",
   provedorAtivo: "",
   opencodeGo: null,
+  jarvis: null,
   modelosDisponiveis: [],
   modeloChain: [],
   isWaiting: false,
@@ -696,17 +697,20 @@ async function streamOllamaReply(userText) {
     ),
   ];
 
-  const useOpenCodeGo = state.provedorAtivo === "opencode-go";
-  if (useOpenCodeGo && !state.opencodeGo?.hasKey) {
-    throw new Error("OpenCode Go não configurado. Defina OPENCODE_GO_API_KEY.");
+  const externalProvider = state.provedorAtivo === "opencode-go"
+    ? state.opencodeGo
+    : state.provedorAtivo === "jarvis" ? state.jarvis : null;
+  const useExternalProvider = !!externalProvider;
+  if (useExternalProvider && !externalProvider.configured) {
+    throw new Error(`${externalProvider.name || state.provedorAtivo} não configurado.`);
   }
 
-  const chain = useOpenCodeGo
-    ? [state.opencodeGo?.model || state.modeloAtivo].filter(Boolean)
+  const chain = useExternalProvider
+    ? [externalProvider.model || state.modeloAtivo].filter(Boolean)
     : getModelChain();
   if (!chain.length) {
-    throw new Error(useOpenCodeGo
-      ? "Nenhum modelo OpenCode Go configurado."
+    throw new Error(useExternalProvider
+      ? `Nenhum modelo ${externalProvider.name || state.provedorAtivo} configurado.`
       : "Nenhum modelo selecionado. Abra 🔀 e escolha um modelo.");
   }
 
@@ -719,8 +723,8 @@ async function streamOllamaReply(userText) {
       const controller = new AbortController();
       state.abortController = controller;
       try {
-        const text = await streamModelOnce(model, messages, controller, useOpenCodeGo);
-        if (!useOpenCodeGo) {
+        const text = await streamModelOnce(model, messages, controller, externalProvider);
+        if (!useExternalProvider) {
           state.modeloAtivo = model;
           updateModelBadge();
         }
@@ -728,7 +732,7 @@ async function streamOllamaReply(userText) {
       } catch (err) {
         if (err.name === "AbortError" && !err.timedOut) throw err;
         if (controller.signal.aborted && !err.timedOut) throw err;
-        if (err.opencodeGo) throw err;
+        if (err.externalProvider) throw err;
         lastError = err;
         console.warn(`[chat] modelo "${model}" falhou:`, err.message);
       }
@@ -739,11 +743,12 @@ async function streamOllamaReply(userText) {
   }
 }
 
-async function streamModelOnce(model, messages, controller, useOpenCodeGo) {
-  const body = useOpenCodeGo
+async function streamModelOnce(model, messages, controller, externalProvider) {
+  const useExternalProvider = !!externalProvider;
+  const body = useExternalProvider
     ? {
-        provider: "opencode-go",
-        model: state.opencodeGo?.model || model,
+        provider: externalProvider.id,
+        model: externalProvider.model || model,
         messages,
         stream: true,
         sessionId: state.conversaId || "",
@@ -767,7 +772,7 @@ async function streamModelOnce(model, messages, controller, useOpenCodeGo) {
   }, 5000);
 
   try {
-    const resp = await fetch(BASE + (useOpenCodeGo ? "/providers/chat" : "/ollama/chat"), {
+    const resp = await fetch(BASE + (useExternalProvider ? "/providers/chat" : "/ollama/chat"), {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Mestre-Client": "v10-web" },
       body: JSON.stringify(body),
@@ -781,8 +786,8 @@ async function streamModelOnce(model, messages, controller, useOpenCodeGo) {
         const parsed = JSON.parse(errText);
         if (parsed?.error) message = String(parsed.error);
       } catch { /* corpo não-JSON */ }
-      const httpError = new Error(useOpenCodeGo ? message : `Ollama HTTP ${resp.status}: ${message}`);
-      if (useOpenCodeGo) httpError.opencodeGo = true;
+      const httpError = new Error(useExternalProvider ? message : `Ollama HTTP ${resp.status}: ${message}`);
+      if (useExternalProvider) httpError.externalProvider = true;
       throw httpError;
     }
 
@@ -801,7 +806,7 @@ async function streamModelOnce(model, messages, controller, useOpenCodeGo) {
 
       for (const line of lines) {
         if (!line.trim()) continue;
-        if (useOpenCodeGo) {
+        if (useExternalProvider) {
           let delta = "";
           try {
             delta = readOpenAiDelta(line);
@@ -882,7 +887,7 @@ function readOpenAiDelta(line) {
   const apiError = parsed.error?.message || (typeof parsed.error === "string" ? parsed.error : "");
   if (apiError) {
     const err = new Error(String(apiError));
-    err.opencodeGo = true;
+    err.externalProvider = true;
     throw err;
   }
   const delta = parsed.choices?.[0]?.delta?.content;
@@ -1543,8 +1548,10 @@ async function loadChatProviders() {
   try {
     const data = await apiGet("/providers");
     state.opencodeGo = (data.providers || []).find((p) => p.id === "opencode-go") || null;
+    state.jarvis = (data.providers || []).find((p) => p.id === "jarvis") || null;
   } catch {
     state.opencodeGo = null;
+    state.jarvis = null;
   }
 }
 
@@ -1563,9 +1570,11 @@ async function loadProfiles() {
   } catch { /* launcher pode estar reiniciando */ }
   await loadChatProviders();
   try {
-    if (localStorage.getItem("mestre.provedorAtivo") === "opencode-go" && state.opencodeGo) {
-      state.provedorAtivo = "opencode-go";
-      if (state.opencodeGo.model) state.modeloAtivo = state.opencodeGo.model;
+    const savedProvider = localStorage.getItem("mestre.provedorAtivo");
+    const available = savedProvider === "opencode-go" ? state.opencodeGo : savedProvider === "jarvis" ? state.jarvis : null;
+    if (available) {
+      state.provedorAtivo = savedProvider;
+      if (available.model) state.modeloAtivo = available.model;
     }
   } catch {}
   renderProfilesMenu();
@@ -1588,7 +1597,7 @@ function renderProfilesMenu() {
     menu.appendChild(empty);
   }
   for (const p of state.perfis || []) {
-    const ativo = state.provedorAtivo !== "opencode-go" && p.id === state.perfilAtivo;
+    const ativo = !state.provedorAtivo && p.id === state.perfilAtivo;
     const item = document.createElement("div");
     item.className = "menu-item" + (ativo ? " selected" : "");
     item.setAttribute("role", "option");
@@ -1603,7 +1612,7 @@ function renderProfilesMenu() {
     item.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); activateProfile(p, item); } });
     menu.appendChild(item);
   }
-  appendOpenCodeGo(menu);
+  appendExternalProviders(menu);
   menu.appendChild(buildModelChainBlock());
 }
 
@@ -1612,42 +1621,44 @@ function tell(message) {
   else alert(message);
 }
 
-function appendOpenCodeGo(menu) {
-  const go = state.opencodeGo;
-  if (!go) return;
+function appendExternalProviders(menu) {
+  const providers = [state.jarvis, state.opencodeGo].filter(Boolean);
+  if (!providers.length) return;
   const title = document.createElement("div");
   title.className = "models-section";
   title.textContent = "Provedores";
   menu.appendChild(title);
-  const configured = !!go.hasKey;
-  const ativo = state.provedorAtivo === "opencode-go";
-  const item = document.createElement("div");
-  item.className = "menu-item" + (ativo ? " selected" : "") + (configured ? "" : " unavailable");
-  item.setAttribute("role", "option");
-  item.setAttribute("aria-selected", String(ativo));
-  item.tabIndex = -1;
-  item.dataset.id = "opencode-go";
-  const check = document.createElement("span"); check.className = "mi-check"; check.textContent = ativo ? "✓" : "";
-  const label = document.createElement("span"); label.className = "mi-label"; label.textContent = go.name || "OpenCode Go";
-  const model = document.createElement("small");
-  model.textContent = configured ? (go.model || "") : "não configurado";
-  model.title = configured ? "OPENCODE_GO_MODEL" : "Defina OPENCODE_GO_API_KEY";
-  item.append(check, label, model);
-  const choose = () => {
-    if (!configured) {
-      tell("OpenCode Go não configurado. Defina OPENCODE_GO_API_KEY no .env.local.");
-      return;
-    }
-    state.provedorAtivo = "opencode-go";
-    state.modeloAtivo = go.model || "";
-    try { localStorage.setItem("mestre.provedorAtivo", "opencode-go"); } catch {}
-    updateModelBadge();
-    closeModelsMenu();
-    renderProfilesMenu();
-  };
-  item.addEventListener("click", choose);
-  item.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); choose(); } });
-  menu.appendChild(item);
+  for (const provider of providers) {
+    const configured = !!provider.configured;
+    const ativo = state.provedorAtivo === provider.id;
+    const item = document.createElement("div");
+    item.className = "menu-item" + (ativo ? " selected" : "") + (configured ? "" : " unavailable");
+    item.setAttribute("role", "option");
+    item.setAttribute("aria-selected", String(ativo));
+    item.tabIndex = -1;
+    item.dataset.id = provider.id;
+    const check = document.createElement("span"); check.className = "mi-check"; check.textContent = ativo ? "✓" : "";
+    const label = document.createElement("span"); label.className = "mi-label"; label.textContent = provider.name || provider.id;
+    const model = document.createElement("small");
+    model.textContent = configured ? (provider.model || "") : "não configurado";
+    model.title = configured ? (provider.model || provider.name || provider.id) : `Configure ${provider.envKey || provider.name}`;
+    item.append(check, label, model);
+    const choose = () => {
+      if (!configured) {
+        tell(`${provider.name || provider.id} não configurado. Verifique o .env.local.`);
+        return;
+      }
+      state.provedorAtivo = provider.id;
+      state.modeloAtivo = provider.model || "";
+      try { localStorage.setItem("mestre.provedorAtivo", provider.id); } catch {}
+      updateModelBadge();
+      closeModelsMenu();
+      renderProfilesMenu();
+    };
+    item.addEventListener("click", choose);
+    item.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); choose(); } });
+    menu.appendChild(item);
+  }
 }
 
 function knownModels() {
@@ -1718,7 +1729,7 @@ function buildModelChainBlock() {
 async function activateProfile(p, item) {
   const menu = $("modelsMenu");
   if (p.id === state.perfilAtivo) {
-    if (state.provedorAtivo === "opencode-go") {
+    if (state.provedorAtivo) {
       state.provedorAtivo = "";
       if (p.model) state.modeloAtivo = p.model;
       try { localStorage.removeItem("mestre.provedorAtivo"); } catch {}
@@ -1814,10 +1825,13 @@ function closeAllMenus() {
 function updateModelBadge() {
   const badge = $("btnModelSelect");
   const span = badge.querySelector("span");
-  if (state.provedorAtivo === "opencode-go" && state.opencodeGo) {
-    const nome = state.opencodeGo.name || "OpenCode Go";
-    span.textContent = state.opencodeGo.hasKey ? `🔀 ${nome}` : `🔀 ${nome} · não configurado`;
-    document.body.dataset.modelo = state.opencodeGo.model || "";
+  const externalProvider = state.provedorAtivo === "opencode-go"
+    ? state.opencodeGo
+    : state.provedorAtivo === "jarvis" ? state.jarvis : null;
+  if (externalProvider) {
+    const nome = externalProvider.name || externalProvider.id;
+    span.textContent = externalProvider.configured ? `🔀 ${nome}` : `🔀 ${nome} · não configurado`;
+    document.body.dataset.modelo = externalProvider.model || "";
     return;
   }
   if (state.perfilAtivo && state.perfis.length) {
