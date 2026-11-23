@@ -3048,6 +3048,182 @@
       "destructive": true,
       "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\onedrive.ps1') -Action reiniciar",
       "description": "Encerra o cliente com /shutdown e sobe de novo com /background. Se não sair em 20 s, força só o OneDrive.exe. Religar o cliente é o que dispara a sincronização."
+    },
+    {
+      "id": "plugins_vscode_listar",
+      "title": "VS Code: listar extensões",
+      "category": "Plugins",
+      "destructive": false,
+      "command": "if (Get-Command code -EA 0) { code --list-extensions --show-versions } else { Write-Host 'VS Code (code) não encontrado no PATH.' -ForegroundColor Yellow }",
+      "description": "Lista as extensões instaladas no VS Code com a versão de cada uma."
+    },
+    {
+      "id": "plugins_vscode_exportar",
+      "title": "VS Code: exportar lista de extensões",
+      "category": "Plugins",
+      "destructive": false,
+      "command": "if (-not (Get-Command code -EA 0)) { Write-Host 'VS Code (code) não encontrado no PATH.' -ForegroundColor Yellow } else { $f = Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'vscode-extensoes.txt'; code --list-extensions | Set-Content -Path $f -Encoding UTF8; Write-Host \"Lista exportada para $f\" -ForegroundColor Green }",
+      "description": "Salva a lista de extensões do VS Code em Documentos\\vscode-extensoes.txt para reinstalar em outro PC."
+    },
+    {
+      "id": "plugins_notepadpp_listar",
+      "title": "Notepad++: listar plugins",
+      "category": "Plugins",
+      "destructive": false,
+      "command": "$dirs = @((Join-Path $env:ProgramFiles 'Notepad++\\plugins'), (Join-Path ${env:ProgramFiles(x86)} 'Notepad++\\plugins'), (Join-Path $env:APPDATA 'Notepad++\\plugins')); $achou = $false; foreach ($d in $dirs) { if (Test-Path $d) { $achou = $true; Write-Host \"== $d\" -ForegroundColor Cyan; Get-ChildItem $d -Directory -EA 0 | Select-Object Name, LastWriteTime | Format-Table -AutoSize } }; if (-not $achou) { Write-Host 'Notepad++ não encontrado.' -ForegroundColor Yellow }",
+      "description": "Lista as pastas de plugins do Notepad++ (instalação e perfil do usuário)."
+    },
+    {
+      "id": "plugins_chrome_listar",
+      "title": "Chrome: listar extensões",
+      "category": "Plugins",
+      "destructive": false,
+      "command": "$p = Join-Path $env:LOCALAPPDATA 'Google\\Chrome\\User Data\\Default\\Extensions'; if (-not (Test-Path $p)) { Write-Host 'Google Chrome não encontrado neste usuário.' -ForegroundColor Yellow } else { Get-ChildItem $p -Directory -EA 0 | ForEach-Object { $m = Get-ChildItem $_.FullName -Recurse -Filter manifest.json -EA 0 | Select-Object -First 1; if ($m) { $j = Get-Content $m.FullName -Raw -EA 0 | ConvertFrom-Json -EA 0; [pscustomobject]@{ Id = $_.Name; Nome = $j.name; Versao = $j.version } } } | Sort-Object Nome | Format-Table -AutoSize }",
+      "description": "Lê os manifest.json das extensões do perfil padrão do Chrome (somente leitura)."
+    },
+    {
+      "id": "plugins_edge_listar",
+      "title": "Edge: listar extensões",
+      "category": "Plugins",
+      "destructive": false,
+      "command": "$p = Join-Path $env:LOCALAPPDATA 'Microsoft\\Edge\\User Data\\Default\\Extensions'; if (-not (Test-Path $p)) { Write-Host 'Microsoft Edge não encontrado neste usuário.' -ForegroundColor Yellow } else { Get-ChildItem $p -Directory -EA 0 | ForEach-Object { $m = Get-ChildItem $_.FullName -Recurse -Filter manifest.json -EA 0 | Select-Object -First 1; if ($m) { $j = Get-Content $m.FullName -Raw -EA 0 | ConvertFrom-Json -EA 0; [pscustomobject]@{ Id = $_.Name; Nome = $j.name; Versao = $j.version } } } | Sort-Object Nome | Format-Table -AutoSize }",
+      "description": "Lê os manifest.json das extensões do perfil padrão do Edge (somente leitura)."
+    },
+    {
+      "id": "plugins_firefox_listar",
+      "title": "Firefox: listar extensões",
+      "category": "Plugins",
+      "destructive": false,
+      "command": "$root = Join-Path $env:APPDATA 'Mozilla\\Firefox\\Profiles'; if (-not (Test-Path $root)) { Write-Host 'Firefox não encontrado neste usuário.' -ForegroundColor Yellow } else { Get-ChildItem $root -Directory -EA 0 | ForEach-Object { $f = Join-Path $_.FullName 'extensions.json'; if (Test-Path $f) { Write-Host \"== Perfil $($_.Name)\" -ForegroundColor Cyan; (Get-Content $f -Raw -EA 0 | ConvertFrom-Json -EA 0).addons | Where-Object { $_.type -eq 'extension' -and $_.location -eq 'app-profile' } | Select-Object @{n='Nome';e={$_.defaultLocale.name}}, version, active | Format-Table -AutoSize } } }",
+      "description": "Lista as extensões instaladas em cada perfil do Firefox (somente leitura)."
+    },
+    {
+      "id": "plugins_powershell_atualizar",
+      "title": "PowerShell: atualizar módulos instalados",
+      "category": "Plugins",
+      "destructive": true,
+      "command": "Get-InstalledModule -EA 0 | ForEach-Object { Write-Host \"Atualizando $($_.Name) ($($_.Version))...\" -ForegroundColor Cyan; Update-Module -Name $_.Name -EA 0 }; Write-Host 'Concluído.' -ForegroundColor Green",
+      "description": "Atualiza pela PowerShell Gallery todos os módulos instalados com Install-Module. Baixa e substitui versões."
+    },
+    {
+      "id": "plugins_mcp_listar",
+      "title": "MCP: listar servidores configurados",
+      "category": "Plugins",
+      "destructive": false,
+      "command": "$cfgs = @((Join-Path $env:APPDATA 'Claude\\claude_desktop_config.json'), (Join-Path $env:APPDATA 'Code\\User\\mcp.json'), (Join-Path $env:USERPROFILE '.copilot\\mcp-config.json'), (Join-Path $env:USERPROFILE '.cursor\\mcp.json')); foreach ($c in $cfgs) { if (Test-Path $c) { Write-Host \"== $c\" -ForegroundColor Cyan; $j = Get-Content $c -Raw -EA 0 | ConvertFrom-Json -EA 0; $s = if ($j.mcpServers) { $j.mcpServers } elseif ($j.servers) { $j.servers } else { $null }; if ($s) { $s.PSObject.Properties.Name | ForEach-Object { Write-Host \"  - $_\" } } else { Write-Host '  (nenhum servidor)' } } }; $codex = Join-Path $env:USERPROFILE '.codex\\config.toml'; if (Test-Path $codex) { Write-Host \"== $codex\" -ForegroundColor Cyan; Select-String -Path $codex -Pattern '^\\[mcp_servers\\.([^\\]]+)\\]' -EA 0 | ForEach-Object { Write-Host \"  - $($_.Matches[0].Groups[1].Value)\" } }",
+      "description": "Mostra só os nomes dos servidores MCP configurados no Claude Desktop, VS Code, Copilot CLI, Cursor e Codex (não exibe tokens nem variáveis)."
+    },
+    {
+      "id": "plugins_ollama_modelos_tamanho",
+      "title": "Ollama: modelos e espaço em disco",
+      "category": "Plugins",
+      "destructive": false,
+      "command": "if (Get-Command ollama -EA 0) { ollama list } else { Write-Host 'Ollama não encontrado no PATH.' -ForegroundColor Yellow }; $d = if ($env:OLLAMA_MODELS) { $env:OLLAMA_MODELS } else { Join-Path $env:USERPROFILE '.ollama\\models' }; if (Test-Path $d) { $t = (Get-ChildItem $d -Recurse -File -EA 0 | Measure-Object Length -Sum).Sum; Write-Host (\"Total em {0}: {1:N2} GB\" -f $d, ($t / 1GB)) -ForegroundColor Green }",
+      "description": "Lista os modelos do Ollama e soma o espaço ocupado na pasta de modelos."
+    },
+    {
+      "id": "bluetooth_dispositivos",
+      "title": "Bluetooth: dispositivos",
+      "category": "Hardware",
+      "destructive": false,
+      "command": "Get-PnpDevice -Class Bluetooth -EA 0 | Select-Object Status, FriendlyName, InstanceId | Sort-Object FriendlyName | Format-Table -AutoSize",
+      "description": "Lista adaptadores e dispositivos Bluetooth pareados com o status de cada um."
+    },
+    {
+      "id": "usb_dispositivos",
+      "title": "USB: dispositivos conectados",
+      "category": "Hardware",
+      "destructive": false,
+      "command": "Get-PnpDevice -PresentOnly -EA 0 | Where-Object { $_.InstanceId -like 'USB*' } | Select-Object Status, Class, FriendlyName | Sort-Object Class, FriendlyName | Format-Table -AutoSize",
+      "description": "Lista os dispositivos USB presentes agora, agrupados por classe."
+    },
+    {
+      "id": "impressoras_listar",
+      "title": "Impressoras e fila de impressão",
+      "category": "Hardware",
+      "destructive": false,
+      "command": "Get-Printer -EA 0 | Select-Object Name, DriverName, PortName, PrinterStatus, Shared | Format-Table -AutoSize; Write-Host 'Fila de impressão:' -ForegroundColor Cyan; Get-Printer -EA 0 | ForEach-Object { Get-PrintJob -PrinterName $_.Name -EA 0 } | Select-Object PrinterName, DocumentName, JobStatus, SubmittedTime | Format-Table -AutoSize",
+      "description": "Lista impressoras instaladas, drivers, portas e trabalhos pendentes na fila."
+    },
+    {
+      "id": "monitores_info",
+      "title": "Monitores: modelo e resolução",
+      "category": "Hardware",
+      "destructive": false,
+      "command": "Get-CimInstance -Namespace root\\wmi -ClassName WmiMonitorID -EA 0 | ForEach-Object { [pscustomobject]@{ Fabricante = -join [char[]]($_.ManufacturerName -ne 0); Modelo = -join [char[]]($_.UserFriendlyName -ne 0); Serie = -join [char[]]($_.SerialNumberID -ne 0); Ano = $_.YearOfManufacture } } | Format-Table -AutoSize; Get-CimInstance Win32_VideoController -EA 0 | Select-Object Name, CurrentHorizontalResolution, CurrentVerticalResolution, CurrentRefreshRate | Format-Table -AutoSize",
+      "description": "Mostra fabricante, modelo e ano dos monitores e a resolução/taxa atual da placa de vídeo."
+    },
+    {
+      "id": "wifi_relatorio",
+      "title": "Wi-Fi: relatório de conexões",
+      "category": "Rede",
+      "destructive": false,
+      "command": "netsh wlan show wlanreport; $r = Join-Path $env:ProgramData 'Microsoft\\Windows\\WlanReport\\wlan-report-latest.html'; if (Test-Path $r) { Write-Host \"Relatório gerado: $r\" -ForegroundColor Green }",
+      "description": "Gera o relatório de Wi-Fi do Windows (quedas, sessões e erros dos últimos 3 dias)."
+    },
+    {
+      "id": "energia_relatorio",
+      "title": "Energia: relatório da bateria",
+      "category": "Sistema",
+      "destructive": false,
+      "command": "$f = Join-Path $env:TEMP 'mestre-battery-report.html'; powercfg /batteryreport /output $f; Write-Host \"Relatório: $f\" -ForegroundColor Green",
+      "description": "Gera o relatório de bateria (capacidade de projeto x atual e ciclos) em %TEMP%."
+    },
+    {
+      "id": "energia_sleepstudy",
+      "title": "Energia: estudo de suspensão",
+      "category": "Sistema",
+      "destructive": false,
+      "command": "$f = Join-Path $env:TEMP 'mestre-sleepstudy.html'; powercfg /sleepstudy /output $f; Write-Host \"Relatório: $f\" -ForegroundColor Green",
+      "description": "Gera o relatório de suspensão moderna (o que drenou bateria em standby) em %TEMP%."
+    },
+    {
+      "id": "ativacao_windows_status",
+      "title": "Windows: status da ativação",
+      "category": "Sistema",
+      "destructive": false,
+      "command": "cscript //nologo (Join-Path $env:SystemRoot 'System32\\slmgr.vbs') /xpr; Get-CimInstance SoftwareLicensingProduct -Filter \"PartialProductKey IS NOT NULL AND Name LIKE 'Windows%'\" -EA 0 | Select-Object Name, @{n='Licenciado';e={$_.LicenseStatus -eq 1}} | Format-Table -AutoSize",
+      "description": "Mostra se o Windows está ativado e o tipo de licença (não exibe a chave)."
+    },
+    {
+      "id": "bsod_ultimos_crashes",
+      "title": "Tela azul: últimos crashes",
+      "category": "Sistema",
+      "destructive": false,
+      "command": "Get-WinEvent -FilterHashtable @{LogName='System'; Id=41,1001} -MaxEvents 50 -EA 0 | Where-Object { $_.ProviderName -match 'Kernel-Power|WER-SystemErrorReporting' } | Select-Object -First 20 TimeCreated, Id, ProviderName, @{n='Mensagem';e={($_.Message -split \"`n\")[0]}} | Format-Table -AutoSize -Wrap; Get-ChildItem (Join-Path $env:SystemRoot 'Minidump') -EA 0 | Select-Object Name, LastWriteTime, Length | Format-Table -AutoSize",
+      "description": "Lista desligamentos inesperados (Kernel-Power 41), bugchecks (1001) e os minidumps existentes."
+    },
+    {
+      "id": "tpm_secureboot_status",
+      "title": "TPM e Secure Boot",
+      "category": "Segurança",
+      "destructive": false,
+      "command": "Get-Tpm -EA 0 | Select-Object TpmPresent, TpmReady, TpmEnabled, TpmActivated | Format-List; try { Write-Host \"Secure Boot ativo: $(Confirm-SecureBootUEFI)\" } catch { Write-Host 'Secure Boot: não suportado (BIOS legado) ou sem permissão.' -ForegroundColor Yellow }",
+      "description": "Verifica se o TPM está presente/pronto e se o Secure Boot está ativo."
+    },
+    {
+      "id": "defender_ameacas_detectadas",
+      "title": "Defender: ameaças detectadas",
+      "category": "Defender",
+      "destructive": false,
+      "command": "Get-MpThreatDetection -EA 0 | Sort-Object InitialDetectionTime -Descending | Select-Object -First 20 InitialDetectionTime, ThreatID, ActionSuccess, @{n='Recurso';e={$_.Resources -join '; '}} | Format-Table -AutoSize -Wrap; Get-MpThreat -EA 0 | Select-Object ThreatName, SeverityID, IsActive | Format-Table -AutoSize",
+      "description": "Histórico de detecções do Microsoft Defender e ameaças conhecidas (somente leitura)."
+    },
+    {
+      "id": "volumes_listar",
+      "title": "Volumes e BitLocker",
+      "category": "Disco",
+      "destructive": false,
+      "command": "Get-Volume -EA 0 | Where-Object DriveLetter | Select-Object DriveLetter, FileSystemLabel, FileSystem, HealthStatus, @{n='Tamanho(GB)';e={[math]::Round($_.Size/1GB,1)}}, @{n='Livre(GB)';e={[math]::Round($_.SizeRemaining/1GB,1)}} | Format-Table -AutoSize; Get-BitLockerVolume -EA 0 | Select-Object MountPoint, ProtectionStatus, EncryptionPercentage | Format-Table -AutoSize",
+      "description": "Lista volumes com espaço livre e saúde, e o estado de criptografia do BitLocker."
+    },
+    {
+      "id": "sombras_vss_listar",
+      "title": "Cópias de sombra (VSS)",
+      "category": "Backup",
+      "destructive": false,
+      "command": "vssadmin list shadows; vssadmin list shadowstorage",
+      "description": "Lista as cópias de sombra (pontos de restauração) e o espaço reservado para elas."
     }
   ],
   "templates": [

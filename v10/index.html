@@ -652,6 +652,8 @@
       }
       .cmd-card-web { background: linear-gradient(135deg, rgba(0,212,255,0.08), rgba(162,0,255,0.06)); border-color: rgba(0,212,255,0.25); }
       .cmd-card-web:hover { border-color: rgba(0,212,255,0.5); box-shadow: 0 0 14px rgba(0,212,255,0.15); }
+      .cmd-card code.prompt-text { white-space: pre-wrap; }
+      .cmd-card-repo a.btn { text-decoration: none; display: inline-flex; align-items: center; }
       .web-card-desc { font-size: 0.82rem; color: #8b949e; margin: 8px 0 12px; line-height: 1.35; }
       .cmd-card-new h4 { transition: 0.3s; }
       .cmd-card-new:hover {
@@ -1051,6 +1053,49 @@
             ["📊 Status do Computer Use", "__CU_STATUS__"],
           ],
         },
+        {
+          id: "cat-prompts",
+          label: "💬 Prompts",
+          cmds: [
+            ["🐢 Analisar lentidão do PC", "Analise a saída abaixo (processos, uso de CPU/RAM/disco e programas de inicialização) e diga, em ordem de impacto, o que está deixando o PC lento. Para cada item, explique o motivo e sugira uma ação segura e reversível:\n\n[cole aqui a saída]", "", { kind: "prompt" }],
+            ["🧾 Explicar erro do Visualizador de Eventos", "Explique em português simples o evento do Windows abaixo: o que significa, se é grave, qual a causa provável e quais passos seguros eu posso seguir para resolver:\n\n[cole aqui o evento: origem, ID e mensagem]", "", { kind: "prompt" }],
+            ["💥 Interpretar tela azul (BSOD)", "Tive uma tela azul. Com base no código de parada e no driver/módulo citados abaixo, explique a causa mais provável e liste diagnósticos em ordem (do mais simples ao mais avançado), sem sugerir nada destrutivo:\n\n[cole aqui o código de parada e o módulo]", "", { kind: "prompt" }],
+            ["🧹 Plano de limpeza segura", "Monte um plano de limpeza de disco seguro para o Windows a partir do relatório abaixo. Separe em: (1) pode apagar sem risco, (2) apagar com cuidado, (3) não apagar. Explique o porquê de cada item:\n\n[cole aqui o relatório de uso de disco]", "", { kind: "prompt" }],
+            ["🌐 Diagnóstico de rede", "Analise os resultados abaixo (ipconfig, ping, tracert, DNS) e diga onde está o problema de conexão: Wi-Fi/cabo, roteador, DNS ou provedor. Indique o próximo teste a fazer:\n\n[cole aqui os resultados]", "", { kind: "prompt" }],
+            ["🚀 Auditoria de inicialização", "Revise a lista de programas que iniciam com o Windows abaixo. Para cada um, diga o que é, se é necessário e se pode ser desativado com segurança:\n\n[cole aqui a lista]", "", { kind: "prompt" }],
+            ["🛡️ Checklist de segurança", "Com base no status abaixo (Defender, firewall, atualizações, TPM/Secure Boot, contas), monte um checklist de segurança do meu PC com o que está OK, o que precisa de atenção e como corrigir:\n\n[cole aqui o status]", "", { kind: "prompt" }],
+            ["📜 Revisar script PowerShell", "Revise o script PowerShell abaixo. Explique o que ele faz linha a linha, aponte riscos (comandos destrutivos, downloads, alterações no registro) e sugira melhorias. Não execute nada:\n\n[cole aqui o script]", "", { kind: "prompt" }],
+            ["🔋 Analisar relatório de bateria", "Analise o relatório de bateria abaixo (powercfg /batteryreport). Diga a saúde atual da bateria comparando capacidade de projeto e capacidade total, e se já vale a pena trocar:\n\n[cole aqui o relatório]", "", { kind: "prompt" }],
+            ["🧩 Avaliar extensões e plugins", "Avalie a lista de extensões/plugins abaixo (navegador, VS Code, Notepad++). Aponte as desnecessárias, as duplicadas e as que podem ser um risco de privacidade ou desempenho:\n\n[cole aqui a lista]", "", { kind: "prompt" }],
+          ],
+        },
+        {
+          id: "cat-repos-estrela",
+          label: "⭐ Repositórios Estrela",
+          cmds: [
+            ["microsoft/copilot-sdk", "git clone https://github.com/microsoft/copilot-sdk.git", "", { kind: "repo", url: "https://github.com/microsoft/copilot-sdk", desc: "SDK multiplataforma para integrar o agente do GitHub Copilot em apps e serviços." }],
+            ["microsoft/JARVIS", "git clone https://github.com/microsoft/JARVIS.git", "", { kind: "repo", url: "https://github.com/microsoft/JARVIS", desc: "Sistema que conecta LLMs à comunidade de modelos de ML (HuggingGPT)." }],
+            ["github/spec-kit", "uv tool install specify-cli --from git+https://github.com/github/spec-kit.git", "", { kind: "repo", url: "https://github.com/github/spec-kit", desc: "Kit para desenvolvimento guiado por especificação (SDD) com agentes de IA." }],
+            ["BrowserMCP/mcp", "npx @browsermcp/mcp@latest", "", { kind: "repo", url: "https://github.com/BrowserMCP/mcp", desc: "Servidor MCP que permite a apps de IA controlar o seu navegador." }],
+            ["femto/mcp-chrome", "git clone https://github.com/femto/mcp-chrome.git", "", { kind: "repo", url: "https://github.com/femto/mcp-chrome", desc: "Servidor MCP para automação do Chrome." }],
+            ["modelcontextprotocol/rust-sdk", "cargo add rmcp", "", { kind: "repo", url: "https://github.com/modelcontextprotocol/rust-sdk", desc: "SDK oficial em Rust do Model Context Protocol." }],
+            ["openai/codex-plugin-cc", "git clone https://github.com/openai/codex-plugin-cc.git", "", { kind: "repo", url: "https://github.com/openai/codex-plugin-cc", desc: "Usa o Codex a partir do Claude Code para revisar código ou delegar tarefas." }],
+            ["deepseek-ai/deepseek-harness", "git clone https://github.com/deepseek-ai/deepseek-harness.git", "", { kind: "repo", url: "https://github.com/deepseek-ai/deepseek-harness", desc: "DeepSeek Harness: tudo é plugin (base do painel dsh)." }],
+            ["vercel/ai", "npm install ai", "", { kind: "repo", url: "https://github.com/vercel/ai", desc: "AI SDK para TypeScript: biblioteca para apps e agentes com IA." }],
+            ["simonw/files-to-prompt", "pipx install files-to-prompt", "", { kind: "repo", url: "https://github.com/simonw/files-to-prompt", desc: "Concatena uma pasta de arquivos num único prompt para LLMs." }],
+            ["openinterpreter/openinterpreter", "git clone https://github.com/openinterpreter/openinterpreter.git", "", { kind: "repo", url: "https://github.com/openinterpreter/openinterpreter", desc: "Agente de código para modelos abertos." }],
+            ["rasbt/LLMs-from-scratch", "git clone https://github.com/rasbt/LLMs-from-scratch.git", "", { kind: "repo", url: "https://github.com/rasbt/LLMs-from-scratch", desc: "Implementa um LLM estilo ChatGPT em PyTorch, passo a passo." }],
+            ["JanDeDobbeleer/oh-my-posh", "winget install JanDeDobbeleer.OhMyPosh", "", { kind: "repo", url: "https://github.com/JanDeDobbeleer/oh-my-posh", desc: "Prompt de terminal personalizável e rápido para qualquer shell." }],
+            ["BornToBeRoot/NETworkManager", "winget install BornToBeRoot.NETworkManager", "", { kind: "repo", url: "https://github.com/BornToBeRoot/NETworkManager", desc: "Ferramenta completa para gerenciar redes e diagnosticar problemas." }],
+            ["esnet/iperf", "git clone https://github.com/esnet/iperf.git", "", { kind: "repo", url: "https://github.com/esnet/iperf", desc: "iperf3: mede a largura de banda TCP, UDP e SCTP." }],
+            ["librespeed/speedtest", "git clone https://github.com/librespeed/speedtest.git", "", { kind: "repo", url: "https://github.com/librespeed/speedtest", desc: "Teste de velocidade auto-hospedado em HTML5." }],
+            ["VirusTotal/vt-cli", "winget install VirusTotal.vt-cli", "", { kind: "repo", url: "https://github.com/VirusTotal/vt-cli", desc: "Linha de comando do VirusTotal (requer chave de API própria)." }],
+            ["EUCPilots/evergreen-module", "Install-Module -Name Evergreen -Scope CurrentUser", "", { kind: "repo", url: "https://github.com/EUCPilots/evergreen-module", desc: "Módulo PowerShell com as versões e links mais recentes de apps comuns." }],
+            ["cloudflare/skills", "npx skills add cloudflare/skills", "", { kind: "repo", url: "https://github.com/cloudflare/skills", desc: "Skills que ensinam agentes a construir na Cloudflare." }],
+            ["firecrawl/skills", "npx skills add firecrawl/skills", "", { kind: "repo", url: "https://github.com/firecrawl/skills", desc: "Skills de busca, scraping e navegação web para agentes." }],
+            ["anthropics/skills", "npx skills add anthropics/skills", "", { kind: "repo", url: "https://github.com/anthropics/skills", desc: "Repositório público de Agent Skills." }],
+          ],
+        },
       ];
       const opsById = new Map();
       let homeCategories = [];
@@ -1173,6 +1218,31 @@
           const opAttr = opId ? ` data-op-id="${escapeHtml(opId)}"` : "";
           const dis = off ? " disabled" : "";
 
+          // Prompts e repositórios são só para copiar: sem Executar, Fila ou favorito (o chip roda runCmd).
+          const meta = cmd[3];
+          if (meta && meta.kind === "prompt") {
+            cards += `<div class="cmd-card cmd-card-web cmd-card-prompt">
+      <h4>${title}</h4>
+      <code id="${uid}" class="prompt-text">${esc}</code>
+      <div class="btn-row">
+        <button class="btn btn-copy" onclick="copyById('${uid}')">📋 Copiar prompt</button>
+      </div>
+    </div>`;
+            return;
+          }
+          if (meta && meta.kind === "repo") {
+            const url = /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+$/.test(meta.url || "") ? meta.url : "";
+            cards += `<div class="cmd-card cmd-card-web cmd-card-repo">
+      <h4>${title}</h4>
+      <p class="web-card-desc">${escapeHtml(meta.desc || "")}</p>
+      <code id="${uid}">${esc}</code>
+      <div class="btn-row">
+        <button class="btn btn-copy" onclick="copyById('${uid}')">📋 Copiar instalação</button>
+        ${url ? `<a class="btn btn-run" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">🔗 Abrir repositório</a>` : ""}
+      </div>
+    </div>`;
+            return;
+          }
           if (cmd[1] === "__WEB_SEARCH__") {
             cards += `<div class="cmd-card ${newClass} cmd-card-web">
       <span class="fav-star ${isFav}" onclick="toggleFavorite('${uid}', this)">${star}</span>
