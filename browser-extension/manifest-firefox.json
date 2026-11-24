@@ -7,11 +7,12 @@
     }
   },
   "name": "Mestre do PC - Integração",
-  "version": "1.0.2",
-  "description": "Integra o navegador com o Mestre do PC V10 e outros apps locais como Chat Hub.",
+  "version": "1.2.0",
+  "description": "Integra o navegador ao Mestre do PC: abas, speedtest, extrair dados, JSON, design, modo dev e administração do PC.",
   "permissions": [
     "storage",
     "activeTab",
+    "tabs",
     "contextMenus",
     "scripting",
     "notifications"
@@ -42,6 +43,8 @@
   },
   "options_page": "options.html",
   "optional_host_permissions": [
-    "http://127.0.0.1/*"
+    "http://127.0.0.1/*",
+    "https://*/*",
+    "http://*/*"
   ]
 }

@@ -1,5 +1,45 @@
 # Mestre do PC V11 - Changelog
 
+## Não lançado — DeepSeek Harness (dsh) nativo · 2026-11-11
+
+### 🧠 Nova capacidade
+
+- `v10/dsh-bridge.js` + `v10/dsh-routes.js`: ponte nativa com o [DeepSeek Harness](https://www.npmjs.com/package/@deepseek-ai/dsh) (`@deepseek-ai/dsh@0.2.2-rc.1`, MIT, developer preview). O launcher lança `headless --json --patch` e lê o NDJSON (`session`, `text`, `thinking`, `tool_call`, `tool_result`, `final`). Rotas `GET /dsh/status`, `POST /dsh/run` (+ job em `GET /dsh/job`).
+- Cascata de provedores grok → 9router → opencode → opencode-go → ollama → deepseek, só com credencial resolvível (ambiente ou `.env.local`). `provider` no corpo força o primeiro degrau; `retry: true` habilita rodadas extras de 300 s.
+- Documentação: `docs/DEEPSEEK-HARNESS.md`.
+
+### 🔒 Segurança
+
+- `dsh` executa shell e edita arquivos: `cwd` precisa ser absoluto, existente, sem `..`, dentro das raízes permitidas (`MPC_DSH_ALLOWED_ROOTS` para extras) e fora de diretórios de sistema. Sem `--add-dir` extra.
+- Chave do provedor nunca entra no patch, no log nem na resposta: o YAML guarda só `apiKeyEnv`, o valor vai pelo ambiente do filho.
+- `DSH_HOME` isolado (`%LOCALAPPDATA%\MestreDoPC\dsh-home`), `DSH_TELEMETRY_MODE=DISABLED` e row `session-log-deepseek` desligada — o upload de log de sessão do dsh (8 MiB/request) fica fora.
+- `dsh_run` grava nível `SECURITY` em `logs/audit/`; saída limitada a ~2 MiB / 200 eventos; no máximo 2 jobs simultâneos e 30 min de retenção.
+
+### ✅ Testes
+
+- `mcp-server/test/dsh-bridge.test.js` (6): status sem pacote instalado, ordem da cadeia, validação de entrada/`cwd`, parser NDJSON, avanço da cascata e retry com espera de 300 s.
+
+## Não lançado — Engenharia Reversa (REA) nativa
+
+### 🔬 Nova capacidade
+
+- Skill `engenharia-reversa` em `v10/chat-integrado/chat-skills.json`: aparece na biblioteca de Skills, no atalho `/` e na cápsula `🔬 Engenharia reversa` do chat. O corpo traz o método do REA (quando usar, quando **não** usar, regras de alvo, disciplina de evidência observado/inferido/desconhecido).
+- `v10/rea-bridge.js` + `v10/rea-routes.js`: ponte nativa com o REA. Rotas `GET /rea/status`, `POST /rea/doctor`, `POST /rea/analyze` (+ job em `GET /rea/job`).
+- Tools do chat: `rea_status`, `rea_doctor`, `rea_analisar_app_js` (painel Ferramentas).
+- Menu de comandos: categoria **Engenharia Reversa (REA)** com `eng_reversa_status`, `eng_reversa_doctor` e o template `eng_reversa_analisar_app_js` (`{{CAMINHO}}`). O registry gera as tools MCP sozinho.
+- `scripts/rea-cli.mjs`: CLI usado pela whitelist e por testes.
+
+### 🔒 Segurança
+
+- Análise é **read-only**: o artefato é lido, nunca executado.
+- Alvo exige caminho absoluto dentro de raízes permitidas (projeto, perfil, TEMP, Program Files; extras em `REA_ALLOWED_ROOTS`). Caminho com `"`, `&`, `|`, `<`, `>`, `^`, `%`, `!` é recusado duas vezes (template + ponte).
+- `rea_analyze` e `rea_doctor` gravam nível `SECURITY` em `logs/audit/`; saída e tempo são limitados.
+
+### ✅ Testes
+
+- `mcp-server/test/rea-bridge.test.js` (5): status, alvo relativo/inexistente/fora das raízes, metacaracteres, alvo válido.
+- `mcp-server/test/rea-operations.test.js` (4): operações da whitelist, resolução do template, recusa de injeção, skill do chat.
+
 ## Versão 11.2.1 - Cliente MCP fail-closed
 
 ### 🔒 Segurança

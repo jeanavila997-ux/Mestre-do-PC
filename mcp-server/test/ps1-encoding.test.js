@@ -11,6 +11,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
@@ -22,7 +23,8 @@ function trackedPs1Files() {
   return execFileSync("git", ["ls-files", "*.ps1"], { cwd: root, encoding: "utf8" })
     .split("\n")
     .map((s) => s.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter((rel) => existsSync(join(root, rel)));
 }
 
 test("todo .ps1 com caractere nao-ASCII tem BOM UTF-8", () => {
@@ -55,7 +57,7 @@ test("install.ps1 prefere pwsh ao se auto-elevar", () => {
 });
 
 test("os .bat gerados para o cliente preferem pwsh", () => {
-  const src = readFileSync(join(root, "scripts", "build-package.js"), "utf8");
+  const src = readFileSync(join(root, "scripts", "build-package.cjs"), "utf8");
 
   const deteccoes = src.match(/where pwsh/g) ?? [];
   assert.equal(
@@ -64,7 +66,7 @@ test("os .bat gerados para o cliente preferem pwsh", () => {
     "esperado um 'where pwsh' no .bat do instalador e outro no do desinstalador"
   );
 
-  for (const alvo of ["instalar", "desinstalar"]) {
+  for (const alvo of ["install", "uninstall"]) {
     assert.match(
       src,
       new RegExp(`pwsh -NoProfile[^\\n]*${alvo}\\.ps1`),

@@ -15,10 +15,9 @@ Assistente local de diagnóstico e manutenção do Windows. Clientes de IA **nun
 | Superfície | Onde | Porta / URL |
 |---|---|---|
 | Launcher + UI desktop | `v10/launcher.js`, `v10/index.html` | `http://127.0.0.1:7777` |
-| PWA mobile | `v10/mobile/` (espelho em `dist/site/mobile/`) | `http://127.0.0.1:7777/mobile/` |
 | MCP | `mcp-server/index.js` (stdio) | chama o launcher via HTTP |
 | GitHub Pages | `dist/site/` | `https://jeanavila997-ux.github.io/Mestre-do-PC-V10/` |
-| VPS (site + PWA) | `deploy/vps/` | `https://mestre.72-62-11-116.sslip.io` |
+| VPS (site estático) | `deploy/vps/` | `https://mestre.72-62-11-116.sslip.io` |
 
 O launcher **só escuta `127.0.0.1`**. `MPC_HOST` diferente de `127.0.0.1` aborta o processo. Na VPS sobe só o site estático em `127.0.0.1:7780` atrás do Traefik — o launcher Windows continua no PC.
 
@@ -27,7 +26,7 @@ O launcher **só escuta `127.0.0.1`**. `MPC_HOST` diferente de `127.0.0.1` abort
 ## Arquitetura (não quebre este fluxo)
 
 ```
-cliente (UI / MCP / extensão / mobile)
+cliente (UI / MCP / extensão)
     │  HTTP + X-Mestre-Client (+ token quando exigido)
     ▼
 v10/launcher.js          127.0.0.1:7777
@@ -77,7 +76,7 @@ pwsh -NoProfile -File scripts/deploy-vps.ps1               # scp + compose
 
 Atalho desktop: `.\start-mestre-v10.ps1`. Instalador: `install.ps1` (Admin) — cria **somente `.lnk`**. Código fica em `$InstallDir`.
 
-CI (`.github/workflows/ci.yml`): Node 22.x e 24.x, `npm ci` na raiz e em `mcp-server/`, `npm test`, `node --check` em launcher / origin-policy / mobile / mcp.
+CI (`.github/workflows/ci.yml`): Node 22.x e 24.x, `npm ci --ignore-scripts` na raiz e em `mcp-server/` (na raiz, o postinstall do `@qwen-code/cua-sdk` quebra o Authenticode no runner Windows e o `postinstall` do próprio pacote reinstala o mcp-server; o mcp-server não depende mais do cua-sdk — o import resolve por `v10/` ou pela raiz). No PC o `npm ci` local segue com scripts. Depois: `npm test`, `node --check` em launcher / origin-policy / mobile / mcp.
 
 ---
 
@@ -93,7 +92,7 @@ CI (`.github/workflows/ci.yml`): Node 22.x e 24.x, `npm ci` na raiz e em `mcp-se
 8. **Não commite segredos.** `.env`, `.keys/`, tokens, `sk-…`. Chave OpenAI do login ChatGPT fica no `localStorage` do browser (`mestre-openai-key`), não no repo.
 9. **Não desabilite o Defender** nem crie exclusões sem o Jean pedir.
 10. **Não gere APK / não instale Java / Bubblewrap** neste ciclo, a menos que o Jean peça de novo. “Download Android” = PWA + URL pública.
-11. **Não commite leftovers** sem confirmação: `v10/chat-integrado/chat-integrado.js`, `v10/chat/Soul.md`, `v10/chat/chat-module.js`, `v10/chat/chat-template.html`, `docs/superpowers/`.
+11. **Não commite leftovers** sem confirmação: `docs/superpowers/`. `v10/chat-integrado/chat-integrado.js` e `v10/chat/Soul.md` são o chat da UI e a persona — não são leftovers.
 12. Use `MESTRE_PROJETO_PATH`. Não grave `C:\Users\Jean\...` em HTML/scripts versionados.
 
 ---
@@ -120,10 +119,12 @@ Testes que sobem o launcher: importar `mcp-server/test/helpers/launcher-test-env
 | `v10/launcher.js` | Backend HTTP. Cache-Control: `no-store`. |
 | `v10/allowed-operations.json` | Whitelist. |
 | `v10/operation-registry.js` | Resolve `{id}` / `{id,params}` / `{cmd}`. |
+| `v10/rea-bridge.js` | Ponte do REA (engenharia reversa): alvo validado, análise read-only, auditoria. |
+| `v10/rea-routes.js` | Rotas `/rea/*` (status, doctor, analyze + job). |
+| `v10/dsh-bridge.js` + `v10/dsh-routes.js` | DeepSeek Harness (dsh): tarefa headless em cascata de provedores e rotas `/dsh/*`. |
 | `v10/index.html` | SPA desktop, sem bundler. |
-| `v10/mobile/` | PWA. Ao mudar, copie para `dist/site/mobile/`. |
-| `v10/chat/` | Chat da UI (`initChat` → `#chat-root`). |
-| `v10/chat-integrado/` | Chat Integrado; skills em `chat-skills.json`. |
+| `v10/chat/` | Persona (`Soul.md`) e módulo legado só de `example-integration.html`. A home não monta esse módulo. |
+| `v10/chat-integrado/` | Chat da UI; skills em `chat-skills.json`. |
 | `v10/security/origin-policy.js` | Origens confiáveis (VPS, sslip.io, github.io, trycloudflare). |
 | `mcp-server/` | MCP stdio + testes. |
 | `mcp-server/chrome-devtools-bridge.js` | Tools `chrome_*`. |
@@ -136,16 +137,12 @@ Testes que sobem o launcher: importar `mcp-server/test/helpers/launcher-test-env
 | `logs/audit/` | Auditoria real — testes **escrevem aqui**. |
 | `.agents/`, `data/` | gitignored. |
 
-UI desktop não tem build. Edite HTML/CSS/JS servidos. Mobile: altere `v10/mobile/` **e** o espelho `dist/site/mobile/` na mesma mudança (Pages/VPS leem o `dist`).
+UI desktop não tem build. Edite HTML/CSS/JS servidos. O projeto não possui versão mobile.
 
 ---
 
-## Mobile / Android / VPS
+## VPS
 
-- PWA em `/mobile/`. Manifest + `sw.js` no próprio diretório mobile.
-- URL pública Android (PWA): `https://jeanavila997-ux.github.io/Mestre-do-PC-V10/mobile/`
-- URL VPS: `https://mestre.72-62-11-116.sslip.io/mobile/`
-- Atalhos embutidos: `BUILTIN_OPS` (Cmds) e `BUILTIN_PROMPTS` (Mais + chips) em `v10/mobile/app.js`. IDs = whitelist real.
 - Deploy VPS: unidade = pasta completa em `/opt/apps/mestre-do-pc`. SSH `root@72.62.11-116` com `%USERPROFILE%\.ssh\id_ed25519_vps` (Host `srv1483039`). Firewall só 22/80/443. Porta 7780 só em loopback.
 - SSH recusa `publickey` até a chave pública estar no hPanel (Hostinger → VPS → Settings → SSH keys). Pública documentada em `docs/VPS-DEPLOY.md`. **Não reinicie a VPS** para “tentar de novo”.
 
@@ -197,13 +194,24 @@ Invoke-RestMethod http://127.0.0.1:7777/ping
 
 # UI
 # http://127.0.0.1:7777/
-# http://127.0.0.1:7777/mobile/
 # http://127.0.0.1:7777/login.html   (bloco ChatGPT)
 
 # Header de smoke na UI
 # Invoke-WebRequest http://127.0.0.1:7777/run -Headers @{ 'X-Mestre-Client'='v10-web' }
 ```
 
-Reinicie **só** o processo Node do launcher. `v10/restart-launcher.ps1` mata **todo** Node da máquina — não use sem aviso.
+Reinicie **só** o processo Node do launcher com `scripts/restart-launcher.ps1`. O script antigo em `v10/restart-launcher.ps1` matava todo Node e foi removido.
 
 Skill de auditoria: `/auditar-mestre-pc` (`~\.grok\skills\auditar-mestre-pc`).
+
+---
+
+## Cursor Cloud specific instructions
+
+O Cloud Agent é Linux. O painel HTTP sobe; jobs da whitelist não, porque o launcher chama `powershell.exe`.
+
+- Node da imagem já atende `engines` (`>=22.13`). Instale como o CI, e também o painel: `npm ci --ignore-scripts` na raiz, depois `npm ci --ignore-scripts --prefix mcp-server` e `npm ci --prefix v10`. O `--ignore-scripts` da raiz evita o `postinstall`, que reinstala o `mcp-server` fora do `npm ci`, e o postinstall do `@qwen-code/cua-sdk` (Authenticode no Windows do Actions). O mcp-server não declara mais o cua-sdk; o facade importa de `v10/computer-use-client.js` e resolve `v10/node_modules` ou `node_modules` da raiz. No PC do Jean, `npm ci` em `mcp-server` continua com scripts.
+- Suba com `node v10/launcher.js`. Só escuta `127.0.0.1:7777` (`MPC_HOST` diferente aborta). `GET /ping` devolve `status: ok`. `POST /run` sem `X-Mestre-Client` devolve 403.
+- No primeiro boot o launcher grava `MESTRE_LOCAL_MCP_TOKEN` em `.env.local` (gitignored). Não commite esse arquivo.
+- Antes de `npm test` em `mcp-server`, pare o processo da porta 7777. A suíte sobe launchers próprios e escreve em `logs/audit/`.
+- Ollama, MySQL, Supabase e chave OpenAI ficam de fora. O smoke do Ollama só roda com `RUN_OLLAMA_SMOKE=1`. Não instale PowerShell para o fluxo padrão.

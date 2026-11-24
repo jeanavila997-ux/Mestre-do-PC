@@ -4,6 +4,25 @@
  */
 
 import { getSettings, fetchLocal as fetchWithTimeout } from "./settings.js";
+import {
+  summarizeMemory,
+  closeJunkTabs,
+  closeDuplicateTabs,
+  discardInactiveTabs,
+  openSpeedtest,
+} from "./tab-actions.js";
+import { ADMIN_OPS } from "./tools-core.js";
+import { applySavedDesign, hasAutoDesignPermission, openToolsWindow } from "./tools-actions.js";
+
+const TOOL_MENU = [
+  { id: "extrair", title: "📋 Extrair lista de informações" },
+  { id: "json", title: "🧾 JSON / resumo em JSON" },
+  { id: "design", title: "🎨 Mudar design da página" },
+  { id: "dev", title: "🧪 Modo dev" },
+  { id: "devtools", title: "🛠️ DevTools e extensões de dev" },
+  { id: "notebooklm", title: "📓 Abrir NotebookLM" },
+  { id: "apps", title: "🗒️ OneNote e nota da página" },
+];
 
 async function sendToLauncher(id, params = {}) {
   const settings = await getSettings();
@@ -54,57 +73,95 @@ async function sendSelectionToAI(text, pageUrl, pageTitle) {
   return data.message?.content || "Sem resposta.";
 }
 
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({
-    id: "mestre-diagnostico",
-    title: "🖥️ Mestre do PC: Diagnóstico rápido",
-    contexts: ["page", "selection"],
+function notify(title, message) {
+  return chrome.notifications.create({
+    type: "basic",
+    iconUrl: "icons/icon128.png",
+    title,
+    message: String(message).slice(0, 180),
   });
-  chrome.contextMenus.create({
-    id: "mestre-limpeza",
-    title: "🧹 Mestre do PC: Limpeza rápida",
-    contexts: ["page", "selection"],
-  });
-  chrome.contextMenus.create({
-    id: "mestre-analisar-texto",
-    title: "🧠 Mestre do PC: Analisar com IA",
-    contexts: ["selection"],
-  });
+}
+
+chrome.runtime.onInstalled.addListener(async () => {
+  await chrome.contextMenus.removeAll();
+  const items = [
+    { id: "mestre-diagnostico", title: "🖥️ Mestre do PC: Diagnóstico rápido", contexts: ["page", "selection"] },
+    { id: "mestre-limpeza", title: "🧹 Mestre do PC: Limpeza rápida", contexts: ["page", "selection"] },
+    { id: "mestre-speedtest", title: "⚡ Mestre do PC: Speedtest", contexts: ["page"] },
+    { id: "mestre-abas-memoria", title: "🧠 Mestre do PC: Memória das abas", contexts: ["page"] },
+    { id: "mestre-fechar-lixo", title: "🗑️ Mestre do PC: Fechar abas sucata", contexts: ["page"] },
+    { id: "mestre-duplicadas", title: "📑 Mestre do PC: Fechar duplicadas", contexts: ["page"] },
+    { id: "mestre-discard", title: "💤 Mestre do PC: Descartar abas inativas", contexts: ["page"] },
+    { id: "mestre-analisar-texto", title: "🧠 Mestre do PC: Analisar com IA", contexts: ["selection"] },
+  ];
+  for (const item of items) {
+    chrome.contextMenus.create(item);
+  }
+  chrome.contextMenus.create({ id: "mestre-ferramentas", title: "🧰 Mestre do PC: Ferramentas", contexts: ["page", "selection"] });
+  for (const t of TOOL_MENU) {
+    chrome.contextMenus.create({ id: "mestre-tool-" + t.id, parentId: "mestre-ferramentas", title: t.title, contexts: ["page", "selection"] });
+  }
+  chrome.contextMenus.create({ id: "mestre-admin", title: "🛡️ Mestre do PC: Administração", contexts: ["page", "selection"] });
+  chrome.contextMenus.create({ id: "mestre-admin-painel", parentId: "mestre-admin", title: "Abrir painel de administração", contexts: ["page", "selection"] });
+  for (const op of ADMIN_OPS) {
+    chrome.contextMenus.create({ id: "mestre-admin-op-" + op.id, parentId: "mestre-admin", title: op.titulo, contexts: ["page", "selection"] });
+  }
+});
+
+// Com a permissão opcional concedida, reaplica o design salvo a cada carregamento.
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  if (changeInfo.status !== "complete" || !tab?.url) return;
+  try {
+    if (await hasAutoDesignPermission()) await applySavedDesign(tabId, tab.url);
+  } catch { /* sem permissão para esta aba */ }
 });
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   try {
+    const menuId = String(info.menuItemId);
+    if (menuId === "mestre-tool-notebooklm") {
+      await chrome.tabs.create({ url: "https://notebooklm.google.com/" });
+      return;
+    }
+    if (menuId.startsWith("mestre-tool-")) {
+      await openToolsWindow(menuId.slice("mestre-tool-".length), tab);
+      return;
+    }
+    if (menuId === "mestre-admin-painel") {
+      await openToolsWindow("admin", tab);
+      return;
+    }
+    if (menuId.startsWith("mestre-admin-op-")) {
+      // A confirmação acontece no painel; aqui só abre com a operação escolhida.
+      await openToolsWindow("admin", tab, { op: menuId.slice("mestre-admin-op-".length) });
+      return;
+    }
     if (info.menuItemId === "mestre-diagnostico") {
       await sendToLauncher("diagnostico_completo");
-      await chrome.notifications.create({
-        type: "basic",
-        iconUrl: "icons/icon128.png",
-        title: "Mestre do PC",
-        message: "Diagnóstico iniciado no app local.",
-      });
+      await notify("Mestre do PC", "Diagnóstico iniciado no app local.");
     } else if (info.menuItemId === "mestre-limpeza") {
       await sendToLauncher("limpeza_rapida_completa");
-      await chrome.notifications.create({
-        type: "basic",
-        iconUrl: "icons/icon128.png",
-        title: "Mestre do PC",
-        message: "Limpeza rápida iniciada no app local.",
-      });
+      await notify("Mestre do PC", "Limpeza rápida iniciada no app local.");
+    } else if (info.menuItemId === "mestre-speedtest") {
+      await openSpeedtest();
+      await notify("Mestre do PC", "Speedtest aberto (fast.com + Cloudflare).");
+    } else if (info.menuItemId === "mestre-abas-memoria") {
+      const s = await summarizeMemory();
+      await notify("Mestre do PC", `Abas: ${s.total} · descartadas: ${s.discarded} · pin: ${s.pinned}.`);
+    } else if (info.menuItemId === "mestre-fechar-lixo") {
+      const r = await closeJunkTabs();
+      await notify("Mestre do PC", `Fechou ${r.closed} aba(s) sucata.`);
+    } else if (info.menuItemId === "mestre-duplicadas") {
+      const r = await closeDuplicateTabs();
+      await notify("Mestre do PC", `Fechou ${r.closed} duplicada(s).`);
+    } else if (info.menuItemId === "mestre-discard") {
+      const r = await discardInactiveTabs();
+      await notify("Mestre do PC", `Descartou ${r.discarded} aba(s) inativa(s).`);
     } else if (info.menuItemId === "mestre-analisar-texto" && info.selectionText) {
       const answer = await sendSelectionToAI(info.selectionText, tab.url, tab.title);
-      await chrome.notifications.create({
-        type: "basic",
-        iconUrl: "icons/icon128.png",
-        title: "Mestre do PC - Análise",
-        message: answer.slice(0, 120) + (answer.length > 120 ? "..." : ""),
-      });
+      await notify("Mestre do PC - Análise", answer);
     }
   } catch (e) {
-    await chrome.notifications.create({
-      type: "basic",
-      iconUrl: "icons/icon128.png",
-      title: "Mestre do PC - Erro",
-      message: e.message,
-    });
+    await notify("Mestre do PC - Erro", e.message);
   }
 });

@@ -75,6 +75,87 @@ Ou execute o script de inicialização rápida:
 
 ---
 
+## 🤖 MESTRE EXTENSSAO — CLI local com IA
+
+A CLI usa o Ollama configurado em `.env.local`, responde em português e grava
+logs rotativos em `logs/mestre-cli.log`. Para ativar, copie `.env.example` para
+`.env.local` e ajuste o modelo desejado.
+
+O modelo da CLI vem de `MESTRE_CLI_MODEL` (padrão `qwen3.5:4b-text`). `OLLAMA_MODEL`
+é o modelo do launcher e do servidor MCP (padrão `qwen2.5-coder:3b-instruct`) e só
+vale para a CLI quando `MESTRE_CLI_MODEL` está vazio.
+
+```powershell
+Copy-Item .env.example .env.local
+npm run cli:status
+npm run ia -- "Analise a arquitetura do Mestre do PC"
+```
+
+Também é possível escolher o modelo ou receber o JSON completo:
+
+```powershell
+npm run ia -- "Explique este erro" --model deepseek-coder:6.7b
+npm run ia -- "Resuma este projeto" --json
+```
+
+Use `npm run test:cli` para validar somente a MESTRE EXTENSSAO.
+
+### Memória local do Obsidian
+
+O MCP expõe `sync_obsidian` e `search_obsidian`. O vault padrão é
+`%USERPROFILE%\Projetos`, configurável por `OBSIDIAN_VAULT_PATH`. O índice fica em
+`v10/data/memories`, fora do Git, e usa `nomic-embed-text` no endpoint local exclusivo
+`OBSIDIAN_OLLAMA_URL` (padrão `http://127.0.0.1:11434`). Se o modelo ainda não existir,
+instale-o separadamente com `ollama pull nomic-embed-text`.
+
+```powershell
+# Atualiza somente os arquivos novos ou modificados
+npm run ia -- --sincronizar-memoria
+
+# Usa até cinco evidências locais, com fonte e data, na resposta
+npm run ia -- "O que decidimos sobre a arquitetura?" --memoria
+```
+
+Pastas protegidas, `Referencias/`, dependências, links simbólicos e arquivos sensíveis
+ficam fora do índice. As notas são enviadas ao modelo como evidências não confiáveis,
+não como instruções. A CLI recusa modelo remoto ao usar `--memoria`; no MCP, os trechos
+retornados são entregues ao cliente que fez a chamada. Quando há resultados, a CLI marca
+a resposta com `[Memória Obsidian] 🧠`.
+
+No Chat Integrado, a busca automática usa o índice existente somente quando o provedor é
+local e `search_obsidian` está ativa; ela não reindexa o vault a cada mensagem. O catálogo
+ao vivo separa chat de embeddings e pode ser conferido com `npm run models:live`.
+
+### Voz Kokoro
+
+As respostas do chat têm o botão **🔊 Kokoro**, que usa o Voicebox local em
+`http://127.0.0.1:17493` e o perfil Dora pt-BR. A síntese só ocorre após o clique. A primeira
+ativação pede consentimento explícito para o possível download do modelo Kokoro (~350 MB);
+cancelar não chama o serviço. Nenhum áudio ou texto é enviado a um endpoint remoto por essa
+integração.
+
+---
+
+## OpenCode Go no chat
+
+O chat integrado pode usar o [OpenCode Go](https://opencode.ai/v2/docs/console/go/) (assinatura v2) como provedor. A chamada fica no launcher, no mesmo cliente HTTP dos outros provedores compatíveis com OpenAI: `POST {base}/chat/completions` com `Authorization: Bearer`.
+
+Copie as variáveis para `.env.local` (nunca commite a chave):
+
+| Variável | Função |
+|---|---|
+| `OPENCODE_GO_API_KEY` | Chave do console (`oc_sk_…`). Sem ela o provedor fica **não configurado**. |
+| `OPENCODE_GO_BASE_URL` | Opcional. Padrão: `https://opencode.ai/inference/go/openai/v1`. É o único jeito de apontar outro host. A URL salva na tela só é aceita em `https` com host `opencode.ai`. |
+| `OPENCODE_GO_MODEL` | Opcional. Padrão: `kimi-k2.7-code`. |
+
+No chat, abra o seletor de modelo e escolha **OpenCode Go**. A página **Configurar API** (`/chaves-api.html`) mostra o mesmo estado. O Go exige o header `x-opencode-session`; o launcher envia um id estável por conversa.
+
+## JARVIS no chat integrado
+
+O JARVIS aparece no mesmo seletor de provedores do chat. No PC, use `JARVIS_URL=http://127.0.0.1:3200`; não é necessário login. Para a VPS, use uma URL HTTPS e mantenha `JARVIS_USER` e `JARVIS_PASS` apenas no `.env.local` do launcher. A interface nunca recebe a senha.
+
+O launcher envia `POST /api/chat` com `X-Jarvis: 1`, interpreta o fluxo NDJSON do JARVIS e o converte para o SSE já entendido pelo chat integrado. Isso adiciona conversação e roteamento; comandos administrativos continuam protegidos pelas confirmações e pela whitelist do Mestre.
+
 ## 🛡️ Segurança e Whitelist
 
 O launcher executa exclusivamente comandos cadastrados na whitelist em [`v10/allowed-operations.json`](v10/allowed-operations.json).

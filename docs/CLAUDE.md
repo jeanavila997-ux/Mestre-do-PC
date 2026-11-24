@@ -17,7 +17,7 @@ Prerequisites: Windows 10/11 (64-bit), PowerShell 5.1+, Node.js 20+.
 - `mcp-server/security.js` — `sanitizeToolArgument()` and `checkPromptInjection()`.
 - `mcp-server/audit-logger.js` — audit logging (7 levels, rotation at 10MB / 30 files kept).
 - `v10/memory-manager.js` + `v10/memory-routes.js` — persistent memory store (IndexedDB in the UI, JSON on disk via `/memories/*`).
-- `v10/chat/` — chat module: `chat-module.js`, `chat-template.html`, `chat-styles.css`, Ollama streaming integration, and `Soul.md` (persona/behavior spec).
+- `v10/chat/` — `Soul.md` (persona) plus the legacy module (`chat-module.js`, `chat-styles.css`) used only by `example-integration.html`. The home redirects chat buttons to `v10/chat-integrado/`.
 - `v10/rede-dashboard.js` — client-side network diagnostics panel loaded by `index.html`.
 - `browser-extension/` — Manifest V3 extension (Chrome + Firefox) that talks to the launcher via `X-Mestre-Client: browser-extension` and a token from `MESTRE_EXTENSION_TOKEN`.
 - `MestreDoPC-Launcher.ps1` — legacy elevated PowerShell backend; still present but not the default. `start-mestre-v10.ps1` starts the Node.js launcher.
@@ -53,7 +53,6 @@ node scripts\test_ollama.mjs
 
 # Legacy validation scripts (kept for reference)
 .\validate-v11.ps1               # PowerShell syntax/style only
-.\validate_all.ps1                # JSON/HTML smoke only
 
 # PowerShell parse check for a single file
 [System.Management.Automation.Language.Parser]::ParseFile("MestreDoPC-Launcher.ps1", [ref]$null, [ref]$null)
@@ -70,9 +69,19 @@ node build.js firefox
 .\ativar-atualizar-tudo.ps1
 ```
 
-CI (`.github/workflows/ci.yml`) runs on `windows-latest` against Node 20.x and 22.x:
-`npm ci && npm test` in `mcp-server/`, then `node --check` on `v10/launcher.js`,
-`mcp-server/index.js`, and `mcp-server/security.js`.
+CI (`.github/workflows/ci.yml`) runs on `windows-latest` against Node 22.x and 24.x:
+`npm ci --ignore-scripts` at the repo root and in `mcp-server/`. The root
+install skips the `@qwen-code/cua-sdk` postinstall, which calls
+`Get-AuthenticodeSignature` and fails on Actions because
+`Microsoft.PowerShell.Security` does not load. `mcp-server` does not depend on
+that package; `v10/computer-use-client.js` resolves it from `v10/node_modules`
+or the repo root `node_modules`. Local `npm ci` on the PC still runs scripts.
+Then `npm test`, then `node --check`
+on `v10/launcher.js`, `v10/security/origin-policy.js`,
+`v10/chat-integrado/chat-integrado.js`, `v10/chat-integrado/obsidian-chat.js`,
+`v10/chat-integrado/kokoro-voice.js`, `v10/chat-integrado/voice-output.js`,
+`mcp-server/model-catalog.js`, `mcp-server/index.js`, and `mcp-server/security.js`, plus
+`node --test v10/security/origin-policy.test.mjs`.
 
 Tests use Node's built-in test runner (no external framework). `mcp-server/test/`
 is split by concern:
@@ -159,7 +168,8 @@ Key flows:
 | `MESTRE_SOUL_DIR` | *(empty)* | Base directory for agent persona files served by `/soul*` (used by tests to isolate writes; defaults: `v10/chat/Soul.md` and `%USERPROFILE%/SOUL.md`) |
 | `OLLAMA_URL` | `http://127.0.0.1:11434` | Ollama API base (auto-switches to `https://ollama.com/api` when `OLLAMA_API_KEY` is set) |
 | `OLLAMA_API_KEY` | *(empty)* | Enables Ollama Cloud mode + auth header |
-| `OLLAMA_MODEL` | `qwen2.5-coder:1.5b` | Default model |
+| `OLLAMA_MODEL` | `qwen2.5-coder:3b-instruct` | Default model for the launcher and the MCP server (overrides the active profile). The CLI falls back to it when `MESTRE_CLI_MODEL` is unset |
+| `MESTRE_CLI_MODEL` | `qwen3.5:4b-text` | Model used only by the CLI (`npm run ia`, `scripts/mestre-cli.js`) |
 | `OLLAMA_MODEL_PROFILE` | *(empty)* | Selects a preset from `mcp-server/model-profiles.json` (fast, balanced, agent, coding, reasoning) |
 | `OLLAMA_NUM_CTX` | `8192` | Context window (tokens) |
 | `OLLAMA_TEMPERATURE` | `0.7` | Sampling temperature |
@@ -176,7 +186,7 @@ Key flows:
 - Conventional commits (`fix:`, `feat:`, `docs:`, `chore:`, `security:`).
 - User-visible strings and documentation are in Brazilian Portuguese; keep English for protocol names, API identifiers, environment variables, and code symbols.
 - JavaScript uses ES modules and `node:` imports for built-ins. The V10 UI has no bundler or frontend build step; edit the served HTML/CSS/JS directly.
-- Keep `v10/chat/chat-module.js`, `chat-template.html`, and `chat-styles.css` aligned when changing chat UI behavior or markup structure.
+- The home does not boot `chat-module.js`. Chat markup lives in that module for `example-integration.html` only; there is no separate `chat-template.html` to keep in sync. The UI chat is `v10/chat-integrado/`.
 - Keep the MCP (non-elevated) / launcher (elevated) split intact — the MCP server must never run commands itself.
 - `mcp-server/package.json` pins transitive dependencies via an `overrides` block (fast-uri, hono, @hono/node-server, ip-address, path-to-regexp, qs, body-parser). `npm audit fix` alone won't bump overridden packages — update the `overrides` versions by hand, then `npm install && npm test`.
 - PowerShell commands in `allowed-operations.json` use `-ErrorAction SilentlyContinue` (`-EA 0`) for non-critical cleanup steps.

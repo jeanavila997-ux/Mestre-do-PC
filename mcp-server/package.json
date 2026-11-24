@@ -1,8 +1,8 @@
 {
     "name": "mcp-server",
-    "version": "1.0.0",
+    "version": "11.2.1",
     "type": "module",
-    "description": "Servidor MCP do Mestre do PC V10 para diagnóstico, manutenção e Ollama local.",
+    "description": "Servidor MCP do Mestre do PC V11 para diagnóstico, manutenção e Ollama local.",
     "main": "index.js",
     "homepage": "https://github.com/jeanavila997-ux/Mestre-do-PC-V10#readme",
     "repository": {
@@ -31,17 +31,16 @@
     },
     "dependencies": {
         "@modelcontextprotocol/sdk": "^1.30.0",
-        "@modelcontextprotocol/server": "^2.0.0",
         "chrome-devtools-mcp": "^1.12.0",
         "mysql2": "^3.11.0"
     },
     "overrides": {
-        "@hono/node-server": "2.1.5",
+        "@hono/node-server": "2.1.6",
         "body-parser": "2.4.0",
         "fast-uri": "3.1.9",
-        "hono": "4.13.13",
-        "ip-address": "10.7.4",
+        "hono": "4.13.16",
+        "ip-address": "10.7.6",
         "path-to-regexp": "8.4.2",
-        "qs": "6.16.1"
+        "qs": "6.17.1"
     }
 }

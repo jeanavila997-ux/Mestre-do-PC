@@ -1,0 +1,50 @@
+{
+  "meta": {
+    "titulo": "",
+    "host": "",
+    "usuario": "",
+    "coletadoEm": "",
+    "ferramentas": []
+  },
+  "resumo": {
+    "conclusao": "",
+    "recomendacao": "",
+    "kpis": []
+  },
+  "wifi": {
+    "antes": {},
+    "depois": {},
+    "perfisSalvos": [],
+    "gateway": {
+      "ip": "",
+      "latenciaMs": 0,
+      "vendor": ""
+    },
+    "dns": []
+  },
+  "speed": {
+    "antes24": [],
+    "depois5g": [],
+    "latencia": [],
+    "isp": {},
+    "mestreSpeedtestMini": {
+      "status": "",
+      "motivo": "",
+      "valorEnganoso": ""
+    }
+  },
+  "lan": {
+    "rede": "",
+    "estePc": "",
+    "dispositivos": [],
+    "adaptadoresAtivos": []
+  },
+  "usuarios": {
+    "sessao": "",
+    "dominio": "",
+    "contasLocais": [],
+    "processosPorUsuario": []
+  },
+  "vizinhanca": [],
+  "comandos": []
+}

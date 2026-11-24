@@ -22,6 +22,14 @@ const PROJECT_ROOT = join(__dirname, "..");
 const ENTRY_POINTS = [
   "v10/launcher.js",
   "v10/operation-registry.js",
+  "v10/chat-integrado/chat-integrado.js",
+  "v10/chat-integrado/grokbot-bridge.js",
+  "v10/chat-integrado/api-routes.js",
+  "v10/chat-integrado/obsidian-chat.js",
+  "v10/chat-integrado/kokoro-voice.js",
+  "v10/chat-integrado/voice-output.js",
+  "v10/chat-integrado/mysql-sync.js",
+  "mcp-server/model-catalog.js",
   "mcp-server/index.js",
   "mcp-server/security.js",
   "mcp-server/audit-logger.js",
@@ -201,7 +209,8 @@ async function checkHtmlSmoke(path) {
     const content = await readFile(path, "utf8");
     const checks = [];
     checks.push({ name: "html exists", ok: content.length > 0 });
-    checks.push({ name: "has CATS array", ok: content.includes("const CATS") });
+    checks.push({ name: "loads /operations", ok: content.includes('fetch(API + "/operations"') });
+    checks.push({ name: "no hardcoded CATS", ok: !content.includes("const CATS") });
     checks.push({ name: "has renderCards function", ok: content.includes("function renderCards") });
     checks.push({ name: "no window.confirm", ok: !content.includes("window.confirm(") });
     const failed = checks.filter((c) => !c.ok);

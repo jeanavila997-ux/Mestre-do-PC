@@ -331,8 +331,8 @@
     {
       "id": "resetar_subsistema_de_audio",
       "title": "Resetar Subsistema de Áudio",
-      "category": "Sistema",
-      "destructive": false,
+      "category": "Destrutiva",
+      "destructive": true,
       "command": "Stop-Service -Name AudioEndpointBuilder -Force -ErrorAction SilentlyContinue; Stop-Service -Name audiosrv -Force -ErrorAction SilentlyContinue; Get-PnpDevice -Class MEDIA | Where-Object { $_.FriendlyName -match 'Audio|Som|Realtek|NVIDIA|AMD|Intel' } | Disable-PnpDevice -Confirm:$false -ErrorAction SilentlyContinue; Start-Sleep -Seconds 3; Get-PnpDevice -Class MEDIA | Where-Object { $_.FriendlyName -match 'Audio|Som|Realtek|NVIDIA|AMD|Intel' } | Enable-PnpDevice -Confirm:$false -ErrorAction SilentlyContinue; Start-Service -Name AudioEndpointBuilder -ErrorAction SilentlyContinue; Start-Service -Name audiosrv -ErrorAction SilentlyContinue; Write-Host '✅ Subsistema de áudio resetado!' -ForegroundColor Green",
       "description": "Resetar Subsistema de Áudio."
     },
@@ -637,7 +637,7 @@
       "title": "Relatório rápido do PC",
       "category": "Outros",
       "destructive": false,
-      "command": "$os=Get-CimInstance Win32_OperatingSystem; $cpu=Get-CimInstance Win32_Processor | Select-Object -First 1; $disk=Get-PSDrive C; $ramLivre=[math]::Round($os.FreePhysicalMemory/1MB,2); $ramTotal=[math]::Round($os.TotalVisibleMemorySize/1MB,2); $diskLivre=[math]::Round($disk.Free/1GB,2); $diskTotal=[math]::Round(($disk.Used+$disk.Free)/1GB,2); $boot=[Management.ManagementDateTimeConverter]::ToDateTime($os.LastBootUpTime); $uptime=New-TimeSpan -Start $boot -End (Get-Date); Write-Host \"===== RELATORIO RAPIDO DO PC =====\" -ForegroundColor Cyan; Write-Host \"Computador: $env:COMPUTERNAME\"; Write-Host \"Windows: $($os.Caption) Build $($os.BuildNumber)\"; Write-Host \"CPU: $($cpu.Name)\"; Write-Host \"RAM: $ramLivre GB livre de $ramTotal GB\"; Write-Host \"Disco C: $diskLivre GB livre de $diskTotal GB\"; Write-Host \"Uptime: $($uptime.Days)d $($uptime.Hours)h\"; Write-Host \"\"; Write-Host \"Top 10 processos por RAM:\" -ForegroundColor Yellow; Get-Process | Sort-Object WorkingSet64 -Descending | Select-Object -First 10 Name,@{N=\"RAM(MB)\";E={[math]::Round($_.WorkingSet64/1MB,2)}} | Format-Table -AutoSize; Write-Host \"\"; if(Test-Connection 8.8.8.8 -Count 1 -Quiet){Write-Host \"Internet: OK\" -ForegroundColor Green}else{Write-Host \"Internet: SEM CONEXAO\" -ForegroundColor Red}",
+      "command": "$os=Get-CimInstance Win32_OperatingSystem; $cpu=Get-CimInstance Win32_Processor | Select-Object -First 1; $disk=Get-PSDrive C; $ramLivre=[math]::Round($os.FreePhysicalMemory/1MB,2); $ramTotal=[math]::Round($os.TotalVisibleMemorySize/1MB,2); $diskLivre=[math]::Round($disk.Free/1GB,2); $diskTotal=[math]::Round(($disk.Used+$disk.Free)/1GB,2); $boot=$os.LastBootUpTime; $uptime=New-TimeSpan -Start $boot -End (Get-Date); Write-Host \"===== RELATORIO RAPIDO DO PC =====\" -ForegroundColor Cyan; Write-Host \"Computador: $env:COMPUTERNAME\"; Write-Host \"Windows: $($os.Caption) Build $($os.BuildNumber)\"; Write-Host \"CPU: $($cpu.Name)\"; Write-Host \"RAM: $ramLivre GB livre de $ramTotal GB\"; Write-Host \"Disco C: $diskLivre GB livre de $diskTotal GB\"; Write-Host \"Uptime: $($uptime.Days)d $($uptime.Hours)h\"; Write-Host \"\"; Write-Host \"Top 10 processos por RAM:\" -ForegroundColor Yellow; Get-Process | Sort-Object WorkingSet64 -Descending | Select-Object -First 10 Name,@{N=\"RAM(MB)\";E={[math]::Round($_.WorkingSet64/1MB,2)}} | Format-Table -AutoSize; Write-Host \"\"; if(Test-Connection 8.8.8.8 -Count 1 -Quiet){Write-Host \"Internet: OK\" -ForegroundColor Green}else{Write-Host \"Internet: SEM CONEXAO\" -ForegroundColor Red}",
       "description": "Gera um relatório rápido do PC com Windows, uptime, RAM, disco C, top 10 processos e internet."
     },
     {
@@ -653,7 +653,7 @@
       "title": "Listar modelos Ollama",
       "category": "Ollama",
       "destructive": false,
-      "command": "try { $data=(Invoke-RestMethod -Uri \"http://localhost:11434/api/tags\" -TimeoutSec 5); Write-Host \"Modelos Ollama instalados:\" -ForegroundColor Cyan; if(-not $data.models){ Write-Host \"Nenhum modelo retornado pelo Ollama.\" -ForegroundColor Yellow } else { $data.models | ForEach-Object { $cloud=if($_.name -match \"cloud\"){ \" [cloud]\" } else { \"\" }; Write-Host (\"- \" + $_.name + $cloud) } } } catch { Write-Host \"Ollama offline ou inacessivel em localhost:11434\" -ForegroundColor Yellow; Write-Host $_.Exception.Message }",
+      "command": "try { $data=(Invoke-RestMethod -Uri \"http://127.0.0.1:11434/api/tags\" -TimeoutSec 5); Write-Host \"Modelos Ollama instalados:\" -ForegroundColor Cyan; if(-not $data.models){ Write-Host \"Nenhum modelo retornado pelo Ollama.\" -ForegroundColor Yellow } else { $data.models | ForEach-Object { $cloud=if($_.name -match \"cloud\"){ \" [cloud]\" } else { \"\" }; Write-Host (\"- \" + $_.name + $cloud) } } } catch { Write-Host \"Ollama offline ou inacessivel em 127.0.0.1:11434\" -ForegroundColor Yellow; Write-Host $_.Exception.Message }",
       "description": "Lista modelos disponíveis no Ollama local e destaca modelos cloud no texto."
     },
     {
@@ -701,7 +701,7 @@
       "title": "Checkup Geral (Resumo Completo)",
       "category": "Outros",
       "destructive": false,
-      "command": "$os=Get-CimInstance Win32_OperatingSystem; $cpu=Get-CimInstance Win32_Processor; $disk=Get-PSDrive C; $ram=[math]::Round($os.FreePhysicalMemory/1MB,1); $totalRam=[math]::Round($os.TotalVisibleMemorySize/1MB,1); $diskFree=[math]::Round($disk.Free/1GB,1); $diskTotal=[math]::Round(($disk.Used+$disk.Free)/1GB,1); $up=[Management.ManagementDateTimeConverter]::ToDateTime($os.LastBootUpTime); $days=([datetime]::Now-$up).Days; Write-Host \"=== CHECKUP DO PC ===\" -ForegroundColor Cyan; Write-Host \"CPU: $($cpu.Name)\" -ForegroundColor White; Write-Host \"RAM: $ram GB livre de $totalRam GB\" -ForegroundColor $(if($ram -lt 2){\"Red\"}else{\"Green\"}); Write-Host \"Disco C: $diskFree GB livre de $diskTotal GB\" -ForegroundColor $(if($diskFree -lt 20){\"Red\"}else{\"Green\"}); Write-Host \"Uptime: $days dias\" -ForegroundColor $(if($days -gt 7){\"Yellow\"}else{\"Green\"}); Write-Host \"Windows: $($os.Caption) Build $($os.BuildNumber)\" -ForegroundColor White",
+      "command": "$os=Get-CimInstance Win32_OperatingSystem; $cpu=Get-CimInstance Win32_Processor; $disk=Get-PSDrive C; $ram=[math]::Round($os.FreePhysicalMemory/1MB,1); $totalRam=[math]::Round($os.TotalVisibleMemorySize/1MB,1); $diskFree=[math]::Round($disk.Free/1GB,1); $diskTotal=[math]::Round(($disk.Used+$disk.Free)/1GB,1); $up=$os.LastBootUpTime; $days=([datetime]::Now-$up).Days; Write-Host \"=== CHECKUP DO PC ===\" -ForegroundColor Cyan; Write-Host \"CPU: $($cpu.Name)\" -ForegroundColor White; Write-Host \"RAM: $ram GB livre de $totalRam GB\" -ForegroundColor $(if($ram -lt 2){\"Red\"}else{\"Green\"}); Write-Host \"Disco C: $diskFree GB livre de $diskTotal GB\" -ForegroundColor $(if($diskFree -lt 20){\"Red\"}else{\"Green\"}); Write-Host \"Uptime: $days dias\" -ForegroundColor $(if($days -gt 7){\"Yellow\"}else{\"Green\"}); Write-Host \"Windows: $($os.Caption) Build $($os.BuildNumber)\" -ForegroundColor White",
       "description": "Checkup Geral."
     },
     {
@@ -811,16 +811,16 @@
     {
       "id": "desligar_agora",
       "title": "Desligar Agora",
-      "category": "Outros",
-      "destructive": false,
+      "category": "Destrutiva",
+      "destructive": true,
       "command": "Stop-Computer -Force",
       "description": "Desligar Agora."
     },
     {
       "id": "reiniciar_agora",
       "title": "Reiniciar Agora",
-      "category": "Outros",
-      "destructive": false,
+      "category": "Destrutiva",
+      "destructive": true,
       "command": "Restart-Computer -Force",
       "description": "Reinicia Agora."
     },
@@ -1131,8 +1131,8 @@
     {
       "id": "desativar_ipv6",
       "title": "Desativar IPv6",
-      "category": "Outros",
-      "destructive": false,
+      "category": "Destrutiva",
+      "destructive": true,
       "command": "Disable-NetAdapterBinding -Name \"*\" -ComponentID ms_tcpip6 -EA 0; Write-Host \"✅ IPv6 desativado!\" -ForegroundColor Green",
       "description": "Desativa IPv6."
     },
@@ -1707,88 +1707,88 @@
     {
       "id": "instalar_ollama_irm_install_ps1",
       "title": "Instalar Ollama (irm install.ps1)",
-      "category": "Instalações",
-      "destructive": false,
+      "category": "Destrutiva",
+      "destructive": true,
       "command": "irm https://ollama.com/install.ps1 | iex",
       "description": "Instala Ollama."
     },
     {
       "id": "pip_install_requests",
       "title": "pip install requests",
-      "category": "Bibliotecas",
-      "destructive": false,
+      "category": "Destrutiva",
+      "destructive": true,
       "command": "pip install --upgrade requests; Write-Host \"✅ requests instalado/atualizado!\" -ForegroundColor Green",
       "description": "pip install requests."
     },
     {
       "id": "pip_install_numpy_pandas",
       "title": "pip install numpy + pandas",
-      "category": "Bibliotecas",
-      "destructive": false,
+      "category": "Destrutiva",
+      "destructive": true,
       "command": "pip install --upgrade numpy pandas; Write-Host \"✅ numpy e pandas instalados!\" -ForegroundColor Green",
       "description": "pip install numpy + pandas."
     },
     {
       "id": "pip_install_matplotlib",
       "title": "pip install matplotlib",
-      "category": "Bibliotecas",
-      "destructive": false,
+      "category": "Destrutiva",
+      "destructive": true,
       "command": "pip install --upgrade matplotlib; Write-Host \"✅ matplotlib instalado!\" -ForegroundColor Green",
       "description": "pip install matplotlib."
     },
     {
       "id": "pip_install_psutil",
       "title": "pip install psutil",
-      "category": "Bibliotecas",
-      "destructive": false,
+      "category": "Destrutiva",
+      "destructive": true,
       "command": "pip install --upgrade psutil; Write-Host \"✅ psutil instalado!\" -ForegroundColor Green",
       "description": "pip install psutil."
     },
     {
       "id": "pip_install_openpyxl",
       "title": "pip install openpyxl",
-      "category": "Bibliotecas",
-      "destructive": false,
+      "category": "Destrutiva",
+      "destructive": true,
       "command": "pip install --upgrade openpyxl; Write-Host \"✅ openpyxl instalado!\" -ForegroundColor Green",
       "description": "pip install openpyxl."
     },
     {
       "id": "npm_install_no_projeto",
       "title": "npm install no projeto",
-      "category": "Bibliotecas",
-      "destructive": false,
+      "category": "Destrutiva",
+      "destructive": true,
       "command": "Set-Location -LiteralPath $env:MESTRE_PROJETO_PATH; npm install; Write-Host \"✅ npm install concluído!\" -ForegroundColor Green",
       "description": "npm install no projeto."
     },
     {
       "id": "npm_install_g_typescript",
       "title": "npm install -g typescript",
-      "category": "Bibliotecas",
-      "destructive": false,
+      "category": "Destrutiva",
+      "destructive": true,
       "command": "npm install -g typescript; Write-Host \"✅ TypeScript instalado globalmente!\" -ForegroundColor Green",
       "description": "npm install -g typescript."
     },
     {
       "id": "npm_install_g_nodemon",
       "title": "npm install -g nodemon",
-      "category": "Bibliotecas",
-      "destructive": false,
+      "category": "Destrutiva",
+      "destructive": true,
       "command": "npm install -g nodemon; Write-Host \"✅ nodemon instalado globalmente!\" -ForegroundColor Green",
       "description": "npm install -g nodemon."
     },
     {
       "id": "pip_install_pywin32",
       "title": "pip install pywin32",
-      "category": "Bibliotecas",
-      "destructive": false,
+      "category": "Destrutiva",
+      "destructive": true,
       "command": "pip install --upgrade pywin32; Write-Host \"✅ pywin32 instalado!\" -ForegroundColor Green",
       "description": "pip install pywin32."
     },
     {
       "id": "pip_install_pillow",
       "title": "pip install pillow",
-      "category": "Bibliotecas",
-      "destructive": false,
+      "category": "Destrutiva",
+      "destructive": true,
       "command": "pip install --upgrade pillow; Write-Host \"✅ pillow instalado!\" -ForegroundColor Green",
       "description": "pip install pillow."
     },
@@ -2147,8 +2147,8 @@
     {
       "id": "atualizar_npm",
       "title": "Atualizar NPM",
-      "category": "Node.js",
-      "destructive": false,
+      "category": "Destrutiva",
+      "destructive": true,
       "command": "npm install -g npm@latest; Write-Host \"✅ NPM atualizado!\" -ForegroundColor Green",
       "description": "Atualiza o NPM para a versão mais recente."
     },
@@ -2187,8 +2187,8 @@
     {
       "id": "instalar_pacote_npm_global_interativo",
       "title": "Instalar Pacote NPM (Global)",
-      "category": "Node.js",
-      "destructive": false,
+      "category": "Destrutiva",
+      "destructive": true,
       "command": "$pkg = Read-Host \"Nome do pacote NPM\"; if ($pkg -match \"^[a-zA-Z0-9_.-]{1,100}$\") { npm install -g $pkg; Write-Host \"✅ Pacote $pkg instalado!\" -ForegroundColor Green } else { Write-Host \"❌ Nome de pacote inválido.\" -ForegroundColor Red }",
       "description": "Instala Pacote NPM."
     },
@@ -2291,8 +2291,8 @@
     {
       "id": "atualizar_pip",
       "title": "Atualizar Pip",
-      "category": "Python",
-      "destructive": false,
+      "category": "Destrutiva",
+      "destructive": true,
       "command": "python -m pip install --upgrade pip; Write-Host \"✅ Pip atualizado!\" -ForegroundColor Green",
       "description": "Atualiza o Pip para a versão mais recente."
     },
@@ -2323,8 +2323,8 @@
     {
       "id": "instalar_pacote_pip_interativo",
       "title": "Instalar Pacote Pip",
-      "category": "Python",
-      "destructive": false,
+      "category": "Destrutiva",
+      "destructive": true,
       "command": "$pkg = Read-Host \"Nome do pacote Pip\"; if ($pkg -match \"^[a-zA-Z0-9_.-]{1,100}$\") { pip install $pkg; Write-Host \"✅ Pacote $pkg instalado!\" -ForegroundColor Green } else { Write-Host \"❌ Nome de pacote inválido.\" -ForegroundColor Red }",
       "description": "Instala Pacote Pip."
     },
@@ -2437,7 +2437,7 @@
       "title": "Testar Ollama (qwen3-coder-next:cloud)",
       "category": "Ollama",
       "destructive": false,
-      "command": "$model=\"qwen3-coder-next:cloud\"; try { $body=@{model=$model;messages=@(@{role=\"user\";content=\"Responda somente OK\"});stream=$false} | ConvertTo-Json -Depth 6; $res=Invoke-RestMethod -Uri \"http://localhost:11434/api/chat\" -Method POST -ContentType \"application/json\" -Body $body -TimeoutSec 30; Write-Host \"Modelo testado: $model\" -ForegroundColor Cyan; if($res.message.content){ Write-Host $res.message.content -ForegroundColor Green } else { Write-Host \"Ollama respondeu, mas sem conteudo de chat.\" -ForegroundColor Yellow } } catch { Write-Host \"Falha no teste do Ollama/modelo. Talvez o modelo nao suporte chat ou esteja offline.\" -ForegroundColor Yellow; Write-Host $_.Exception.Message }",
+      "command": "$model=\"qwen3-coder-next:cloud\"; try { $body=@{model=$model;messages=@(@{role=\"user\";content=\"Responda somente OK\"});stream=$false} | ConvertTo-Json -Depth 6; $res=Invoke-RestMethod -Uri \"http://127.0.0.1:11434/api/chat\" -Method POST -ContentType \"application/json\" -Body $body -TimeoutSec 30; Write-Host \"Modelo testado: $model\" -ForegroundColor Cyan; if($res.message.content){ Write-Host $res.message.content -ForegroundColor Green } else { Write-Host \"Ollama respondeu, mas sem conteudo de chat.\" -ForegroundColor Yellow } } catch { Write-Host \"Falha no teste do Ollama/modelo. Talvez o modelo nao suporte chat ou esteja offline.\" -ForegroundColor Yellow; Write-Host $_.Exception.Message }",
       "description": "Testar Ollama."
     },
     {
@@ -2795,8 +2795,8 @@
     {
       "id": "instalar_chrome_devtools_mcp",
       "title": "Instalar Chrome DevTools MCP",
-      "category": "Bibliotecas",
-      "destructive": false,
+      "category": "Destrutiva",
+      "destructive": true,
       "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; $pasta = Join-Path $env:MESTRE_PROJETO_PATH 'mcp-server'; Set-Location -LiteralPath $pasta; npm install chrome-devtools-mcp@1.12.0 --no-audit --no-fund; if ($LASTEXITCODE -eq 0) { Write-Host \"✅ Chrome DevTools MCP instalado em $pasta!\" -ForegroundColor Green; Write-Host \"ℹ️ Reinicie o MCP Server para ativar as tools chrome_*.\" -ForegroundColor Cyan } else { Write-Host \"❌ Falha ao instalar o Chrome DevTools MCP.\" -ForegroundColor Red }",
       "description": "Instala o pacote chrome-devtools-mcp (Chrome DevTools Protocol) na pasta mcp-server do projeto. Habilita as tools chrome_* (list_pages, take_snapshot, evaluate_script, take_screenshot, lighthouse_audit, performance_start_trace) no MCP Server. Reinicie o MCP Server após instalar."
     },
@@ -2819,13 +2819,895 @@
     {
       "id": "fc_3_1793346585805",
       "title": "Instalar Firecrawl Skills (37)",
-      "category": "Instalações",
-      "destructive": false,
+      "category": "Destrutiva",
+      "destructive": true,
       "command": "Set-Location $env:USERPROFILE\\Projetos\\Mestre-do-PC-V10; npx -y skills add https://github.com/firecrawl/skills.git --all -y",
       "description": "Instala as 37 skills Firecrawl nos agentes."
+    },
+    {
+      "id": "browser_speedtest_mini",
+      "title": "Speedtest mini (Cloudflare/GitHub)",
+      "category": "Navegador",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\browser-devtools.ps1') -Action speedtest-mini",
+      "description": "Mede Mbps com download Cloudflare/GitHub (sem Tele2)."
+    },
+    {
+      "id": "browser_abrir_speedtest",
+      "title": "Abrir Speedtest no navegador",
+      "category": "Navegador",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\browser-devtools.ps1') -Action open-speedtest",
+      "description": "Abre fast.com e speed.cloudflare.com."
+    },
+    {
+      "id": "browser_devtools_config",
+      "title": "Configuração DevTools / CDP",
+      "category": "Navegador",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\browser-devtools.ps1') -Action config-devtools",
+      "description": "Mostra porta CDP 9222, atalhos F12 e flags do navegador."
+    },
+    {
+      "id": "browser_abrir_paginas_devtools",
+      "title": "Abrir páginas internas DevTools",
+      "category": "Navegador",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\browser-devtools.ps1') -Action open-devtools-pages",
+      "description": "Abre gpu, discards, system e memory no Edge/Chrome."
+    },
+    {
+      "id": "browser_memoria_processos",
+      "title": "Memória dos processos do navegador",
+      "category": "Navegador",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\browser-devtools.ps1') -Action memoria-processos",
+      "description": "Soma RAM (Working Set) de Edge, Chrome e WebView2."
+    },
+    {
+      "id": "browser_memoria_virtual",
+      "title": "Memória virtual do navegador",
+      "category": "Navegador",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\browser-devtools.ps1') -Action memoria-virtual",
+      "description": "RAM, pagefile, commit e Memory Compression ligados ao navegador."
+    },
+    {
+      "id": "browser_melhorar_velocidade",
+      "title": "Melhorar velocidade do navegador",
+      "category": "Navegador",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\browser-devtools.ps1') -Action melhorar-velocidade",
+      "description": "Flush DNS e relatório seguro (não mata o navegador)."
+    },
+    {
+      "id": "browser_listar_abas",
+      "title": "Listar abas (CDP)",
+      "category": "Navegador",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\browser-devtools.ps1') -Action listar-abas",
+      "description": "Lista abas via Chrome DevTools Protocol em 127.0.0.1:9222."
+    },
+    {
+      "id": "browser_fechar_abas_descartaveis",
+      "title": "Fechar abas descartáveis (CDP)",
+      "category": "Navegador",
+      "destructive": true,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\browser-devtools.ps1') -Action fechar-abas-descartaveis",
+      "description": "Fecha newtab/about:blank no CDP. Abas de trabalho ficam."
+    },
+    {
+      "id": "browser_analisar_devtools",
+      "title": "Analisar DevTools (CDP)",
+      "category": "Navegador",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\browser-devtools.ps1') -Action analisar-devtools",
+      "description": "Resume alvos CDP, WebSockets e checklist Performance/Memory."
+    },
+    {
+      "id": "browser_iniciar_edge_cdp",
+      "title": "Iniciar Edge com CDP",
+      "category": "Navegador",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\browser-devtools.ps1') -Action iniciar-edge-cdp",
+      "description": "Sobe Edge isolado com --remote-debugging-port=9222."
+    },
+    {
+      "id": "browser_abrir_extensao_pasta",
+      "title": "Instalar extensão do Mestre (pasta)",
+      "category": "Navegador",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\browser-devtools.ps1') -Action abrir-extensao-pasta",
+      "description": "Copia o caminho da extensão, abre a pasta e edge://extensions."
+    },
+    {
+      "id": "browser_enviar_f12",
+      "title": "Apertar F12 no navegador",
+      "category": "Navegador",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\browser-devtools.ps1') -Action enviar-f12",
+      "description": "Pedido da extensão: aperta F12 na janela em foco só se ela for um navegador (Edge, Chrome, Firefox, Brave, Opera, Vivaldi)."
+    },
+    {
+      "id": "browser_abrir_onenote",
+      "title": "Abrir OneNote",
+      "category": "Navegador",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\browser-devtools.ps1') -Action abrir-onenote",
+      "description": "Abre o app do OneNote; sem o app, abre o OneNote na web."
+    },
+    {
+      "id": "cli_agentes_status",
+      "title": "Status dos agentes CLI",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action status",
+      "description": "Lista OpenCode, Grok, OMP, Copilot e APIs locais (llama.cpp, LM Studio, Ollama, 9Router)."
+    },
+    {
+      "id": "cli_agentes_instalar_opencode",
+      "title": "Instalar / atualizar OpenCode (v2)",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action install-opencode",
+      "description": "Roda o instalador oficial curl https://opencode.ai/v2/install | bash via Git Bash."
+    },
+    {
+      "id": "cli_agentes_llamacpp_status",
+      "title": "Status llama.cpp (:8080)",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action llamacpp-status",
+      "description": "Sonda a API OpenAI-compatível do llama.cpp em 127.0.0.1:8080."
+    },
+    {
+      "id": "cli_agentes_abrir_opencode",
+      "title": "Abrir OpenCode",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action opencode",
+      "description": "Abre o OpenCode no Windows Terminal, na pasta do projeto."
+    },
+    {
+      "id": "cli_agentes_abrir_grok",
+      "title": "Abrir Grok CLI",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action grok",
+      "description": "Abre o Grok CLI no terminal do Mestre."
+    },
+    {
+      "id": "cli_agentes_abrir_omp",
+      "title": "Abrir OMP",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action omp",
+      "description": "Abre o OMP (modelo coder local) no terminal do Mestre."
+    },
+    {
+      "id": "cli_agentes_abrir_copilot",
+      "title": "Abrir GitHub Copilot CLI",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action copilot",
+      "description": "Abre o GitHub Copilot CLI no terminal do Mestre."
+    },
+    {
+      "id": "cli_agentes_abrir_claude",
+      "title": "Abrir Claude Code",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action claude",
+      "description": "Abre o Claude Code nativo no terminal do Mestre."
+    },
+    {
+      "id": "cli_agentes_abrir_codex",
+      "title": "Abrir Codex CLI",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action codex",
+      "description": "Abre o Codex CLI num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "cli_agentes_abrir_gemini",
+      "title": "Abrir Gemini CLI",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action gemini",
+      "description": "Abre o Gemini CLI num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "cli_agentes_abrir_qwen",
+      "title": "Abrir Qwen Code",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action qwen",
+      "description": "Abre o Qwen Code num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "cli_agentes_abrir_aider",
+      "title": "Abrir Aider",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action aider",
+      "description": "Abre o Aider num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "cli_agentes_abrir_cursor",
+      "title": "Abrir Cursor Agent",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action cursor",
+      "description": "Abre o Cursor Agent num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "cli_agentes_abrir_dsh",
+      "title": "Abrir DeepSeek Harness (dsh)",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action dsh",
+      "description": "Abre o DeepSeek Harness (dsh) num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "cli_agentes_abrir_hermes",
+      "title": "Abrir Hermes Agent",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action hermes",
+      "description": "Abre o Hermes Agent num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "cli_agentes_abrir_goose",
+      "title": "Abrir Goose",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action goose",
+      "description": "Abre o Goose num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "cli_agentes_abrir_kilo",
+      "title": "Abrir Kilo Code CLI",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action kilo",
+      "description": "Abre o Kilo Code CLI num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "cli_agentes_abrir_cline",
+      "title": "Abrir Cline CLI",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action cline",
+      "description": "Abre o Cline CLI num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "cli_agentes_abrir_crush",
+      "title": "Abrir Crush (Charm)",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action crush",
+      "description": "Abre o Crush (Charm) num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "cli_agentes_abrir_pi",
+      "title": "Abrir Pi Coding Agent",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action pi",
+      "description": "Abre o Pi Coding Agent num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "cli_agentes_abrir_antigravity",
+      "title": "Abrir Antigravity CLI (agy)",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action antigravity",
+      "description": "Abre o Antigravity CLI (agy) num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "cli_agentes_abrir_ori",
+      "title": "Abrir Ori (OpenRouter)",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action ori",
+      "description": "Abre o Ori (OpenRouter) num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "cli_agentes_abrir_openhands",
+      "title": "Abrir OpenHands",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action openhands",
+      "description": "Abre o OpenHands num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "cli_agentes_abrir_interpreter",
+      "title": "Abrir Open Interpreter",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action interpreter",
+      "description": "Abre o Open Interpreter num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "cli_agentes_abrir_continue",
+      "title": "Abrir Continue CLI (cn)",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action continue",
+      "description": "Abre o Continue CLI (cn) num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "cli_agentes_abrir_plandex",
+      "title": "Abrir Plandex",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action plandex",
+      "description": "Abre o Plandex num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "cli_agentes_abrir_kimi",
+      "title": "Abrir Kimi Code",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action kimi",
+      "description": "Abre o Kimi Code num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "cli_agentes_abrir_gptme",
+      "title": "Abrir gptme",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action gptme",
+      "description": "Abre o gptme num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "cli_agentes_abrir_kiro",
+      "title": "Abrir Kiro CLI",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action kiro",
+      "description": "Abre o Kiro CLI num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "cli_agentes_abrir_amp",
+      "title": "Abrir Amp",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action amp",
+      "description": "Abre o Amp num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "cli_agentes_abrir_droid",
+      "title": "Abrir Droid (Factory)",
+      "category": "Agentes CLI",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"❌ MESTRE_PROJETO_PATH não definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\cli-agents.ps1') -Action droid",
+      "description": "Abre o Droid (Factory) num terminal na pasta do projeto. Se não estiver instalado, mostra o link oficial; o Mestre não instala sozinho."
+    },
+    {
+      "id": "skill_typesafe_ai",
+      "title": "skill typesafe-ai",
+      "category": "Destrutiva",
+      "destructive": true,
+      "command": "npx -y skills add typesafe-ai/skills --skill typesafe-ai",
+      "description": "instalar skills typesafe",
+      "enabled": true
+    },
+    {
+      "id": "onedrive_status",
+      "title": "OneDrive: ver se está rodando",
+      "category": "OneDrive",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\onedrive.ps1') -Action status",
+      "description": "Mostra o executável, a versão, a pasta e se o OneDrive.exe está em execução."
+    },
+    {
+      "id": "onedrive_abrir",
+      "title": "OneDrive: abrir o cliente",
+      "category": "OneDrive",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\onedrive.ps1') -Action abrir",
+      "description": "Sobe o cliente de sincronização com /background. Sem esse argumento o Explorador abre a pasta e o sincronizador não inicia."
+    },
+    {
+      "id": "onedrive_config",
+      "title": "OneDrive: abrir configurações",
+      "category": "OneDrive",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\onedrive.ps1') -Action config",
+      "description": "Pede o painel do cliente com /settings. Esse argumento não é oficial; se a janela não abrir, use o ícone da bandeja."
+    },
+    {
+      "id": "onedrive_pasta",
+      "title": "OneDrive: abrir a pasta",
+      "category": "OneDrive",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\onedrive.ps1') -Action pasta",
+      "description": "Abre %USERPROFILE%\\OneDrive no Explorador de Arquivos."
+    },
+    {
+      "id": "onedrive_web",
+      "title": "OneDrive: abrir o site",
+      "category": "OneDrive",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\onedrive.ps1') -Action web",
+      "description": "Abre https://onedrive.live.com no navegador."
+    },
+    {
+      "id": "onedrive_armazenamento",
+      "title": "OneDrive: armazenamento",
+      "category": "OneDrive",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\onedrive.ps1') -Action armazenamento",
+      "description": "Abre o painel de armazenamento em https://onedrive.live.com/?v=managestorage."
+    },
+    {
+      "id": "onedrive_reiniciar",
+      "title": "OneDrive: reiniciar e sincronizar",
+      "category": "OneDrive",
+      "destructive": true,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & pwsh -NoProfile -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\onedrive.ps1') -Action reiniciar",
+      "description": "Encerra o cliente com /shutdown e sobe de novo com /background. Se não sair em 20 s, força só o OneDrive.exe. Religar o cliente é o que dispara a sincronização."
+    },
+    {
+      "id": "turbo_pc_diagnostico",
+      "title": "Turbo PC: diagnóstico completo (só leitura)",
+      "category": "Turbo PC",
+      "destructive": false,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\turbo-pc.ps1') -Modo diagnostico",
+      "description": "RAM e top processos, memória virtual, disco e TRIM, temporários e caches, inicialização, serviços, energia, GPU por app, Modo de Jogo e efeitos visuais. Devolve JSON em pt-BR e não muda nada."
+    },
+    {
+      "id": "turbo_pc_otimizar",
+      "title": "Turbo PC: otimizar com backup e desfazer",
+      "category": "Turbo PC",
+      "destructive": true,
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\turbo-pc.ps1') -Modo otimizar -Confirmar",
+      "description": "Limpa temporários (>24h), crash dumps antigos, miniaturas e caches pnpm/pip/uv; Alto desempenho na tomada; IA na RTX e navegadores no iGPU; Modo de Jogo; efeitos visuais para desempenho. Cria backup, desfazer.ps1 e rodar-como-admin.ps1 em Projetos\\_arquivo\\turbo-AAAAMMDD. Nunca esvazia a Lixeira nem apaga arquivos pessoais, modelos ou o cache npm."
+    },
+    {
+      "id": "admin_reiniciar_mestre",
+      "title": "Reiniciar o Mestre do PC",
+      "category": "Administração",
+      "destructive": true,
+      "classe": "execucao",
+      "elevado": true,
+      "confirmacao": "simples",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action reiniciar-mestre",
+      "description": "Abre uma janela de administrador (UAC) que encerra o launcher travado na porta 7777, sobe de novo pela tarefa MestreDoPC_Admin_Launcher e confere o /ping."
+    },
+    {
+      "id": "admin_criar_ponto_restauracao",
+      "title": "Criar ponto de restauração",
+      "category": "Administração",
+      "destructive": true,
+      "classe": "execucao",
+      "elevado": true,
+      "confirmacao": "simples",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action criar-ponto-restauracao",
+      "description": "Abre uma janela de administrador (UAC) e cria um ponto de restauração do Windows no C:. Não apaga nada."
+    },
+    {
+      "id": "admin_turbo_admin",
+      "title": "Turbo admin (Temp do Windows, DISM, Windows Update, retrim)",
+      "category": "Administração",
+      "destructive": true,
+      "classe": "destrutiva",
+      "elevado": true,
+      "confirmacao": "simples",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action turbo-admin",
+      "description": "Janela de administrador (UAC): cria ponto de restauração, apaga arquivos de C:\\Windows\\Temp com mais de 24 h, limpa componentes do Windows Update (DISM) e o cache de download do Windows Update, e faz retrim do SSD C:. Não mexe na Lixeira nem em arquivos pessoais."
+    },
+    {
+      "id": "admin_sfc_verificar",
+      "title": "SFC: só verificar",
+      "category": "Administração",
+      "destructive": true,
+      "classe": "leitura",
+      "elevado": true,
+      "confirmacao": "simples",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action sfc-verificar",
+      "description": "Janela de administrador (UAC) com sfc /verifyonly: procura arquivos do sistema corrompidos sem consertar."
+    },
+    {
+      "id": "admin_sfc_reparar",
+      "title": "SFC: verificar e reparar",
+      "category": "Administração",
+      "destructive": true,
+      "classe": "execucao",
+      "elevado": true,
+      "confirmacao": "simples",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action sfc-reparar",
+      "description": "Janela de administrador (UAC) com sfc /scannow: verifica e substitui arquivos do sistema corrompidos. Leva de 10 a 30 min."
+    },
+    {
+      "id": "admin_dism_verificar",
+      "title": "DISM: só verificar a imagem",
+      "category": "Administração",
+      "destructive": true,
+      "classe": "leitura",
+      "elevado": true,
+      "confirmacao": "simples",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action dism-verificar",
+      "description": "Janela de administrador (UAC) com DISM /CheckHealth e /ScanHealth: verifica a imagem do Windows sem consertar."
+    },
+    {
+      "id": "admin_dism_reparar",
+      "title": "DISM: reparar a imagem (RestoreHealth)",
+      "category": "Administração",
+      "destructive": true,
+      "classe": "execucao",
+      "elevado": true,
+      "confirmacao": "simples",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action dism-reparar",
+      "description": "Janela de administrador (UAC) com DISM /Online /Cleanup-Image /RestoreHealth: baixa e repõe componentes do Windows. Precisa de internet."
+    },
+    {
+      "id": "admin_winget_listar",
+      "title": "Listar atualizações (winget)",
+      "category": "Administração",
+      "destructive": false,
+      "classe": "leitura",
+      "elevado": false,
+      "confirmacao": "nenhuma",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action winget-listar",
+      "description": "Mostra os apps com versão nova no winget. Não instala nada."
+    },
+    {
+      "id": "admin_winget_atualizar_tudo",
+      "title": "Atualizar todos os apps (winget)",
+      "category": "Administração",
+      "destructive": true,
+      "classe": "execucao",
+      "elevado": true,
+      "confirmacao": "simples",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action winget-atualizar-tudo",
+      "description": "Janela de administrador (UAC) com winget upgrade --all. Pode fechar e reabrir apps que estiverem sendo atualizados."
+    },
+    {
+      "id": "admin_reiniciar_ollama",
+      "title": "Reiniciar o Ollama",
+      "category": "Administração",
+      "destructive": true,
+      "classe": "execucao",
+      "elevado": false,
+      "confirmacao": "simples",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action reiniciar-ollama",
+      "description": "Fecha o Ollama e abre de novo como usuário normal. Descarrega os modelos da memória."
+    },
+    {
+      "id": "admin_reiniciar_spooler",
+      "title": "Reiniciar o spooler de impressão",
+      "category": "Administração",
+      "destructive": true,
+      "classe": "execucao",
+      "elevado": true,
+      "confirmacao": "simples",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action reiniciar-spooler",
+      "description": "Janela de administrador (UAC) que reinicia o serviço Spooler. Trabalhos de impressão presos podem ser perdidos."
+    },
+    {
+      "id": "admin_flush_dns",
+      "title": "Limpar cache DNS",
+      "category": "Administração",
+      "destructive": true,
+      "classe": "execucao",
+      "elevado": false,
+      "confirmacao": "simples",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action flush-dns",
+      "description": "Roda ipconfig /flushdns. A internet não cai."
+    },
+    {
+      "id": "admin_renovar_rede",
+      "title": "Rede: limpar DNS e renovar IP",
+      "category": "Administração",
+      "destructive": true,
+      "classe": "execucao",
+      "elevado": true,
+      "confirmacao": "simples",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action renovar-rede",
+      "description": "Janela de administrador (UAC) com ipconfig /flushdns, /release e /renew. A internet cai por alguns segundos."
+    },
+    {
+      "id": "admin_abrir_gerenciador_tarefas",
+      "title": "Abrir Gerenciador de Tarefas",
+      "category": "Administração",
+      "destructive": false,
+      "classe": "leitura",
+      "elevado": false,
+      "confirmacao": "nenhuma",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action abrir-gerenciador-tarefas",
+      "description": "Abre o Gerenciador de Tarefas."
+    },
+    {
+      "id": "admin_abrir_servicos",
+      "title": "Abrir Serviços",
+      "category": "Administração",
+      "destructive": false,
+      "classe": "leitura",
+      "elevado": false,
+      "confirmacao": "nenhuma",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action abrir-servicos",
+      "description": "Abre services.msc."
+    },
+    {
+      "id": "admin_abrir_eventos",
+      "title": "Abrir Visualizador de Eventos",
+      "category": "Administração",
+      "destructive": false,
+      "classe": "leitura",
+      "elevado": false,
+      "confirmacao": "nenhuma",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action abrir-eventos",
+      "description": "Abre eventvwr.msc."
+    },
+    {
+      "id": "admin_abrir_disco",
+      "title": "Abrir Gerenciamento de Disco",
+      "category": "Administração",
+      "destructive": false,
+      "classe": "leitura",
+      "elevado": false,
+      "confirmacao": "nenhuma",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action abrir-disco",
+      "description": "Abre diskmgmt.msc (só abre; nada é formatado)."
+    },
+    {
+      "id": "admin_apps_inicializacao",
+      "title": "Ver apps de inicialização",
+      "category": "Administração",
+      "destructive": false,
+      "classe": "leitura",
+      "elevado": false,
+      "confirmacao": "nenhuma",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action apps-inicializacao",
+      "description": "Lista o que abre com o Windows (Run do usuário e da máquina, pasta Inicializar e itens desativados). Não muda nada."
+    },
+    {
+      "id": "admin_defender_status",
+      "title": "Status do Microsoft Defender",
+      "category": "Administração",
+      "destructive": false,
+      "classe": "leitura",
+      "elevado": false,
+      "confirmacao": "nenhuma",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action defender-status",
+      "description": "Mostra proteção em tempo real, assinaturas e última verificação."
+    },
+    {
+      "id": "admin_defender_verificacao_rapida",
+      "title": "Defender: verificação rápida",
+      "category": "Administração",
+      "destructive": true,
+      "classe": "execucao",
+      "elevado": true,
+      "confirmacao": "simples",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action defender-verificacao-rapida",
+      "description": "Janela de administrador (UAC) com Start-MpScan -ScanType QuickScan. Leva alguns minutos."
+    },
+    {
+      "id": "admin_reiniciar_pc",
+      "title": "Reiniciar o PC (em 60 s)",
+      "category": "Administração",
+      "destructive": true,
+      "classe": "destrutiva",
+      "elevado": false,
+      "confirmacao": "dupla",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action reiniciar-pc",
+      "description": "Agenda o reinício em 60 segundos (shutdown /r /t 60). Salve seus trabalhos. Dá para cancelar com 'Cancelar reinício/desligamento'."
+    },
+    {
+      "id": "admin_desligar_pc",
+      "title": "Desligar o PC (em 60 s)",
+      "category": "Administração",
+      "destructive": true,
+      "classe": "destrutiva",
+      "elevado": false,
+      "confirmacao": "dupla",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action desligar-pc",
+      "description": "Agenda o desligamento em 60 segundos (shutdown /s /t 60). Salve seus trabalhos. Dá para cancelar com 'Cancelar reinício/desligamento'."
+    },
+    {
+      "id": "admin_cancelar_desligamento",
+      "title": "Cancelar reinício/desligamento",
+      "category": "Administração",
+      "destructive": false,
+      "classe": "execucao",
+      "elevado": false,
+      "confirmacao": "nenhuma",
+      "command": "if (-not $env:MESTRE_PROJETO_PATH) { Write-Host \"MESTRE_PROJETO_PATH nao definido.\" -ForegroundColor Red; exit 1 }; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:MESTRE_PROJETO_PATH 'scripts\\admin-tools.ps1') -Action cancelar-desligamento",
+      "description": "Roda shutdown /a e cancela um reinício ou desligamento agendado."
+    },
+    {
+      "id": "plugins_vscode_listar",
+      "title": "VS Code: listar extensões",
+      "category": "Plugins",
+      "destructive": false,
+      "command": "if (Get-Command code -EA 0) { code --list-extensions --show-versions } else { Write-Host 'VS Code (code) não encontrado no PATH.' -ForegroundColor Yellow }",
+      "description": "Lista as extensões instaladas no VS Code com a versão de cada uma."
+    },
+    {
+      "id": "plugins_vscode_exportar",
+      "title": "VS Code: exportar lista de extensões",
+      "category": "Plugins",
+      "destructive": false,
+      "command": "if (-not (Get-Command code -EA 0)) { Write-Host 'VS Code (code) não encontrado no PATH.' -ForegroundColor Yellow } else { $f = Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'vscode-extensoes.txt'; code --list-extensions | Set-Content -Path $f -Encoding UTF8; Write-Host \"Lista exportada para $f\" -ForegroundColor Green }",
+      "description": "Salva a lista de extensões do VS Code em Documentos\\vscode-extensoes.txt para reinstalar em outro PC."
+    },
+    {
+      "id": "plugins_notepadpp_listar",
+      "title": "Notepad++: listar plugins",
+      "category": "Plugins",
+      "destructive": false,
+      "command": "$dirs = @((Join-Path $env:ProgramFiles 'Notepad++\\plugins'), (Join-Path ${env:ProgramFiles(x86)} 'Notepad++\\plugins'), (Join-Path $env:APPDATA 'Notepad++\\plugins')); $achou = $false; foreach ($d in $dirs) { if (Test-Path $d) { $achou = $true; Write-Host \"== $d\" -ForegroundColor Cyan; Get-ChildItem $d -Directory -EA 0 | Select-Object Name, LastWriteTime | Format-Table -AutoSize } }; if (-not $achou) { Write-Host 'Notepad++ não encontrado.' -ForegroundColor Yellow }",
+      "description": "Lista as pastas de plugins do Notepad++ (instalação e perfil do usuário)."
+    },
+    {
+      "id": "plugins_chrome_listar",
+      "title": "Chrome: listar extensões",
+      "category": "Plugins",
+      "destructive": false,
+      "command": "$p = Join-Path $env:LOCALAPPDATA 'Google\\Chrome\\User Data\\Default\\Extensions'; if (-not (Test-Path $p)) { Write-Host 'Google Chrome não encontrado neste usuário.' -ForegroundColor Yellow } else { Get-ChildItem $p -Directory -EA 0 | ForEach-Object { $m = Get-ChildItem $_.FullName -Recurse -Filter manifest.json -EA 0 | Select-Object -First 1; if ($m) { $j = Get-Content $m.FullName -Raw -EA 0 | ConvertFrom-Json -EA 0; [pscustomobject]@{ Id = $_.Name; Nome = $j.name; Versao = $j.version } } } | Sort-Object Nome | Format-Table -AutoSize }",
+      "description": "Lê os manifest.json das extensões do perfil padrão do Chrome (somente leitura)."
+    },
+    {
+      "id": "plugins_edge_listar",
+      "title": "Edge: listar extensões",
+      "category": "Plugins",
+      "destructive": false,
+      "command": "$p = Join-Path $env:LOCALAPPDATA 'Microsoft\\Edge\\User Data\\Default\\Extensions'; if (-not (Test-Path $p)) { Write-Host 'Microsoft Edge não encontrado neste usuário.' -ForegroundColor Yellow } else { Get-ChildItem $p -Directory -EA 0 | ForEach-Object { $m = Get-ChildItem $_.FullName -Recurse -Filter manifest.json -EA 0 | Select-Object -First 1; if ($m) { $j = Get-Content $m.FullName -Raw -EA 0 | ConvertFrom-Json -EA 0; [pscustomobject]@{ Id = $_.Name; Nome = $j.name; Versao = $j.version } } } | Sort-Object Nome | Format-Table -AutoSize }",
+      "description": "Lê os manifest.json das extensões do perfil padrão do Edge (somente leitura)."
+    },
+    {
+      "id": "plugins_firefox_listar",
+      "title": "Firefox: listar extensões",
+      "category": "Plugins",
+      "destructive": false,
+      "command": "$root = Join-Path $env:APPDATA 'Mozilla\\Firefox\\Profiles'; if (-not (Test-Path $root)) { Write-Host 'Firefox não encontrado neste usuário.' -ForegroundColor Yellow } else { Get-ChildItem $root -Directory -EA 0 | ForEach-Object { $f = Join-Path $_.FullName 'extensions.json'; if (Test-Path $f) { Write-Host \"== Perfil $($_.Name)\" -ForegroundColor Cyan; (Get-Content $f -Raw -EA 0 | ConvertFrom-Json -EA 0).addons | Where-Object { $_.type -eq 'extension' -and $_.location -eq 'app-profile' } | Select-Object @{n='Nome';e={$_.defaultLocale.name}}, version, active | Format-Table -AutoSize } } }",
+      "description": "Lista as extensões instaladas em cada perfil do Firefox (somente leitura)."
+    },
+    {
+      "id": "plugins_powershell_atualizar",
+      "title": "PowerShell: atualizar módulos instalados",
+      "category": "Plugins",
+      "destructive": true,
+      "command": "Get-InstalledModule -EA 0 | ForEach-Object { Write-Host \"Atualizando $($_.Name) ($($_.Version))...\" -ForegroundColor Cyan; Update-Module -Name $_.Name -EA 0 }; Write-Host 'Concluído.' -ForegroundColor Green",
+      "description": "Atualiza pela PowerShell Gallery todos os módulos instalados com Install-Module. Baixa e substitui versões."
+    },
+    {
+      "id": "plugins_mcp_listar",
+      "title": "MCP: listar servidores configurados",
+      "category": "Plugins",
+      "destructive": false,
+      "command": "$cfgs = @((Join-Path $env:APPDATA 'Claude\\claude_desktop_config.json'), (Join-Path $env:APPDATA 'Code\\User\\mcp.json'), (Join-Path $env:USERPROFILE '.copilot\\mcp-config.json'), (Join-Path $env:USERPROFILE '.cursor\\mcp.json')); foreach ($c in $cfgs) { if (Test-Path $c) { Write-Host \"== $c\" -ForegroundColor Cyan; $j = Get-Content $c -Raw -EA 0 | ConvertFrom-Json -EA 0; $s = if ($j.mcpServers) { $j.mcpServers } elseif ($j.servers) { $j.servers } else { $null }; if ($s) { $s.PSObject.Properties.Name | ForEach-Object { Write-Host \"  - $_\" } } else { Write-Host '  (nenhum servidor)' } } }; $codex = Join-Path $env:USERPROFILE '.codex\\config.toml'; if (Test-Path $codex) { Write-Host \"== $codex\" -ForegroundColor Cyan; Select-String -Path $codex -Pattern '^\\[mcp_servers\\.([^\\]]+)\\]' -EA 0 | ForEach-Object { Write-Host \"  - $($_.Matches[0].Groups[1].Value)\" } }",
+      "description": "Mostra só os nomes dos servidores MCP configurados no Claude Desktop, VS Code, Copilot CLI, Cursor e Codex (não exibe tokens nem variáveis)."
+    },
+    {
+      "id": "plugins_ollama_modelos_tamanho",
+      "title": "Ollama: modelos e espaço em disco",
+      "category": "Plugins",
+      "destructive": false,
+      "command": "if (Get-Command ollama -EA 0) { ollama list } else { Write-Host 'Ollama não encontrado no PATH.' -ForegroundColor Yellow }; $d = if ($env:OLLAMA_MODELS) { $env:OLLAMA_MODELS } else { Join-Path $env:USERPROFILE '.ollama\\models' }; if (Test-Path $d) { $t = (Get-ChildItem $d -Recurse -File -EA 0 | Measure-Object Length -Sum).Sum; Write-Host (\"Total em {0}: {1:N2} GB\" -f $d, ($t / 1GB)) -ForegroundColor Green }",
+      "description": "Lista os modelos do Ollama e soma o espaço ocupado na pasta de modelos."
+    },
+    {
+      "id": "bluetooth_dispositivos",
+      "title": "Bluetooth: dispositivos",
+      "category": "Hardware",
+      "destructive": false,
+      "command": "Get-PnpDevice -Class Bluetooth -EA 0 | Select-Object Status, FriendlyName, InstanceId | Sort-Object FriendlyName | Format-Table -AutoSize",
+      "description": "Lista adaptadores e dispositivos Bluetooth pareados com o status de cada um."
+    },
+    {
+      "id": "usb_dispositivos",
+      "title": "USB: dispositivos conectados",
+      "category": "Hardware",
+      "destructive": false,
+      "command": "Get-PnpDevice -PresentOnly -EA 0 | Where-Object { $_.InstanceId -like 'USB*' } | Select-Object Status, Class, FriendlyName | Sort-Object Class, FriendlyName | Format-Table -AutoSize",
+      "description": "Lista os dispositivos USB presentes agora, agrupados por classe."
+    },
+    {
+      "id": "impressoras_listar",
+      "title": "Impressoras e fila de impressão",
+      "category": "Hardware",
+      "destructive": false,
+      "command": "Get-Printer -EA 0 | Select-Object Name, DriverName, PortName, PrinterStatus, Shared | Format-Table -AutoSize; Write-Host 'Fila de impressão:' -ForegroundColor Cyan; Get-Printer -EA 0 | ForEach-Object { Get-PrintJob -PrinterName $_.Name -EA 0 } | Select-Object PrinterName, DocumentName, JobStatus, SubmittedTime | Format-Table -AutoSize",
+      "description": "Lista impressoras instaladas, drivers, portas e trabalhos pendentes na fila."
+    },
+    {
+      "id": "monitores_info",
+      "title": "Monitores: modelo e resolução",
+      "category": "Hardware",
+      "destructive": false,
+      "command": "Get-CimInstance -Namespace root\\wmi -ClassName WmiMonitorID -EA 0 | ForEach-Object { [pscustomobject]@{ Fabricante = -join [char[]]($_.ManufacturerName -ne 0); Modelo = -join [char[]]($_.UserFriendlyName -ne 0); Serie = -join [char[]]($_.SerialNumberID -ne 0); Ano = $_.YearOfManufacture } } | Format-Table -AutoSize; Get-CimInstance Win32_VideoController -EA 0 | Select-Object Name, CurrentHorizontalResolution, CurrentVerticalResolution, CurrentRefreshRate | Format-Table -AutoSize",
+      "description": "Mostra fabricante, modelo e ano dos monitores e a resolução/taxa atual da placa de vídeo."
+    },
+    {
+      "id": "wifi_relatorio",
+      "title": "Wi-Fi: relatório de conexões",
+      "category": "Rede",
+      "destructive": false,
+      "command": "netsh wlan show wlanreport; $r = Join-Path $env:ProgramData 'Microsoft\\Windows\\WlanReport\\wlan-report-latest.html'; if (Test-Path $r) { Write-Host \"Relatório gerado: $r\" -ForegroundColor Green }",
+      "description": "Gera o relatório de Wi-Fi do Windows (quedas, sessões e erros dos últimos 3 dias)."
+    },
+    {
+      "id": "energia_relatorio",
+      "title": "Energia: relatório da bateria",
+      "category": "Sistema",
+      "destructive": false,
+      "command": "$f = Join-Path $env:TEMP 'mestre-battery-report.html'; powercfg /batteryreport /output $f; Write-Host \"Relatório: $f\" -ForegroundColor Green",
+      "description": "Gera o relatório de bateria (capacidade de projeto x atual e ciclos) em %TEMP%."
+    },
+    {
+      "id": "energia_sleepstudy",
+      "title": "Energia: estudo de suspensão",
+      "category": "Sistema",
+      "destructive": false,
+      "command": "$f = Join-Path $env:TEMP 'mestre-sleepstudy.html'; powercfg /sleepstudy /output $f; Write-Host \"Relatório: $f\" -ForegroundColor Green",
+      "description": "Gera o relatório de suspensão moderna (o que drenou bateria em standby) em %TEMP%."
+    },
+    {
+      "id": "ativacao_windows_status",
+      "title": "Windows: status da ativação",
+      "category": "Sistema",
+      "destructive": false,
+      "command": "cscript //nologo (Join-Path $env:SystemRoot 'System32\\slmgr.vbs') /xpr; Get-CimInstance SoftwareLicensingProduct -Filter \"PartialProductKey IS NOT NULL AND Name LIKE 'Windows%'\" -EA 0 | Select-Object Name, @{n='Licenciado';e={$_.LicenseStatus -eq 1}} | Format-Table -AutoSize",
+      "description": "Mostra se o Windows está ativado e o tipo de licença (não exibe a chave)."
+    },
+    {
+      "id": "bsod_ultimos_crashes",
+      "title": "Tela azul: últimos crashes",
+      "category": "Sistema",
+      "destructive": false,
+      "command": "Get-WinEvent -FilterHashtable @{LogName='System'; Id=41,1001} -MaxEvents 50 -EA 0 | Where-Object { $_.ProviderName -match 'Kernel-Power|WER-SystemErrorReporting' } | Select-Object -First 20 TimeCreated, Id, ProviderName, @{n='Mensagem';e={($_.Message -split \"`n\")[0]}} | Format-Table -AutoSize -Wrap; Get-ChildItem (Join-Path $env:SystemRoot 'Minidump') -EA 0 | Select-Object Name, LastWriteTime, Length | Format-Table -AutoSize",
+      "description": "Lista desligamentos inesperados (Kernel-Power 41), bugchecks (1001) e os minidumps existentes."
+    },
+    {
+      "id": "tpm_secureboot_status",
+      "title": "TPM e Secure Boot",
+      "category": "Segurança",
+      "destructive": false,
+      "command": "Get-Tpm -EA 0 | Select-Object TpmPresent, TpmReady, TpmEnabled, TpmActivated | Format-List; try { Write-Host \"Secure Boot ativo: $(Confirm-SecureBootUEFI)\" } catch { Write-Host 'Secure Boot: não suportado (BIOS legado) ou sem permissão.' -ForegroundColor Yellow }",
+      "description": "Verifica se o TPM está presente/pronto e se o Secure Boot está ativo."
+    },
+    {
+      "id": "defender_ameacas_detectadas",
+      "title": "Defender: ameaças detectadas",
+      "category": "Defender",
+      "destructive": false,
+      "command": "Get-MpThreatDetection -EA 0 | Sort-Object InitialDetectionTime -Descending | Select-Object -First 20 InitialDetectionTime, ThreatID, ActionSuccess, @{n='Recurso';e={$_.Resources -join '; '}} | Format-Table -AutoSize -Wrap; Get-MpThreat -EA 0 | Select-Object ThreatName, SeverityID, IsActive | Format-Table -AutoSize",
+      "description": "Histórico de detecções do Microsoft Defender e ameaças conhecidas (somente leitura)."
+    },
+    {
+      "id": "volumes_listar",
+      "title": "Volumes e BitLocker",
+      "category": "Disco",
+      "destructive": false,
+      "command": "Get-Volume -EA 0 | Where-Object DriveLetter | Select-Object DriveLetter, FileSystemLabel, FileSystem, HealthStatus, @{n='Tamanho(GB)';e={[math]::Round($_.Size/1GB,1)}}, @{n='Livre(GB)';e={[math]::Round($_.SizeRemaining/1GB,1)}} | Format-Table -AutoSize; Get-BitLockerVolume -EA 0 | Select-Object MountPoint, ProtectionStatus, EncryptionPercentage | Format-Table -AutoSize",
+      "description": "Lista volumes com espaço livre e saúde, e o estado de criptografia do BitLocker."
+    },
+    {
+      "id": "sombras_vss_listar",
+      "title": "Cópias de sombra (VSS)",
+      "category": "Backup",
+      "destructive": false,
+      "command": "vssadmin list shadows; vssadmin list shadowstorage",
+      "description": "Lista as cópias de sombra (pontos de restauração) e o espaço reservado para elas."
     }
   ],
   "templates": [
+    {
+      "id": "mover_segredo_para_chaves",
+      "title": "Mover Segredo para Chaves",
+      "category": "Segurança",
+      "destructive": true,
+      "pattern": "$d='C:\\Users\\Jean\\chaves'; $n=\"{{ARQUIVO}}\"; if($n -match '^\\.{1,2}$'){Write-Host '⚠️ Nome inválido.' -ForegroundColor Yellow} elseif($f=@('C:\\Users\\Jean\\OneDrive','C:\\Users\\Jean\\Desktop','C:\\Users\\Jean\\Downloads') | ForEach-Object {Join-Path $_ $n} | Where-Object {Test-Path -LiteralPath $_} | Select-Object -First 1){$i=Get-Item -LiteralPath $f -Force; if($i.Attributes -band [IO.FileAttributes]::ReparsePoint){Write-Host '⚠️ Somente-nuvem: abra o OneDrive e repita.' -ForegroundColor Yellow} else {$t=Join-Path $d $i.Name; if(Test-Path -LiteralPath $t){$b=[IO.Path]::GetFileNameWithoutExtension($i.Name); $e=[IO.Path]::GetExtension($i.Name); $k=1; while(Test-Path -LiteralPath $t){$t=Join-Path $d ($b+'-'+$k+$e); $k++}}; Move-Item -LiteralPath $f -Destination $t -Force -ErrorAction Stop; Write-Host ('✅ Movido: '+$i.Name+' -> '+$t) -ForegroundColor Green}} else {Write-Host '⚠️ Não encontrado em OneDrive, Desktop ou Downloads.' -ForegroundColor Yellow}",
+      "params": {
+        "arquivo": "^(?!\\.{1,2}$)[a-zA-Z0-9_. -]{1,128}$"
+      },
+      "description": "Move um segredo para C:\\Users\\Jean\\chaves, fora do OneDrive e da Área de Trabalho. Informe 'arquivo' com o nome apenas (ex: API MISTRAL.txt), sem caminho. Procura na raiz do OneDrive, no Desktop e em Downloads. Recusa arquivo somente-nuvem com o OneDrive parado; não abre nem imprime o conteúdo; não sobrescreve (acrescenta -1, -2).",
+      "enabled": true
+    },
     {
       "id": "encerrar_processo",
       "title": "Encerrar Processo",
@@ -3557,10 +4439,10 @@
     },
     {
       "id": "rede_testar_ollama",
-      "title": "Testar Ollama (localhost:11434)",
+      "title": "Testar Ollama (127.0.0.1:11434)",
       "category": "Ollama",
       "destructive": false,
-      "command": "try { $r = Invoke-WebRequest -Uri 'http://localhost:11434' -TimeoutSec 5 -UseBasicParsing; if($r.StatusCode -eq 200) { Write-Host '✅ Ollama ONLINE' -ForegroundColor Green; $m = Invoke-RestMethod -Uri 'http://localhost:11434/api/tags' -TimeoutSec 5; Write-Host \"Modelos: $(($m.models | ForEach-Object { $_.name }) -join ', ')\" -ForegroundColor Cyan } } catch { Write-Host '❌ Ollama offline: ' $_.Exception.Message -ForegroundColor Red }",
+      "command": "try { $r = Invoke-WebRequest -Uri 'http://127.0.0.1:11434' -TimeoutSec 5 -UseBasicParsing; if($r.StatusCode -eq 200) { Write-Host '✅ Ollama ONLINE' -ForegroundColor Green; $m = Invoke-RestMethod -Uri 'http://127.0.0.1:11434/api/tags' -TimeoutSec 5; Write-Host \"Modelos: $(($m.models | ForEach-Object { $_.name }) -join ', ')\" -ForegroundColor Cyan } } catch { Write-Host '❌ Ollama offline: ' $_.Exception.Message -ForegroundColor Red }",
       "description": "Testar Ollama."
     },
     {
@@ -3854,8 +4736,8 @@
     {
       "id": "instalar_pacote_npm_global",
       "title": "Instalar Pacote NPM (Global)",
-      "category": "Node.js",
-      "destructive": false,
+      "category": "Destrutiva",
+      "destructive": true,
       "pattern": "npm install -g {{PACOTE}}; Write-Host \"✅ Pacote {{PACOTE}} instalado!\" -ForegroundColor Green",
       "params": {
         "pacote": "^[a-zA-Z0-9_.-]{1,100}$"
@@ -3876,8 +4758,8 @@
     {
       "id": "instalar_pacote_pip",
       "title": "Instalar Pacote Pip",
-      "category": "Python",
-      "destructive": false,
+      "category": "Destrutiva",
+      "destructive": true,
       "pattern": "pip install {{PACOTE}}; Write-Host \"✅ Pacote {{PACOTE}} instalado!\" -ForegroundColor Green",
       "params": {
         "pacote": "^[a-zA-Z0-9_.-]{1,100}$"
@@ -4286,6 +5168,60 @@
         "nome": "^[A-Za-z0-9 ._-]{1,128}$"
       },
       "description": "Mostra o status e o tipo de início de um serviço. Use 'nome' com o Name do serviço (ex: Spooler)."
+    },
+    {
+      "id": "eng_reversa_status",
+      "title": "REA: Status da Integração",
+      "category": "Engenharia Reversa (REA)",
+      "destructive": false,
+      "command": "node \"$env:MESTRE_PROJETO_PATH\\scripts\\rea-cli.mjs\" status",
+      "description": "Mostra como o REA está sendo chamado (instalado, no PATH ou via npx), a versão detectada e as raízes de alvo permitidas."
+    },
+    {
+      "id": "eng_reversa_doctor",
+      "title": "REA: Diagnóstico (doctor)",
+      "category": "Engenharia Reversa (REA)",
+      "destructive": false,
+      "command": "node \"$env:MESTRE_PROJETO_PATH\\scripts\\rea-cli.mjs\" doctor",
+      "description": "Roda 'rea doctor --json' para conferir motores, registro MCP e pré-requisitos. Read-only. Na primeira execução via npx baixa o pacote (precisa de rede)."
+    },
+    {
+      "id": "eng_reversa_analisar_app_js",
+      "title": "REA: Analisar App JavaScript/Electron",
+      "category": "Engenharia Reversa (REA)",
+      "destructive": false,
+      "pattern": "node \"$env:MESTRE_PROJETO_PATH\\scripts\\rea-cli.mjs\" analyze-js \"{{CAMINHO}}\"",
+      "params": {
+        "caminho": "^[A-Za-z]:[\\\\/][A-Za-z0-9 ._\\\\/()\\-]{1,240}$"
+      },
+      "description": "Analisa um app entregue (pasta extraída, .asar ou build JavaScript) e devolve a Evidência do REA em JSON. Informe 'caminho' absoluto. O app analisado nunca é executado."
+    },
+    {
+      "id": "dsh_status",
+      "title": "Status do DeepSeek Harness",
+      "category": "DeepSeek Harness (dsh)",
+      "destructive": false,
+      "command": "$h=@{ \"X-Mestre-Client\"=\"v10-web\" }; try { $r=Invoke-RestMethod -Uri \"http://127.0.0.1:7777/dsh/status\" -Headers $h -TimeoutSec 20; Write-Host \"dsh instalado: $($r.installed) | versao: $($r.version) | modo: $($r.mode)\" -ForegroundColor Cyan; if(-not $r.providers){ Write-Host \"Nenhum provedor retornado.\" -ForegroundColor Yellow } else { $r.providers | ForEach-Object { $marca=if($_.ready){ \"PRONTO\" } else { \"offline\" }; Write-Host (\"- {0} [{1}] modelo={2} ({3})\" -f $_.id, $marca, $_.model, $_.label) } } } catch { Write-Host \"dsh indisponivel em 127.0.0.1:7777: $($_.Exception.Message)\" -ForegroundColor Yellow }",
+      "description": "Mostra se o DeepSeek Harness está instalado, a versão/modo e o estado de cada provedor da cascata (pronto ou offline). Read-only."
+    },
+    {
+      "id": "dsh_cascata_provedores",
+      "title": "Ver cascata de provedores do dsh",
+      "category": "DeepSeek Harness (dsh)",
+      "destructive": false,
+      "command": "$h=@{ \"X-Mestre-Client\"=\"v10-web\" }; try { $r=Invoke-RestMethod -Uri \"http://127.0.0.1:7777/dsh/status\" -Headers $h -TimeoutSec 20; Write-Host \"Cascata do dsh (grok -> 9router -> opencode -> opencode-go -> ollama -> deepseek):\" -ForegroundColor Cyan; $i=0; $r.providers | ForEach-Object { $i++; $marca=if($_.ready){ \"PRONTO\" } else { \"offline\" }; Write-Host (\"{0}. {1} -> {2} [{3}]\" -f $i, $_.id, $_.model, $marca) }; $prontos=@($r.providers | Where-Object { $_.ready }).Count; Write-Host \"Provedores prontos: $prontos de $($r.providers.Count)\" -ForegroundColor $(if($prontos -gt 0){ \"Green\" } else { \"Red\" }) } catch { Write-Host \"dsh indisponivel em 127.0.0.1:7777: $($_.Exception.Message)\" -ForegroundColor Yellow }",
+      "description": "Lista a cascata de provedores do dsh na ordem de tentativa (grok, 9router, opencode, opencode-go, ollama, deepseek) e quantos estão prontos agora. Read-only."
+    },
+    {
+      "id": "dsh_rodar_tarefa",
+      "title": "Rodar tarefa no DeepSeek Harness",
+      "category": "DeepSeek Harness (dsh)",
+      "destructive": false,
+      "pattern": "$h=@{ \"X-Mestre-Client\"=\"v10-web\" }; $corpo=@{ task=\"{{TAREFA}}\" } | ConvertTo-Json -Compress; try { $r=Invoke-RestMethod -Method POST -Uri \"http://127.0.0.1:7777/dsh/run\" -Headers $h -ContentType \"application/json\" -Body $corpo -TimeoutSec 60; $id=$r.jobId; Write-Host \"Tarefa enviada ao dsh: job $id\" -ForegroundColor Cyan; $estado=\"queued\"; for($i=0; $i -lt 144; $i++){ Start-Sleep -Seconds 5; $j=Invoke-RestMethod -Uri \"http://127.0.0.1:7777/dsh/job?id=$id\" -Headers $h -TimeoutSec 30; $estado=$j.state; if($estado -eq \"completed\" -or $estado -eq \"failed\"){ break } }; Write-Host \"Estado final: $estado\"; if($j.provider){ Write-Host \"Provedor: $($j.provider)\" }; if($j.error){ Write-Host \"Erro: $($j.error)\" -ForegroundColor Red }; if($j.attempts){ $j.attempts | ForEach-Object { if($_.error){ Write-Host (\"Falha em {0}: {1}\" -f $_.provider, $_.error) -ForegroundColor Yellow } } }; if($j.result){ $texto=if($j.result -is [string]){ $j.result } else { $j.result.output }; Write-Host \"\"; Write-Host $texto } } catch { Write-Host \"dsh indisponivel em 127.0.0.1:7777: $($_.Exception.Message)\" -ForegroundColor Yellow }",
+      "params": {
+        "tarefa": "^[A-Za-z0-9À-ÿ .,;:()\\/_-]{1,600}$"
+      },
+      "description": "Envia uma tarefa de código ao dsh (POST /dsh/run), acompanha o job (GET /dsh/job?id=) e imprime o texto final, o provedor que respondeu e as falhas de cada tentativa. Informe 'tarefa' com o objetivo autossuficiente. Uma tarefa por execução, sem follow-up."
     }
   ]
 }

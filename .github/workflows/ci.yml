@@ -24,7 +24,11 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Install MCP dependencies
         working-directory: mcp-server
-        run: npm ci
+        # @qwen-code/cua-sdk não é dependência deste pacote: o import fica em
+        # v10/computer-use-client.js e resolve v10/node_modules ou a raiz.
+        # --ignore-scripts evita postinstall nativo (Authenticode do cua-sdk na
+        # raiz; puppeteer se voltar ao lock) no runner do Actions.
+        run: npm ci --ignore-scripts
       - name: Run MCP tests
         working-directory: mcp-server
         run: npm test
@@ -33,8 +37,11 @@ jobs:
         run: |
           node --check v10/launcher.js
           node --check v10/security/origin-policy.js
-          node --check v10/mobile/app.js
-          node --check v10/mobile/sw.js
+          node --check v10/chat-integrado/chat-integrado.js
+          node --check v10/chat-integrado/obsidian-chat.js
+          node --check v10/chat-integrado/kokoro-voice.js
+          node --check v10/chat-integrado/voice-output.js
+          node --check mcp-server/model-catalog.js
           node --test v10/security/origin-policy.test.mjs
           node --check mcp-server/index.js
           node --check mcp-server/security.js

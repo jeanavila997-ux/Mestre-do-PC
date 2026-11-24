@@ -4,6 +4,15 @@
  */
 
 import { getSettings, localBaseUrl, fetchLocal as fetchWithTimeout } from "./settings.js";
+import {
+  summarizeMemory,
+  closeJunkTabs,
+  closeDuplicateTabs,
+  discardInactiveTabs,
+  openSpeedtest,
+} from "./tab-actions.js";
+import { ADMIN_CLASS_LABEL, ADMIN_OPS, APP_LINKS } from "./tools-core.js";
+import { applySavedDesign, openToolsWindow } from "./tools-actions.js";
 
 const UI = {
   launcherDot: document.getElementById("launcherDot"),
@@ -15,6 +24,11 @@ const UI = {
   message: document.getElementById("message"),
   btnDiagnostico: document.getElementById("btnDiagnostico"),
   btnLimpeza: document.getElementById("btnLimpeza"),
+  btnSpeedtest: document.getElementById("btnSpeedtest"),
+  btnListarAbas: document.getElementById("btnListarAbas"),
+  btnFecharLixo: document.getElementById("btnFecharLixo"),
+  btnDuplicadas: document.getElementById("btnDuplicadas"),
+  btnDiscard: document.getElementById("btnDiscard"),
   btnEnviarPagina: document.getElementById("btnEnviarPagina"),
   btnOptions: document.getElementById("btnOptions"),
   linkOpenApp: document.getElementById("linkOpenApp"),
@@ -156,12 +170,103 @@ async function sendPageToAI(settings) {
   }
 }
 
+async function activeTab() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  return tab || null;
+}
+
+function renderAdminButtons() {
+  const box = document.getElementById("adminButtons");
+  let group = "";
+  for (const op of ADMIN_OPS) {
+    if (op.grupo !== group) {
+      group = op.grupo;
+      const h = document.createElement("h4");
+      h.textContent = group;
+      box.append(h);
+    }
+    const b = document.createElement("button");
+    b.dataset.tool = "admin";
+    b.dataset.op = op.id;
+    b.textContent = op.titulo;
+    const tag = document.createElement("span");
+    tag.className = "tag";
+    tag.textContent = ADMIN_CLASS_LABEL[op.classe] + (op.elevado ? " · UAC" : "");
+    b.append(tag);
+    box.append(b);
+  }
+}
+
+function wireTools() {
+  // Ferramentas e Administração abrem o painel; nada roda direto do popup.
+  document.body.addEventListener("click", async (e) => {
+    const btn = e.target.closest("button[data-tool]");
+    if (!btn) return;
+    try {
+      const tab = await activeTab();
+      await openToolsWindow(btn.dataset.tool, tab, btn.dataset.op ? { op: btn.dataset.op } : {});
+      window.close();
+    } catch (error) { showMessage(error.message); }
+  });
+  document.getElementById("btnNotebookLM").addEventListener("click", async () => {
+    try { await chrome.tabs.create({ url: APP_LINKS.notebooklm }); } catch (error) { showMessage(error.message); }
+  });
+}
+
 function wireActions() {
   if (wireActions.done) return;
   wireActions.done = true;
-  UI.btnDiagnostico.addEventListener("click", () => getSettings().then(settings => runLauncherCommand("diagnostico_completo", settings)).catch(e => showMessage(e.message)));
-  UI.btnLimpeza.addEventListener("click", () => getSettings().then(settings => runLauncherCommand("limpeza_rapida_completa", settings)).catch(e => showMessage(e.message)));
-  UI.btnEnviarPagina.addEventListener("click", () => getSettings().then(sendPageToAI).catch(e => showMessage(e.message)));
+  renderAdminButtons();
+  wireTools();
+  UI.btnDiagnostico.addEventListener("click", async () => {
+    try {
+      const settings = await getSettings();
+      await runLauncherCommand("diagnostico_completo", settings);
+    } catch (e) { showMessage(e.message); }
+  });
+  UI.btnLimpeza.addEventListener("click", async () => {
+    try {
+      const settings = await getSettings();
+      await runLauncherCommand("limpeza_rapida_completa", settings);
+    } catch (e) { showMessage(e.message); }
+  });
+  UI.btnSpeedtest.addEventListener("click", async () => {
+    try {
+      await openSpeedtest();
+      showMessage("fast.com e Cloudflare Speedtest abertos.", "success");
+    } catch (e) { showMessage(e.message); }
+  });
+  UI.btnListarAbas.addEventListener("click", async () => {
+    try {
+      const s = await summarizeMemory();
+      const hosts = s.topHosts.map(([h, n]) => `${h} (${n})`).join(", ");
+      showMessage(`Abas: ${s.total} · descartadas: ${s.discarded} · pin: ${s.pinned} · áudio: ${s.audible}. Hosts: ${hosts}`, "success");
+    } catch (e) { showMessage(e.message); }
+  });
+  UI.btnFecharLixo.addEventListener("click", async () => {
+    try {
+      const r = await closeJunkTabs();
+      showMessage(`Fechou ${r.closed} aba(s) sucata. Restam ${r.remaining}.`, "success");
+    } catch (e) { showMessage(e.message); }
+  });
+  UI.btnDuplicadas.addEventListener("click", async () => {
+    try {
+      const r = await closeDuplicateTabs();
+      showMessage(`Fechou ${r.closed} aba(s) duplicada(s).`, "success");
+    } catch (e) { showMessage(e.message); }
+  });
+  UI.btnDiscard.addEventListener("click", async () => {
+    try {
+      const r = await discardInactiveTabs();
+      showMessage(`Descartou ${r.discarded} aba(s) inativa(s) da RAM.`, "success");
+    } catch (e) { showMessage(e.message); }
+  });
+  UI.btnEnviarPagina.addEventListener("click", async () => {
+    try {
+      const settings = await getSettings();
+      await sendPageToAI(settings);
+    } catch (e) { showMessage(e.message); }
+  });
   UI.btnOptions.addEventListener("click", () => chrome.runtime.openOptionsPage());
   UI.linkOpenApp.addEventListener("click", async (e) => {
     e.preventDefault();
@@ -178,6 +283,8 @@ function wireActions() {
 
 async function init() {
   wireActions();
+  // Abrir o popup concede activeTab: reaplica o design salvo deste site.
+  activeTab().then((tab) => tab?.id != null && applySavedDesign(tab.id, tab.url || "")).catch(() => {});
   try {
     const settings = await getSettings();
     await Promise.all([checkLauncher(settings), checkOllama(settings), checkChatHub(settings)]);

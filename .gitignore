@@ -39,7 +39,6 @@ desktop.ini
 .claude/*
 !.claude/commands/
 .codex/
-.agents/
 .cursor/
 .kimi/
 .kimi-code/
@@ -48,6 +47,7 @@ desktop.ini
 .cline/
 .console-ninja/
 .playwright-cli/
+.codesight/default.json
 .testsprite/
 .pytest_cache/
 .coverage/
@@ -119,4 +119,8 @@ mobile/gateway/data/
 
 # Backups locais com data
 *.bak-*
+
+
+# sessao local do visual companion
+.superpowers/
 

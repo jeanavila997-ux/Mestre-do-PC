@@ -5,7 +5,7 @@
 // V10.1: suporta operações parametrizadas via {id, params} e templates seguros.
 
 import http from "node:http";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import { readFile, mkdir, writeFile } from "node:fs/promises";
 import { existsSync, readFileSync } from "node:fs";
@@ -20,21 +20,14 @@ import { handleOperationRoutes } from "./operation-routes.js";
 import { handleSoulRoutes } from "./soul-routes.js";
 import { handleComputerUseRoutes } from "./computer-use-routes.js";
 import { handleProviderRoutes } from "./providers-routes.js";
+import { handleReaRoutes } from "./rea-routes.js";
+import { handleDshRoutes } from "./dsh-routes.js";
+import { handleMcpHttpEndpoint } from "./chat-integrado/grokbot-bridge.js";
 import { isAllowedWebOrigin, isNppOrigin, isTrustedClientOrigin, parseExtraOrigins } from "./security/origin-policy.js";
 import { isLocalMcpEnabled, validateLocalMcpToken, ensureLocalMcpToken, isLegacyMcpAllowed } from "../mcp-server/auth/local-token.js";
-import { 
-  createMemory, 
-  listMemories, 
-  getMemory, 
-  updateMemory, 
-  deleteMemory, 
-  exportMemories, 
-  importMemories,
-  searchRelevantMemories,
-  MemoryType 
-} from "./memory-manager.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const APP_VERSION = JSON.parse(readFileSync(join(__dirname, "package.json"), "utf8")).version;
 const PORT = process.env.MPC_PORT ? Number(process.env.MPC_PORT) : 7777;
 const HOST = process.env.MPC_HOST || "127.0.0.1";
 if (HOST !== "127.0.0.1") {
@@ -53,6 +46,21 @@ const MAX_CONCURRENT_JOBS = 3;
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
 const JOB_RETENTION_MS = 30 * 60 * 1000;
 const MAX_CMD_LENGTH = 32768;
+// Agentes CLI do menu (mesmos ids do catálogo em scripts/cli-agents.ps1). Nunca instala nada.
+const CLI_AGENT_IDS = ["claude","opencode","codex","gemini","qwen","aider","copilot","cursor","grok","dsh","hermes","goose","kilo","cline","crush","pi","antigravity","ori","openhands","interpreter","continue","plandex","kimi","gptme","kiro","amp","droid","omp"];
+let cliAgentsCache = { at: 0, data: null };
+// pwsh 7 costuma vir só como alias da Microsoft Store (WindowsApps). O launcher
+// elevado (tarefa MestreDoPC_Admin_Launcher) nem sempre tem essa pasta no PATH,
+// então "pwsh.exe" sozinho falha; tenta caminhos completos antes.
+function resolvePwsh() {
+  const candidatos = [
+    process.env.MESTRE_PWSH_PATH,
+    "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+    process.env.LOCALAPPDATA && join(process.env.LOCALAPPDATA, "Microsoft", "WindowsApps", "pwsh.exe"),
+    process.env.USERPROFILE && join(process.env.USERPROFILE, "AppData", "Local", "Microsoft", "WindowsApps", "pwsh.exe"),
+  ].filter(Boolean);
+  return candidatos.find((p) => existsSync(p)) || "pwsh.exe";
+}
 
 // ===== Modo Livre — execução de comandos fora da whitelist =====
 // Opt-in e reversível: por padrão desligado. Quando ligado, /run-free aceita
@@ -176,13 +184,16 @@ function isDirectLoopback(req) {
 
 function crossOriginMobileTokenOk(req) {
   const expected = process.env.MESTRE_MOBILE_TOKEN || "";
-  if (!expected) return true;
   const origin = req.headers.origin || "";
   const sameLauncher = !origin || isAllowedWebOrigin(origin, BASE_URL);
   // O Desktop local entra direto em 127.0.0.1, sem proxy. Túnel e proxy
   // (x-forwarded-for / cf-connecting-ip) ou um socket que não é loopback
   // precisam do token, mesmo sem Origin ou com a origem do próprio launcher.
   if (sameLauncher && isDirectLoopback(req)) return true;
+  // Fail-closed: sem MESTRE_MOBILE_TOKEN, nada que não seja loopback direto
+  // passa. Antes, com MPC_HOST=0.0.0.0 e sem token, qualquer máquina da rede
+  // chamava /run só mandando X-Mestre-Client: v10-web e omitindo o Origin.
+  if (!expected) return false;
   return sameToken(req.headers["x-mestre-mobile-token"] || "", expected);
 }
 
@@ -191,6 +202,19 @@ function cors(res, origin = BASE_URL) {
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", CORS_ALLOW_HEADERS);
   res.setHeader("Vary", "Origin");
+}
+
+// Encerra o PowerShell do job e os filhos dele (pwsh, winget...). Só kill()
+// deixava netos vivos depois do /shutdown.
+function killProcessTree(child) {
+  if (!child?.pid) return;
+  if (process.platform === "win32") {
+    try {
+      spawnSync("taskkill.exe", ["/PID", String(child.pid), "/T", "/F"], { windowsHide: true, timeout: 5000 });
+      return;
+    } catch { /* cai no kill() */ }
+  }
+  try { child.kill(); } catch { /* processo já saiu */ }
 }
 
 function isExtensionOrigin(origin) {
@@ -226,15 +250,30 @@ function warnMcpSemToken() {
   console.warn("[SEGURANÇA] Cliente 'mcp' aceito sem token (MESTRE_ALLOW_LEGACY_MCP=1).");
 }
 
+// /mcp (Streamable HTTP): todo POST exige o token local, aceito em
+// X-Mestre-Mcp-Token ou Authorization: Bearer. Sem token configurado é
+// fail-closed; o modo legado (MESTRE_ALLOW_LEGACY_MCP=1) só vale para
+// chamadas diretas do próprio PC, sem origin de navegador.
+function isMcpHttpAuthorized(req) {
+  const origin = req.headers.origin || "";
+  if (origin && !isAllowedWebOrigin(origin, BASE_URL)) return false;
+  if (isLocalMcpEnabled()) {
+    const bearer = headerValue(req, "authorization").replace(/^Bearer\s+/i, "");
+    const token = headerValue(req, "x-mestre-mcp-token") || bearer;
+    return validateLocalMcpToken(token).valid;
+  }
+  if (!isLegacyMcpAllowed()) return false;
+  warnMcpSemToken();
+  return !origin && isDirectLoopback(req);
+}
+
 function isAuthorized(req) {
   const origin = req.headers.origin || "";
   const client = req.headers["x-mestre-client"] || "";
 
-  // v10-web: a UI desktop no próprio launcher, e a PWA mobile quando a origem
-  // é localhost, LAN, túnel trycloudflare, VPS ou página estática do projeto.
-  // v11-mobile é alias do mesmo cliente. Fora da origem do launcher, um
-  // MESTRE_MOBILE_TOKEN definido passa a ser obrigatório.
-  if (client === "v10-web" || client === "v11-mobile") {
+  // v10-web: UI desktop no launcher ou em origem remota explicitamente confiável.
+  // Fora da origem do launcher, um token definido passa a ser obrigatório.
+  if (client === "v10-web") {
     if (!crossOriginMobileTokenOk(req)) return false;
     return isAllowedWebOrigin(origin, BASE_URL) || isTrustedClientOrigin(origin, mobileExtraOrigins());
   }
@@ -415,17 +454,28 @@ async function proxyOllamaStream(path, req, res, allowOrigin = BASE_URL, maxBody
     if (blocked) return sendJson(res, 400, blocked, allowOrigin);
   }
   let upstream;
+  // Se o cliente desistir (Parar, troca de modelo, timeout), cancela também
+  // a geração no Ollama — senão o runner fica ocupado e trava os próximos modelos.
+  const upstreamAbort = new AbortController();
+  const onClientClose = () => {
+    if (!res.writableEnded) upstreamAbort.abort();
+  };
+  res.on("close", onClientClose);
   try {
     upstream = await fetch(OLLAMA_URL + path, {
       method: req.method,
       headers: { "Content-Type": "application/json" },
       body: req.method === "POST" ? JSON.stringify(body) : undefined,
+      signal: upstreamAbort.signal,
     });
   } catch (e) {
+    res.off("close", onClientClose);
+    if (upstreamAbort.signal.aborted) return; // cliente já desconectou
     return sendJson(res, 502, { error: "Ollama offline: " + e.message }, allowOrigin);
   }
   if (!upstream.ok || !upstream.body) {
     const text = await upstream.text().catch(() => "");
+    res.off("close", onClientClose);
     return sendJson(res, upstream.status || 502, { error: text || "Ollama error" }, allowOrigin);
   }
   res.writeHead(upstream.status, {
@@ -444,6 +494,7 @@ async function proxyOllamaStream(path, req, res, allowOrigin = BASE_URL, maxBody
   } catch (e) {
     // cliente desconectou ou erro de stream — ignora silenciosamente
   } finally {
+    res.off("close", onClientClose);
     res.end();
   }
 }
@@ -476,7 +527,7 @@ async function callOllamaChat(messages, allowOrigin = BASE_URL) {
   const upstream = await fetch(OLLAMA_URL + "/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model, messages, stream: false, keep_alive: "10m" }),
+    body: JSON.stringify({ model, messages, stream: false, think: false, keep_alive: "10m" }),
     signal: AbortSignal.timeout(60000),
   });
   if (!upstream.ok) {
@@ -590,104 +641,75 @@ async function handleNppAction(action, payload) {
 }
 
 // Métricas do sistema via PowerShell (para o dashboard V10).
+// Cache de 5s + single-flight: cada poll da UI não paga spawn+WMI (~2-5s medidos).
+// Timeout server-side: resposta nunca fica pendurada; PowerShell órfão é morto em 8s.
+const SYSTEM_STATUS_TTL_MS = 5000;
+const SYSTEM_STATUS_PS_TIMEOUT_MS = 8000;
+const SYSTEM_STATUS_RESPONSE_TIMEOUT_MS = 10000;
+const SYSTEM_STATUS_EMPTY = { cpu: 0, cpuCount: 0, ramFree: 0, ramTotal: 0, diskFree: 0, diskUsed: 0, uptimeSec: 0 };
+let systemStatusCache = { data: null, at: 0 };
+let systemStatusInflight = null;
+
+function collectSystemStatus() {
+  return new Promise((resolve) => {
+    let out = "";
+    const ps = spawn("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", `
+$os = Get-WmiObject Win32_OperatingSystem
+$ramFree = [math]::Round($os.FreePhysicalMemory/1MB, 2)
+$ramTotal = [math]::Round($os.TotalVisibleMemorySize/1MB, 2)
+$cpu = (Get-WmiObject Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average
+$cpuCount = (Get-WmiObject Win32_ComputerSystem).NumberOfLogicalProcessors
+$disk = Get-PSDrive C
+$diskFree = [math]::Round($disk.Free/1GB, 2)
+$diskUsed = [math]::Round($disk.Used/1GB, 2)
+$boot = [Management.ManagementDateTimeConverter]::ToDateTime($os.LastBootUpTime)
+$uptime = [int]((Get-Date) - $boot).TotalSeconds
+@{cpu=[math]::Round($cpu,1);cpuCount=$cpuCount;ramFree=$ramFree;ramTotal=$ramTotal;diskFree=$diskFree;diskUsed=$diskUsed;uptimeSec=$uptime} | ConvertTo-Json -Compress
+`], { windowsHide: true, env: cleanPSEnv() });
+    const killTimer = setTimeout(() => { try { ps.kill(); } catch {} }, SYSTEM_STATUS_PS_TIMEOUT_MS);
+    killTimer.unref();
+    ps.stdout.on("data", (d) => (out += d.toString()));
+    ps.stderr.on("data", (d) => (out += d.toString()));
+    ps.on("close", () => {
+      clearTimeout(killTimer);
+      try { resolve(JSON.parse(out.trim())); } catch { resolve(null); }
+    });
+    ps.on("error", () => { clearTimeout(killTimer); resolve(null); });
+  });
+}
+
+function ensureSystemStatusCollection() {
+  if (!systemStatusInflight) {
+    systemStatusInflight = collectSystemStatus()
+      .then((data) => {
+        if (data) systemStatusCache = { data, at: Date.now() };
+        systemStatusInflight = null;
+        return data;
+      })
+      .catch(() => {
+        systemStatusInflight = null;
+        return null;
+      });
+  }
+  return systemStatusInflight;
+}
+
 function getSystemStatus(res, allowedOrigin = BASE_URL) {
-  const empty = { cpu: 0, ramFree: 0, ramTotal: 0, diskFree: 0, diskUsed: 0, uptimeSec: 0 };
   let settled = false;
   const finish = (data) => {
     if (settled) return;
     settled = true;
     sendJson(res, 200, data, allowedOrigin);
   };
-  const ps = spawn("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", `
-$os = Get-WmiObject Win32_OperatingSystem
-$ramFree = [math]::Round($os.FreePhysicalMemory/1MB, 2)
-$ramTotal = [math]::Round($os.TotalVisibleMemorySize/1MB, 2)
-$cpu = (Get-WmiObject Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average
-$disk = Get-PSDrive C
-$diskFree = [math]::Round($disk.Free/1GB, 2)
-$diskUsed = [math]::Round($disk.Used/1GB, 2)
-$boot = [Management.ManagementDateTimeConverter]::ToDateTime($os.LastBootUpTime)
-$uptime = [int]((Get-Date) - $boot).TotalSeconds
-@{cpu=[math]::Round($cpu,1);ramFree=$ramFree;ramTotal=$ramTotal;diskFree=$diskFree;diskUsed=$diskUsed;uptimeSec=$uptime} | ConvertTo-Json -Compress
-`], { windowsHide: true, env: cleanPSEnv() });
-  let out = "";
-  ps.stdout.on("data", (d) => (out += d.toString()));
-  ps.stderr.on("data", (d) => (out += d.toString()));
-  ps.on("close", () => {
-    try { finish(JSON.parse(out.trim())); }
-    catch { finish(empty); }
+  const fresh = systemStatusCache.data && Date.now() - systemStatusCache.at < SYSTEM_STATUS_TTL_MS;
+  if (fresh) return finish(systemStatusCache.data);
+  const fallback = () => systemStatusCache.data || SYSTEM_STATUS_EMPTY;
+  const timer = setTimeout(() => finish(fallback()), SYSTEM_STATUS_RESPONSE_TIMEOUT_MS);
+  timer.unref();
+  ensureSystemStatusCollection().then((data) => {
+    clearTimeout(timer);
+    finish(data || fallback());
   });
-  ps.on("error", () => finish(empty));
-}
-
-const MOBILE_CSP = [
-  "default-src 'self'",
-  "img-src 'self' data: blob:",
-  "style-src 'self' 'unsafe-inline'",
-  "script-src 'self'",
-  "connect-src 'self' http: https:",
-  "font-src 'self' data:",
-  "worker-src 'self'",
-  "manifest-src 'self'",
-  "frame-ancestors 'none'",
-  "base-uri 'none'",
-  "form-action 'none'",
-].join("; ");
-
-async function serveMobile(res, requestPath, method) {
-  if (method !== "GET" && method !== "HEAD") {
-    sendJson(res, 405, { error: "Método não permitido." });
-    return true;
-  }
-  let relative = requestPath.slice("/mobile".length).replace(/^\/+/, "");
-  if (!relative || relative.endsWith("/")) relative += "index.html";
-  if (relative.includes("\0") || /(?:^|\/)\.\.(?:\/|$)/.test(relative) || /[\\<>|:"*?]/.test(relative)) {
-    sendJson(res, 403, { error: "Caminho não permitido." });
-    return true;
-  }
-  const root = resolve(__dirname, "mobile");
-  const filePath = resolve(root, relative);
-  if (filePath !== root && !filePath.startsWith(root + sep)) {
-    sendJson(res, 403, { error: "Caminho não permitido." });
-    return true;
-  }
-  const ext = extname(filePath).toLowerCase();
-  const mimeTypes = {
-    ".html": "text/html; charset=utf-8",
-    ".css": "text/css; charset=utf-8",
-    ".js": "text/javascript; charset=utf-8",
-    ".json": "application/json; charset=utf-8",
-    ".webmanifest": "application/manifest+json; charset=utf-8",
-    ".svg": "image/svg+xml",
-    ".png": "image/png",
-    ".txt": "text/plain; charset=utf-8",
-    ".md": "text/markdown; charset=utf-8",
-  };
-  const contentType = mimeTypes[ext];
-  if (!contentType) {
-    sendJson(res, 403, { error: "Extensão não permitida." });
-    return true;
-  }
-  try {
-    const content = await readFile(filePath);
-    const headers = {
-      "Content-Type": contentType,
-      "X-Content-Type-Options": "nosniff",
-      "Referrer-Policy": "no-referrer",
-      "Cache-Control": ext === ".png" || ext === ".svg" ? "public, max-age=86400" : "no-store",
-    };
-    if (ext === ".html") headers["Content-Security-Policy"] = MOBILE_CSP;
-    if (filePath.endsWith(`${sep}sw.js`) || filePath.endsWith("/sw.js")) {
-      headers["Service-Worker-Allowed"] = "/mobile/";
-      headers["Cache-Control"] = "no-store";
-    }
-    res.writeHead(200, headers);
-    if (method === "HEAD") return res.end(), true;
-    res.end(content);
-  } catch {
-    sendJson(res, 404, { error: "recurso mobile não encontrado" });
-  }
-  return true;
 }
 
 const server = http.createServer(async (req, res) => {
@@ -712,7 +734,7 @@ const server = http.createServer(async (req, res) => {
   try {
     // ── Chaves de API & Provedores: rotas /providers* ───────────────
     if (path === "/providers" || path.startsWith("/providers/")) {
-      const handled = await handleProviderRoutes(req, res, url, { sendJson, readBody, allowedOrigin });
+      const handled = await handleProviderRoutes(req, res, url, { sendJson, readBody, allowedOrigin, isAuthorized });
       if (handled) return;
     }
 
@@ -746,21 +768,62 @@ const server = http.createServer(async (req, res) => {
       if (handled) return;
     }
 
+    // ── Engenharia Reversa (REA): rotas /rea/* ──────────────────────
+    // Só análise de artefato entregue (leitura). O alvo nunca é executado.
+    if (path === "/rea" || path.startsWith("/rea/")) {
+      const handled = await handleReaRoutes(req, res, url, { isAuthorized, allowedOrigin });
+      if (handled) return;
+    }
+
+    // ── DeepSeek Harness (dsh): rotas /dsh/* ────────────────────────
+    // Tarefa headless em cascata de provedores; a chave vai só pelo env do filho.
+    if (path === "/dsh" || path.startsWith("/dsh/")) {
+      const handled = await handleDshRoutes(req, res, url, { isAuthorized, allowedOrigin });
+      if (handled) return;
+    }
+
     if (path === "/ping") {
       return sendJson(res, 200, {
         status: "ok",
         admin: isElevated,
         state: getRunningJobCount() > 0 ? "busy" : "idle",
         activeJobs: getRunningJobCount(),
-        version: "10.1.0",
+        version: APP_VERSION,
         pid: process.pid,
       }, allowedOrigin);
     }
 
+    // Endpoint MCP Streamable HTTP (JSON-RPC) — montado in-process via grokbot-bridge.
+    if (path === "/mcp") {
+      if (req.method === "OPTIONS") {
+        res.writeHead(204, {
+          "Access-Control-Allow-Origin": allowedOrigin,
+          "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Mestre-Client, X-Mestre-Mcp-Token, Mcp-Session-Id",
+        });
+        res.end();
+        return;
+      }
+      if (req.method === "POST") {
+        // Só JSON: bloqueia POST "simples" (text/plain, form) que uma página web
+        // conseguiria enviar sem preflight de CORS.
+        const contentType = headerValue(req, "content-type").toLowerCase();
+        if (!contentType.startsWith("application/json")) {
+          return sendJson(res, 415, { jsonrpc: "2.0", id: null, error: { code: -32600, message: "Content-Type precisa ser application/json." } }, allowedOrigin);
+        }
+        if (!isMcpHttpAuthorized(req)) {
+          return sendJson(res, 401, { jsonrpc: "2.0", id: null, error: { code: -32001, message: "Token MCP ausente ou inválido. Envie X-Mestre-Mcp-Token (ou Authorization: Bearer) com o MESTRE_LOCAL_MCP_TOKEN." } }, allowedOrigin);
+        }
+      }
+      return handleMcpHttpEndpoint(req, res, { allowedOrigin, readBody, runAllowedOperation });
+    }
+
     if (path === "/mcp-status") {
+      // Endpoint /mcp montado in-process — status leve, sem probe de rede a cada poll da UI.
       return sendJson(res, 200, {
-        status: "unknown",
-        version: "10.1.0",
+        status: "online",
+        version: APP_VERSION,
+        endpoint: "/mcp",
         modelProfile: process.env.OLLAMA_MODEL_PROFILE || "balanced",
         model: process.env.OLLAMA_MODEL || "qwen2.5-coder:3b-instruct",
       }, allowedOrigin);
@@ -881,21 +944,66 @@ const server = http.createServer(async (req, res) => {
       res.on("finish", () => {
         console.log(`Encerrando launcher por solicitação da interface (jobs ativos: ${ativos}).`);
         for (const job of jobs.values()) {
-          if (job.state === "running" && job.child) {
-            try { job.child.kill(); } catch { /* processo já saiu */ }
-          }
+          if (job.state === "running" && job.child) killProcessTree(job.child);
         }
         server.close(() => process.exit(0));
-        // Rede de segurança: se alguma conexão keep-alive travar o close.
+        // Conexões keep-alive (navegador, extensão) seguravam o close e a porta 7777.
+        server.closeAllConnections?.();
+        // Rede de segurança: sai mesmo que algo ainda segure o loop.
         setTimeout(() => process.exit(0), 1500).unref();
       });
       return;
     }
 
+    // Agentes CLI: detecção, versão, comando e link de instalação (só leitura).
+    if (path === "/cli-agents" && req.method === "GET") {
+      if (!isAuthorized(req)) return sendJson(res, 403, { success: false, output: "Cliente não autorizado." }, allowedOrigin);
+      const fresh = url.searchParams.get("refresh") === "1";
+      if (!fresh && cliAgentsCache.data && Date.now() - cliAgentsCache.at < 60000) {
+        return sendJson(res, 200, { success: true, agents: cliAgentsCache.data, cached: true }, allowedOrigin);
+      }
+      const script = join(PROJECT_DIR, "scripts", "cli-agents.ps1");
+      const agents = await new Promise((resolveAgents) => {
+        let out = "";
+        const child = spawn(resolvePwsh(), ["-NoProfile", "-File", script, "-Action", "status-json"], {
+          windowsHide: true,
+          env: { ...process.env, MESTRE_PROJETO_PATH: PROJECT_DIR },
+        });
+        const timer = setTimeout(() => { try { child.kill(); } catch {} resolveAgents(null); }, 30000);
+        child.stdout.on("data", (d) => (out += d.toString("utf8")));
+        child.on("error", () => { clearTimeout(timer); resolveAgents(null); });
+        child.on("close", () => {
+          clearTimeout(timer);
+          try { const parsed = JSON.parse(out.slice(Math.max(0, out.indexOf("[")))); resolveAgents(Array.isArray(parsed) ? parsed : [parsed]); }
+          catch { resolveAgents(null); }
+        });
+      });
+      if (!agents) return sendJson(res, 500, { success: false, output: "Falha ao consultar os agentes CLI (pwsh 7 instalado?)." }, allowedOrigin);
+      cliAgentsCache = { at: Date.now(), data: agents };
+      return sendJson(res, 200, { success: true, agents }, allowedOrigin);
+    }
+
     if (path === "/open-terminal" && req.method === "POST") {
       if (!isAuthorized(req)) return sendJson(res, 403, { success: false, output: "Cliente não autorizado." }, allowedOrigin);
-      spawn("powershell.exe", ["-NoLogo", "-NoExit", "-Command", "Set-Location '" + __dirname.replace(/'/g, "''") + "'"], { windowsHide: false, detached: true, stdio: "ignore" }).unref();
-      return sendJson(res, 200, { success: true, output: "Terminal aberto." }, allowedOrigin);
+      const body = await readBody(req, 16 * 1024);
+      const agent = String(body.agent || "pwsh").toLowerCase();
+      const allowedAgents = new Set(["pwsh", "llamacpp", ...CLI_AGENT_IDS]);
+      if (!allowedAgents.has(agent)) {
+        return sendJson(res, 400, { success: false, output: "Agente de terminal não permitido: " + agent }, allowedOrigin);
+      }
+      if (agent === "pwsh") {
+        spawn("powershell.exe", ["-NoLogo", "-NoExit", "-Command", "Set-Location '" + __dirname.replace(/'/g, "''") + "'"], { windowsHide: false, detached: true, stdio: "ignore" }).unref();
+      } else {
+        const script = join(PROJECT_DIR, "scripts", "cli-agents.ps1");
+        const action = agent === "llamacpp" ? "llamacpp-status" : agent;
+        spawn(resolvePwsh(), ["-NoProfile", "-File", script, "-Action", action], {
+          windowsHide: false,
+          detached: true,
+          stdio: "ignore",
+          env: { ...process.env, MESTRE_PROJETO_PATH: PROJECT_DIR },
+        }).unref();
+      }
+      return sendJson(res, 200, { success: true, output: "Terminal aberto: " + agent }, allowedOrigin);
     }
 
     // Notepad++ integration endpoint
@@ -926,17 +1034,6 @@ const server = http.createServer(async (req, res) => {
       return proxyOllamaStream("/api/pull", req, res, allowedOrigin);
     }
 
-    // PWA Mestre Mobile V11 — arquivos de v10/mobile/ em /mobile e /mobile/*
-    // A barra final mantém CSS/JS relativos dentro de /mobile/.
-    if (path === "/mobile") {
-      res.writeHead(302, { Location: `/mobile/${url.search}`, "Cache-Control": "no-store" });
-      return res.end();
-    }
-    if (path.startsWith("/mobile/")) {
-      const served = await serveMobile(res, path, req.method);
-      if (served) return;
-    }
-
     // Servir frontend estático
     // Login local compartilhado com o site público.
     if (path === "/login.html") {
@@ -955,7 +1052,7 @@ const server = http.createServer(async (req, res) => {
 
     if (path === "/" || path === "/index.html") {
       try {
-        const html = await readFile(join(__dirname, "index.html"), "utf8");
+        const html = (await readFile(join(__dirname, "index.html"), "utf8")).replaceAll("__APP_VERSION__", APP_VERSION);
         res.writeHead(200, {
           "Content-Type": "text/html; charset=utf-8",
           "Content-Security-Policy": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
@@ -966,28 +1063,29 @@ const server = http.createServer(async (req, res) => {
         return res.end(html);
       } catch { return sendJson(res, 404, { error: "index.html não encontrado" }); }
     }
-    if (path === "/favicon.png" || path === "/logo-mestre-v7-transparent.png") {
+    // Marca fica na raiz do repo; PWA e scripts ficam em v10/.
+    const rootStatic = {
+      "/favicon.png": { type: "image/png", dir: PROJECT_DIR },
+      "/logo-mestre-transparent.png": { type: "image/png", dir: PROJECT_DIR },
+      "/icon-192.png": { type: "image/png", dir: __dirname },
+      "/icon-512.png": { type: "image/png", dir: __dirname },
+      "/sw.js": { type: "text/javascript; charset=utf-8", dir: __dirname },
+      "/manifest.json": { type: "application/manifest+json; charset=utf-8", dir: __dirname },
+      "/rede-dashboard.js": { type: "text/javascript; charset=utf-8", dir: __dirname },
+    };
+    const staticFile = rootStatic[path];
+    if (staticFile) {
       try {
-        const buf = await readFile(join(__dirname, "..", path.slice(1)));
+        const buf = await readFile(join(staticFile.dir, path.slice(1)));
         res.writeHead(200, {
-          "Content-Type": "image/png",
-          "Cache-Control": "public, max-age=604800, immutable",
+          "Content-Type": staticFile.type,
+          "X-Content-Type-Options": "nosniff",
+          "Cache-Control": staticFile.type.startsWith("image/")
+            ? "public, max-age=604800, immutable"
+            : "no-store",
         });
         return res.end(buf);
       } catch { return sendJson(res, 404, { error: "recurso não encontrado" }); }
-    }
-
-    // ===== CORREÇÃO V10.1.1: Servir rede-dashboard.js como JavaScript =====
-    if (path === "/rede-dashboard.js") {
-      try {
-        const js = await readFile(join(__dirname, "rede-dashboard.js"), "utf8");
-        res.writeHead(200, {
-          "Content-Type": "text/javascript; charset=utf-8",
-          "Cache-Control": "no-store",
-          "X-Content-Type-Options": "nosniff",
-        });
-        return res.end(js);
-      } catch { return sendJson(res, 404, { error: "rede-dashboard.js não encontrado" }); }
     }
 
     // ===== NOVO V11.2: Páginas .html estáticas do diretório v10 (ex: /novidades-v11.html) =====
@@ -1094,10 +1192,13 @@ const server = http.createServer(async (req, res) => {
     }
 
     // ===== NOVO V11.2: SPA fallback — rotas de seção (ex: /8.diagnostico) servem index.html =====
+    if (path === "/mobile" || path.startsWith("/mobile/")) {
+      return sendJson(res, 404, { success: false, output: "Versão mobile removida." }, allowedOrigin);
+    }
     // Rotas de API acima já retornaram; qualquer GET sem extensão de arquivo é rota de seção.
     if (req.method === "GET" && !path.includes(".")) {
       try {
-        const html = await readFile(join(__dirname, "index.html"), "utf8");
+        const html = (await readFile(join(__dirname, "index.html"), "utf8")).replaceAll("__APP_VERSION__", APP_VERSION);
         res.writeHead(200, {
           "Content-Type": "text/html; charset=utf-8",
           "Content-Security-Policy": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
@@ -1123,7 +1224,7 @@ server.listen(PORT, HOST, async () => {
   console.log(`Ollama proxy -> ${OLLAMA_URL}`);
   console.log(`Extensão do navegador: ${EXTENSION_TOKEN ? "habilitada" : "desabilitada (defina MESTRE_EXTENSION_TOKEN)"}`);
   console.log(`Notepad++: ${NPP_TOKEN ? "habilitado" : "desabilitado (defina MESTRE_NPP_TOKEN)"}`);
-  console.log(`Dashboard /status | Streaming /ollama/chat | Notepad++ /npp | Mobile /mobile`);
+  console.log(`Dashboard /status | Streaming /ollama/chat | Notepad++ /npp`);
 });
 
 const cleanupTimer = setInterval(() => {

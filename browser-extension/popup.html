@@ -73,6 +73,14 @@
     .message.show { display: block; }
     .message.error { border-color: #f85149; color: #f85149; }
     .message.success { border-color: #00ff88; color: #00ff88; }
+    details.section { margin: 0 16px 12px; border: 1px solid #21262d; border-radius: 8px; }
+    details.section summary { cursor: pointer; padding: 9px 12px; font-weight: 600; list-style: none; }
+    details.section summary::-webkit-details-marker { display: none; }
+    details.section[open] summary { border-bottom: 1px solid #21262d; }
+    .section-body { padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+    .section-body button { padding: 8px 10px; text-align: left; }
+    .section-body .tag { float: right; font-size: 10px; opacity: .75; }
+    .section-body h4 { margin: 6px 2px 0; font-size: 11px; color: #8b949e; text-transform: uppercase; letter-spacing: .04em; }
   </style>
 </head>
 <body>
@@ -101,9 +109,34 @@
   <div class="actions">
     <button id="btnDiagnostico" class="primary">🖥️ Diagnóstico rápido</button>
     <button id="btnLimpeza">🧹 Limpeza rápida</button>
+    <button id="btnSpeedtest">⚡ Speedtest (fast.com)</button>
+    <button id="btnListarAbas">📑 Listar / memória das abas</button>
+    <button id="btnFecharLixo">🗑️ Fechar abas descartáveis</button>
+    <button id="btnDuplicadas">📑 Fechar duplicadas</button>
+    <button id="btnDiscard">💤 Descartar abas inativas</button>
     <button id="btnEnviarPagina">📄 Enviar título, URL e seleção para IA</button>
     <button id="btnOptions">⚙️ Configurações</button>
   </div>
+
+  <details class="section" id="secFerramentas">
+    <summary>🧰 Ferramentas</summary>
+    <div class="section-body">
+      <button data-tool="extrair">📋 Extrair lista de informações</button>
+      <button data-tool="json">🧾 JSON da página / resumo em JSON</button>
+      <button data-tool="design">🎨 Mudar design da página</button>
+      <button data-tool="dev">🧪 Modo dev</button>
+      <button data-tool="devtools">🛠️ Abrir DevTools e extensões de dev</button>
+      <button id="btnNotebookLM">📓 Abrir NotebookLM</button>
+      <button data-tool="apps">🗒️ OneNote e nota da página</button>
+    </div>
+  </details>
+
+  <details class="section" id="secAdmin">
+    <summary>🛡️ Administração</summary>
+    <div class="section-body" id="adminButtons">
+      <button data-tool="admin">Abrir painel de administração</button>
+    </div>
+  </details>
 
   <div class="footer">
     <a href="#" id="linkOpenApp">Abrir app local</a> · <a href="#" id="linkRefresh">Atualizar</a>
