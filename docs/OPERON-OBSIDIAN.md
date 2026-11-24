@@ -101,8 +101,12 @@ não escolhe o caminho final e nenhuma operação de PowerShell é adicionada.
 
 O módulo restringe caminhos e extensões à pasta do Operon e rejeita traversal,
 diretórios reservados e links simbólicos/junctions inseguros. Os arquivos são
-preparados e validados antes da substituição, com backup e restauração em caso
-de erro. A auditoria registra eventos sem prompts, planos ou credenciais.
+preparados a partir do plano validado antes da substituição, com backup e
+restauração em caso de erro. A auditoria registra eventos sem prompts, planos
+ou credenciais.
+Nesta versão, a preparação usa arquivos temporários na própria pasta do Operon,
+e não um diretório temporário separado. Uma interrupção abrupta pode deixar
+arquivos temporários ou um lock para recuperação manual.
 Mantenha backups independentes do Vault: falhas de energia, desconexão do disco
 e alterações concorrentes externas podem impedir a recuperação automática.
 As verificações de caminhos não são um isolamento contra outro processo local
