@@ -18,6 +18,8 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve, extname } from "node:path";
 import { spawn } from "node:child_process";
+import * as operonDomain from "./operon/index.js";
+import { createOperonMcp, operonToolSchemas } from "./operon/mcp.js";
 
 import { isLocalMcpEnabled, refreshLocalMcpTokenFromFile } from "./auth/local-token.js"; // força carga de .env.local e expõe o token
 
@@ -1249,6 +1251,15 @@ const EXTRA_TOOLS = [
 ];
 
 const TOOLS = operationRegistry.buildMcpToolSchemas(EXTRA_TOOLS);
+const operonMcp = createOperonMcp({
+  domain: operonDomain,
+  guard: guardPromptInjection,
+  audit: (tool, status) => auditLog(AuditLevel.INFO, "operon_mcp", { tool, status }),
+  ollama: {
+    url: OLLAMA_URL, model: OLLAMA_MODEL, headers: ollamaHeaders,
+    options: buildOllamaOptions, keepAlive: OLLAMA_KEEP_ALIVE, fetch: globalThis.fetch,
+  },
+});
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   // Concatena dinamicamente as tools das pontes MCP (sessões nexo_* e
@@ -1257,6 +1268,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
       ...TOOLS,
+      ...operonToolSchemas,
       ...nexoBridge.getToolSchemas(),
       ...chromeDevToolsBridge.getToolSchemas(),
     ],
@@ -1265,6 +1277,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
+
+  if (operonMcp.isTool(name)) {
+    return operonMcp.callTool(name, args);
+  }
 
   // Sessão de funções NEXO: encaminha nexo_* para o nexo-core via ponte MCP.
   // O gate de segurança (confirm/dry_run) é decidido no núcleo do nexo.
