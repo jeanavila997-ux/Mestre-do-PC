@@ -37,8 +37,11 @@ jobs:
         run: |
           node --check v10/launcher.js
           node --check v10/security/origin-policy.js
-          node --check v10/mobile/app.js
-          node --check v10/mobile/sw.js
+          node --check v10/chat-integrado/chat-integrado.js
+          node --check v10/chat-integrado/obsidian-chat.js
+          node --check v10/chat-integrado/kokoro-voice.js
+          node --check v10/chat-integrado/voice-output.js
+          node --check mcp-server/model-catalog.js
           node --test v10/security/origin-policy.test.mjs
           node --check mcp-server/index.js
           node --check mcp-server/security.js

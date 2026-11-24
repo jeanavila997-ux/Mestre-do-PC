@@ -35,7 +35,7 @@ Se `/ping` falhar: `pwsh mcp-server/check-status.ps1` → avise UAC antes de `st
 
 ## Fase 1 — Estrutura e entry points
 
-Liste e resuma propósito: `v10/`, `mcp-server/`, `browser-extension/`, `mobile/`,
+Liste e resuma propósito: `v10/`, `mcp-server/`, `browser-extension/`,
 `skills-globais/`, `docs/`, `dist/site/`, `logs/audit/`, `v10/data/`.
 
 Entry points a citar: `v10/launcher.js`, `start-mestre-v10.ps1`, `mcp-server/index.js`.
@@ -49,7 +49,6 @@ Probe (COM e SEM header `X-Mestre-Client: v10-web`):
 | `/ping`, `/status` | 200 | 200 |
 | `/api/skills`, `/api/config`, `/api/sync/status` | 403 | 200 |
 | `/sw.js`, `/manifest.json` | 200 se PWA ok | idem |
-| `/mobile/sw.js` | 200 | 200 |
 | POST `/npp` | 501 se token ausente | 501 |
 
 Medir latência de `/status` (`Measure-Command`). Se > 3 s, cruzar com
@@ -63,9 +62,9 @@ Checar: `mysqlConfigurado` em `/api/sync/status`, tokens `MESTRE_EXTENSION_TOKEN
 1. Sessão de teste (só loopback): injetar
    `localStorage.mestre-site-session = {user, expiresAt: Date.now()+7d }`.
 2. Navegar: `/`, `/chat-integrado/chat-integrado.html`, `/memories.html`,
-   `/novidades-v11.html`, `/gerenciar-comandos.html`, `/mobile/`.
+   `/novidades-v11.html`, `/gerenciar-comandos.html`.
 3. Snapshot + console (`error`/`warn`) + screenshot viewport.
-4. Validar redirects: UA mobile → `/mobile/`; sem sessão → `/login.html`.
+4. Validar redirect sem sessão → `/login.html`; não existe rota/PWA mobile.
 
 ## Fase 4 — Desempenho (skill analisar-desempenho)
 
@@ -80,7 +79,7 @@ Entregar LCP, CLS, tamanho do documento, 3 achados acionáveis com severidade.
 
 ## Fase 5 — Responsividade (skill emular-dispositivos)
 
-1. Emular `390x844x3,mobile,touch` + UA iPhone → confirmar `/mobile/`.
+1. Emular `390x844x3,mobile,touch` + UA iPhone → a UI desktop deve permanecer em `/`.
 2. Overflow-X, FCP, console limpo, telemetria viva (CPU/RAM/Disco).
 3. Screenshot mobile vs desktop.
 

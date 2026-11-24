@@ -11,6 +11,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
@@ -22,7 +23,8 @@ function trackedPs1Files() {
   return execFileSync("git", ["ls-files", "*.ps1"], { cwd: root, encoding: "utf8" })
     .split("\n")
     .map((s) => s.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter((rel) => existsSync(join(root, rel)));
 }
 
 test("todo .ps1 com caractere nao-ASCII tem BOM UTF-8", () => {

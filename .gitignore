@@ -39,7 +39,6 @@ desktop.ini
 .claude/*
 !.claude/commands/
 .codex/
-.agents/
 .cursor/
 .kimi/
 .kimi-code/

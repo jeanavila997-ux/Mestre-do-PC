@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Mestre do PC - Integração",
-  "version": "1.1.0",
-  "description": "Integra o navegador com o Mestre do PC: abas, speedtest, memória e o launcher local.",
+  "version": "1.2.0",
+  "description": "Integra o navegador ao Mestre do PC: abas, speedtest, extrair dados, JSON, design, modo dev e administração do PC.",
   "permissions": [
     "storage",
     "activeTab",
@@ -35,6 +35,8 @@
   },
   "options_page": "options.html",
   "optional_host_permissions": [
-    "http://127.0.0.1/*"
+    "http://127.0.0.1/*",
+    "https://*/*",
+    "http://*/*"
   ]
 }

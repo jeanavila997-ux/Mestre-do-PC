@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mestre do PC – Ferramentas</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Segoe UI", system-ui, sans-serif; background: #0d1117; color: #e6edf3; font-size: 13px; }
+    header { padding: 10px 14px; background: linear-gradient(135deg, #a200ff, #00d4ff); display: flex; gap: 10px; align-items: center; }
+    header img { width: 24px; height: 24px; }
+    header h1 { margin: 0; font-size: 15px; }
+    #target { font-size: 11px; opacity: .9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 380px; }
+    nav { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 10px; border-bottom: 1px solid #21262d; }
+    nav button { width: auto; padding: 6px 9px; font-size: 12px; }
+    nav button[aria-selected="true"] { background: linear-gradient(135deg, #a200ff, #00d4ff); color: #fff; }
+    main { padding: 12px 14px 40px; }
+    section[hidden] { display: none; }
+    h2 { font-size: 14px; margin: 4px 0 10px; }
+    h3 { font-size: 13px; margin: 14px 0 6px; color: #7ff6ff; }
+    p.hint { color: #8b949e; font-size: 12px; margin: 4px 0 10px; }
+    button { padding: 8px 10px; border: none; border-radius: 7px; background: #21262d; color: #e6edf3; cursor: pointer; font-size: 12px; }
+    button:hover { background: #30363d; }
+    button.primary { background: linear-gradient(135deg, #a200ff, #00d4ff); color: #fff; }
+    button.danger { background: #8b1d1d; color: #fff; }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; }
+    select, input[type=text], input[type=search], input[type=number] { background: #161b22; color: #e6edf3; border: 1px solid #30363d; border-radius: 6px; padding: 6px 8px; font-size: 12px; }
+    label { display: inline-flex; gap: 6px; align-items: center; }
+    .table-wrap { max-height: 380px; overflow: auto; border: 1px solid #21262d; border-radius: 6px; margin-top: 8px; }
+    table { border-collapse: collapse; width: 100%; font-size: 12px; }
+    th, td { border-bottom: 1px solid #21262d; padding: 4px 6px; text-align: left; vertical-align: top; word-break: break-word; }
+    th { background: #161b22; position: sticky; top: 0; }
+    pre { background: #010409; border: 1px solid #21262d; border-radius: 6px; padding: 8px; max-height: 420px; overflow: auto; font-size: 12px; white-space: pre-wrap; word-break: break-word; margin: 8px 0; }
+    pre .hit { background: #6b5800; }
+    .msg { margin: 8px 0; padding: 8px; border-radius: 6px; background: #161b22; border: 1px solid #30363d; display: none; white-space: pre-wrap; }
+    .msg.show { display: block; }
+    .msg.error { border-color: #f85149; color: #f85149; }
+    .msg.success { border-color: #00ff88; color: #00ff88; }
+    .card { border: 1px solid #21262d; border-radius: 8px; padding: 10px; margin: 8px 0; background: #0f141b; }
+    .badge { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 9px; margin-left: 4px; border: 1px solid #30363d; }
+    .badge.leitura { color: #00ff88; border-color: #00ff88; }
+    .badge.execucao { color: #f0ad4e; border-color: #f0ad4e; }
+    .badge.destrutiva { color: #f85149; border-color: #f85149; }
+    .badge.elevado { color: #c99bff; border-color: #c99bff; }
+    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+    .grid button { text-align: left; }
+    ul.plain { padding-left: 18px; margin: 4px 0; }
+    kbd { background: #21262d; border: 1px solid #30363d; border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; font-size: 12px; }
+    a { color: #00d4ff; }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="icons/icon32.png" alt="" />
+    <div>
+      <h1>Ferramentas do Mestre</h1>
+      <div id="target">Página: …</div>
+    </div>
+  </header>
+  <nav role="tablist" aria-label="Ferramentas">
+    <button role="tab" data-view="extrair">📋 Extrair</button>
+    <button role="tab" data-view="json">🧾 JSON</button>
+    <button role="tab" data-view="design">🎨 Design</button>
+    <button role="tab" data-view="dev">🧪 Modo dev</button>
+    <button role="tab" data-view="devtools">🛠️ DevTools</button>
+    <button role="tab" data-view="apps">📓 Apps</button>
+    <button role="tab" data-view="admin">🛡️ Administração</button>
+  </nav>
+  <main>
+    <div id="msg" class="msg" role="status" aria-live="polite"></div>
+
+    <section id="view-extrair" role="tabpanel">
+      <h2>📋 Extrair lista de informações</h2>
+      <p class="hint">Lê a página atual neste computador. Nada é enviado para fora.</p>
+      <div class="row">
+        <select id="extractType" aria-label="Tipo de informação"></select>
+        <button id="btnExtract" class="primary">Extrair</button>
+        <button id="btnCopyTsv" disabled>Copiar</button>
+        <button id="btnCsv" disabled>Baixar CSV</button>
+        <button id="btnJsonDl" disabled>Baixar JSON</button>
+      </div>
+      <div id="extractCount" class="hint"></div>
+      <div class="table-wrap"><table id="extractTable"></table></div>
+    </section>
+
+    <section id="view-json" role="tabpanel" hidden>
+      <h2>🧾 JSON</h2>
+      <p class="hint">Se a página for um JSON, mostra formatado. Em qualquer página, gera um resumo em JSON.</p>
+      <div class="row">
+        <button id="btnJsonView" class="primary">Ver JSON da página</button>
+        <button id="btnJsonSummary">Resumo em JSON da página</button>
+      </div>
+      <div class="row">
+        <input id="jsonSearch" type="search" placeholder="Buscar no JSON" aria-label="Buscar no JSON" />
+        <span id="jsonHits" class="hint"></span>
+        <button id="btnJsonCopy" disabled>Copiar</button>
+        <button id="btnJsonSave" disabled>Baixar</button>
+        <button id="btnJsonAI" disabled>🧠 Enviar resumo para a IA do Mestre</button>
+      </div>
+      <pre id="jsonOut" tabindex="0"></pre>
+    </section>
+
+    <section id="view-design" role="tabpanel" hidden>
+      <h2>🎨 Mudar design da página</h2>
+      <p class="hint">Só muda o que você vê (CSS injetado). O site não é alterado. Fica salvo para este site.</p>
+      <div class="row"><label>Tema <select id="designTheme"></select></label></div>
+      <div class="row"><label>Tamanho da fonte <input id="designFont" type="range" min="70" max="200" step="5" /></label> <span id="designFontVal"></span></div>
+      <div class="row"><label>Largura do texto
+        <select id="designWidth">
+          <option value="0">Original</option><option value="640">Estreita (640 px)</option>
+          <option value="800">Média (800 px)</option><option value="1000">Larga (1000 px)</option><option value="1280">Muito larga (1280 px)</option>
+        </select></label></div>
+      <div class="row"><label><input id="designAds" type="checkbox" /> Esconder anúncios e banners</label></div>
+      <div class="row">
+        <button id="btnDesignApply" class="primary">Aplicar e salvar</button>
+        <button id="btnDesignReset">Restaurar original</button>
+      </div>
+      <div class="card">
+        <label><input id="designAuto" type="checkbox" /> Reaplicar sozinho ao abrir o site</label>
+        <p class="hint">Pede permissão para ler todas as páginas (só para injetar o CSS salvo). Sem ela, o design salvo volta quando você abre o popup da extensão no site.</p>
+      </div>
+    </section>
+
+    <section id="view-dev" role="tabpanel" hidden>
+      <h2>🧪 Modo dev</h2>
+      <div class="row">
+        <button id="btnDevRefresh" class="primary">Atualizar painel</button>
+        <button id="btnHardReload">Recarregar sem cache</button>
+        <button id="btnExtPage">Abrir página de extensões</button>
+      </div>
+      <p class="hint">Os erros do console são capturados a partir do momento em que você abre este painel.</p>
+      <div id="devOut"></div>
+      <div class="card">
+        <h3>Limpar dados do site</h3>
+        <p class="hint">Apaga localStorage, sessionStorage, cookies visíveis, Cache Storage, IndexedDB e service workers <b>só deste site</b>. Você pode sair da conta nele. Cookies HttpOnly ficam.</p>
+        <label><input id="clearConfirm" type="checkbox" /> Entendi, quero limpar os dados deste site</label>
+        <div class="row"><button id="btnClearSite" class="danger" disabled>Limpar dados do site</button></div>
+      </div>
+    </section>
+
+    <section id="view-devtools" role="tabpanel" hidden>
+      <h2>🛠️ DevTools</h2>
+      <div class="card">
+        <h3>Abrir DevTools</h3>
+        <p>O navegador não deixa uma extensão abrir o DevTools. Use <kbd>F12</kbd> ou <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>I</kbd> (console: <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>J</kbd>).</p>
+        <div class="row"><button id="btnF12">Pedir ao Mestre para apertar F12 na página</button></div>
+        <p class="hint">Precisa do Mestre no ar e do token. Ele só aperta F12 se a janela em foco for um navegador.</p>
+      </div>
+      <h3>📦 Extensões de desenvolvedor</h3>
+      <p class="hint">Abre a página da loja; a instalação é um clique seu. O Lighthouse também já vem dentro do DevTools.</p>
+      <div id="devtoolsList" class="grid"></div>
+    </section>
+
+    <section id="view-apps" role="tabpanel" hidden>
+      <h2>📓 Apps</h2>
+      <div class="card">
+        <h3>NotebookLM</h3>
+        <div class="row">
+          <button id="btnNotebook" class="primary">Abrir NotebookLM</button>
+          <button id="btnNotebookCopy">Copiar link desta página (para usar como fonte)</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>OneNote</h3>
+        <div class="row">
+          <button id="btnOneNote" class="primary">Abrir OneNote</button>
+          <button id="btnOneNoteCopy">Copiar página como nota</button>
+        </div>
+        <p class="hint">Com o Mestre no ar, abre o app do OneNote; senão abre o OneNote na web. "Copiar página como nota" copia título, link e seleção para colar na nota (sem login).</p>
+      </div>
+    </section>
+
+    <section id="view-admin" role="tabpanel" hidden>
+      <h2>🛡️ Administração</h2>
+      <p class="hint">Operações fixas do Mestre (nada de comando livre). O que precisa de administrador abre uma janela com UAC visível. Nada roda sem você confirmar aqui.</p>
+      <div id="adminList"></div>
+      <div id="adminDetail" class="card" hidden>
+        <h3 id="adminTitle"></h3>
+        <div id="adminBadges"></div>
+        <p id="adminDesc"></p>
+        <div id="adminConfirmBox">
+          <label><input id="adminConfirm" type="checkbox" /> Li o que esta operação faz e quero executar</label>
+          <div id="adminWordBox" class="row" hidden>
+            <label>Digite <b id="adminWord"></b> para confirmar <input id="adminTyped" type="text" autocomplete="off" /></label>
+          </div>
+        </div>
+        <div class="row"><button id="btnAdminRun" class="primary">Executar</button></div>
+        <pre id="adminOut" hidden></pre>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="tools.js"></script>
+</body>
+</html>

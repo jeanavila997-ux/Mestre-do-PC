@@ -1,3 +1,5 @@
+import { formatSystemStatusPtBr } from "./system-status-format.js";
+import { turboToolsDefinition, isTurboTool, callTurboTool } from "./turbo-pc.js";
 import { readFileSync as __rf } from "node:fs";
 function readLocal9RouterKey() { try { const p = new URL("../data/providers.json", import.meta.url); return JSON.parse(__rf(p, "utf8")).providers?.["9router"]?.apiKey || ""; } catch { return ""; } }
 /**
@@ -264,7 +266,7 @@ export async function getQuickSystemMetrics() {
     });
     if (resp.ok) return await resp.json();
   } catch {}
-  return { cpu: 0, ramFree: 0, ramTotal: 0, diskFree: 0, diskUsed: 0, uptimeSec: 0 };
+  return { cpu: 0, cpuCount: 0, ramFree: 0, ramTotal: 0, diskFree: 0, diskUsed: 0, uptimeSec: 0 };
 }
 
 export async function runFastPcOptimization() {
@@ -599,9 +601,11 @@ export async function callGrokBotTool(toolName, rawArgs = {}) {
 
 async function getMcpToolsDefinition() {
   return [
+    // Turbo PC: diagnóstico (leitura) e otimizar (destrutiva, exige confirmar=true).
+    ...turboToolsDefinition(),
     {
       name: "mestre_system_status",
-      description: "Retorna métricas em tempo real do PC Windows (CPU %, RAM livre/total GB, Disco C: livre/usado GB e Uptime).",
+      description: "Estado atual do PC Windows em pt-BR, já formatado: processadores_logicos, uso_cpu_pct, ram_total_gb, ram_livre_gb, ram_uso_pct, disco_livre_gb, disco_total_gb, tempo_ligado e um resumo pronto. Copie os valores como vieram.",
       inputSchema: { type: "object", properties: {} },
     },
     {
@@ -666,7 +670,8 @@ async function getMcpToolsDefinition() {
 async function executeMcpToolCall(name, args = {}, runOperationCallback = null) {
   switch (name) {
     case "mestre_system_status":
-      return await getQuickSystemMetrics();
+      // pt-BR rotulado; os campos antigos (cpu, ramFree…) ficam em "bruto".
+      return formatSystemStatusPtBr(await getQuickSystemMetrics());
 
     case "mestre_optimize_ram_and_temp":
       return await runFastPcOptimization();
@@ -722,6 +727,9 @@ async function executeMcpToolCall(name, args = {}, runOperationCallback = null) 
       return await callGrokBotTool("grokbot__chat", args);
 
     default:
+      if (isTurboTool(name)) {
+        return await callTurboTool(name, args);
+      }
       if (isGrokBotTool(name)) {
         return await callGrokBotTool(name, args);
       }

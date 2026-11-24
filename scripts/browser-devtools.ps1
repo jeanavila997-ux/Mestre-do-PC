@@ -24,7 +24,9 @@ param(
     'fechar-abas-descartaveis',
     'analisar-devtools',
     'iniciar-edge-cdp',
-    'abrir-extensao-pasta'
+    'abrir-extensao-pasta',
+    'enviar-f12',
+    'abrir-onenote'
   )]
   [string] $Action,
 
@@ -313,5 +315,40 @@ switch ($Action) {
     Write-Host "1) Ative Modo do desenvolvedor"
     Write-Host "2) Carregar sem compactação → cole o caminho"
     Write-Host "3) Copie o ID da extensão e configure MESTRE_EXTENSION_ORIGINS + token"
+  }
+
+  'enviar-f12' {
+    # Pedido da extensão: aperta F12 só se a janela em foco for um navegador.
+    Start-Sleep -Milliseconds 900
+    if (-not ('MestreFg.Win' -as [type])) {
+      Add-Type -Namespace MestreFg -Name Win -MemberDefinition @'
+[DllImport("user32.dll")] public static extern System.IntPtr GetForegroundWindow();
+[DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(System.IntPtr hWnd, out uint pid);
+'@
+    }
+    $fgPid = [uint32]0
+    [void][MestreFg.Win]::GetWindowThreadProcessId([MestreFg.Win]::GetForegroundWindow(), [ref]$fgPid)
+    $nome = (Get-Process -Id $fgPid -ErrorAction SilentlyContinue).ProcessName
+    if ($nome -notin @('msedge', 'chrome', 'firefox', 'brave', 'opera', 'vivaldi')) {
+      Write-Host "Janela em foco: '$nome'. F12 não enviado (só envio para navegador)." -ForegroundColor Yellow
+      exit 1
+    }
+    (New-Object -ComObject WScript.Shell).SendKeys('{F12}')
+    Write-Host "F12 enviado para $nome." -ForegroundColor Green
+  }
+
+  'abrir-onenote' {
+    Write-Section 'Abrir OneNote'
+    $app = Get-StartApps -ErrorAction SilentlyContinue | Where-Object { $_.Name -match '^OneNote' } | Select-Object -First 1
+    if ($app) {
+      Start-Process "shell:AppsFolder\$($app.AppID)"
+      Write-Host "Aberto: $($app.Name)" -ForegroundColor Green
+    } elseif (Test-Path -LiteralPath 'Registry::HKEY_CLASSES_ROOT\onenote') {
+      Start-Process 'onenote:'
+      Write-Host 'Aberto pelo protocolo onenote:' -ForegroundColor Green
+    } else {
+      Start-Process 'https://www.onenote.com/notebooks'
+      Write-Host 'App do OneNote não encontrado; aberto na web.' -ForegroundColor Yellow
+    }
   }
 }

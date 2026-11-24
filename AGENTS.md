@@ -15,10 +15,9 @@ Assistente local de diagnóstico e manutenção do Windows. Clientes de IA **nun
 | Superfície | Onde | Porta / URL |
 |---|---|---|
 | Launcher + UI desktop | `v10/launcher.js`, `v10/index.html` | `http://127.0.0.1:7777` |
-| PWA mobile | `v10/mobile/` (espelho em `dist/site/mobile/`) | `http://127.0.0.1:7777/mobile/` |
 | MCP | `mcp-server/index.js` (stdio) | chama o launcher via HTTP |
 | GitHub Pages | `dist/site/` | `https://jeanavila997-ux.github.io/Mestre-do-PC-V10/` |
-| VPS (site + PWA) | `deploy/vps/` | `https://mestre.72-62-11-116.sslip.io` |
+| VPS (site estático) | `deploy/vps/` | `https://mestre.72-62-11-116.sslip.io` |
 
 O launcher **só escuta `127.0.0.1`**. `MPC_HOST` diferente de `127.0.0.1` aborta o processo. Na VPS sobe só o site estático em `127.0.0.1:7780` atrás do Traefik — o launcher Windows continua no PC.
 
@@ -27,7 +26,7 @@ O launcher **só escuta `127.0.0.1`**. `MPC_HOST` diferente de `127.0.0.1` abort
 ## Arquitetura (não quebre este fluxo)
 
 ```
-cliente (UI / MCP / extensão / mobile)
+cliente (UI / MCP / extensão)
     │  HTTP + X-Mestre-Client (+ token quando exigido)
     ▼
 v10/launcher.js          127.0.0.1:7777
@@ -124,7 +123,6 @@ Testes que sobem o launcher: importar `mcp-server/test/helpers/launcher-test-env
 | `v10/rea-routes.js` | Rotas `/rea/*` (status, doctor, analyze + job). |
 | `v10/dsh-bridge.js` + `v10/dsh-routes.js` | DeepSeek Harness (dsh): tarefa headless em cascata de provedores e rotas `/dsh/*`. |
 | `v10/index.html` | SPA desktop, sem bundler. |
-| `v10/mobile/` | PWA. Ao mudar, copie para `dist/site/mobile/`. |
 | `v10/chat/` | Persona (`Soul.md`) e módulo legado só de `example-integration.html`. A home não monta esse módulo. |
 | `v10/chat-integrado/` | Chat da UI; skills em `chat-skills.json`. |
 | `v10/security/origin-policy.js` | Origens confiáveis (VPS, sslip.io, github.io, trycloudflare). |
@@ -139,16 +137,12 @@ Testes que sobem o launcher: importar `mcp-server/test/helpers/launcher-test-env
 | `logs/audit/` | Auditoria real — testes **escrevem aqui**. |
 | `.agents/`, `data/` | gitignored. |
 
-UI desktop não tem build. Edite HTML/CSS/JS servidos. Mobile: altere `v10/mobile/` **e** o espelho `dist/site/mobile/` na mesma mudança (Pages/VPS leem o `dist`).
+UI desktop não tem build. Edite HTML/CSS/JS servidos. O projeto não possui versão mobile.
 
 ---
 
-## Mobile / Android / VPS
+## VPS
 
-- PWA em `/mobile/`. Manifest + `sw.js` no próprio diretório mobile.
-- URL pública Android (PWA): `https://jeanavila997-ux.github.io/Mestre-do-PC-V10/mobile/`
-- URL VPS: `https://mestre.72-62-11-116.sslip.io/mobile/`
-- Atalhos embutidos: `BUILTIN_OPS` (Cmds) e `BUILTIN_PROMPTS` (Mais + chips) em `v10/mobile/app.js`. IDs = whitelist real.
 - Deploy VPS: unidade = pasta completa em `/opt/apps/mestre-do-pc`. SSH `root@72.62.11-116` com `%USERPROFILE%\.ssh\id_ed25519_vps` (Host `srv1483039`). Firewall só 22/80/443. Porta 7780 só em loopback.
 - SSH recusa `publickey` até a chave pública estar no hPanel (Hostinger → VPS → Settings → SSH keys). Pública documentada em `docs/VPS-DEPLOY.md`. **Não reinicie a VPS** para “tentar de novo”.
 
@@ -200,7 +194,6 @@ Invoke-RestMethod http://127.0.0.1:7777/ping
 
 # UI
 # http://127.0.0.1:7777/
-# http://127.0.0.1:7777/mobile/
 # http://127.0.0.1:7777/login.html   (bloco ChatGPT)
 
 # Header de smoke na UI

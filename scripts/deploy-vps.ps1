@@ -103,7 +103,6 @@ Esta pasta e a unidade de deploy. Fica em /opt/apps/mestre-do-pc na VPS.
 Nao extraia na Area de Trabalho do Windows e nao misture com outros apps.
 
 Site publico (Traefik): https://mestre.72-62-11-116.sslip.io
-Mobile PWA:             https://mestre.72-62-11-116.sslip.io/mobile/
 Health:                 http://127.0.0.1:7780/ping  (so na VPS)
 
 Subir:
@@ -182,5 +181,4 @@ Write-Host ""
 Write-Host "===================================================" -ForegroundColor Green
 Write-Host " Pasta completa enviada para $RemotePath" -ForegroundColor Green
 Write-Host " Site: https://mestre.72-62-11-116.sslip.io" -ForegroundColor Cyan
-Write-Host " App:  https://mestre.72-62-11-116.sslip.io/mobile/" -ForegroundColor Cyan
 Write-Host "===================================================" -ForegroundColor Green

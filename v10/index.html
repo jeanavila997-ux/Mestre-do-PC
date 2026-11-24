@@ -9,23 +9,6 @@
     <script>
       (() => {
         try {
-          const params = new URLSearchParams(location.search);
-          if (params.get("mobile") === "1") {
-            localStorage.removeItem("mestrePreferDesktop");
-            location.replace("/mobile/");
-            return;
-          }
-          const forceDesktop = params.get("desktop") === "1";
-          if (forceDesktop) localStorage.setItem("mestrePreferDesktop", "1");
-          const preferDesktop = forceDesktop || localStorage.getItem("mestrePreferDesktop") === "1";
-          const narrow = Math.min(screen.width || 0, screen.height || 0) > 0
-            && Math.min(screen.width, screen.height) <= 820;
-          const mobileUa = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
-          const mobile = mobileUa || (navigator.maxTouchPoints > 1 && narrow);
-          if (!preferDesktop && mobile && (location.pathname === "/" || location.pathname === "/index.html")) {
-            location.replace("/mobile/");
-            return;
-          }
           const session = JSON.parse(localStorage.getItem("mestre-site-session") || "null");
           if (!session || session.expiresAt <= Date.now()) {
             const next = `${location.pathname}${location.search}`;
@@ -269,15 +252,14 @@
       .term-modal {
         animation: fadeInScale 0.3s ease-out;
       }
-      /* Scroll reveal */
+      /* Scroll reveal — CLS fix: revelação apenas por opacidade (sem translate),
+         para os cards ocuparem o lugar desde o primeiro frame e não gerarem layout shift */
       .reveal {
         opacity: 0;
-        transform: translateY(30px);
-        transition: opacity 0.6s ease, transform 0.6s ease;
+        transition: opacity 0.6s ease;
       }
       .reveal.visible {
         opacity: 1;
-        transform: translateY(0);
       }
       /* Animações para tema claro */
       body.light .particle {
@@ -693,7 +675,7 @@
         margin-bottom: 7px;
         padding: 2px 8px;
         background: rgba(248,81,73,0.15);
-        color: var(--danger);
+        color: #ff7b71; /* contraste fix: 5.7:1 sobre o fundo do badge (Lighthouse reclamava 4.35:1 com var(--danger)) */
         border: 1px solid rgba(248,81,73,0.4);
         border-radius: 12px;
         font-size: 0.72rem;
@@ -886,7 +868,6 @@
       <div class="header">
         <h1><button class="mobile-menu-btn" onclick="document.body.classList.toggle('mobile-nav-open')" title="Menu de categorias">☰</button> 🛡️ Mestre do PC <span id="appVersion">__APP_VERSION__</span> <span class="header-license">| <span class="header-license-name">JEAN</span></span></h1>
         <div class="header-right"><a id="btnChavesApi" href="/chaves-api.html" title="Configurar APIs" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;margin-right:8px;border-radius:8px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;font-size:13px">🔑 Configurar API</a>
-          <a href="/mobile/" style="text-decoration:none"><button type="button" class="btn-open-ps" title="Abrir Mestre Mobile V11">📱 Versão Mobile</button></a>
           <input type="text" id="searchInput" class="search" placeholder="🔍 Buscar comando..." />
           <button class="btn-open-ps btn-pwa-install" id="pwaInstallBtn" onclick="installPwaApp()" title="Instalar aplicativo no Android / PC">📲 Instalar App</button>
           <button class="btn-theme" id="themeToggle" onclick="toggleTheme()" title="Alternar tema">🌙</button>
@@ -897,6 +878,7 @@
           <button class="btn-open-ps" onclick="openAgent('grok')" title="Abrir Grok CLI no terminal">Grok CLI</button>
           <button class="btn-open-ps" onclick="openAgent('copilot')" title="Abrir GitHub Copilot CLI">Copilot</button>
           <button class="btn-open-ps" onclick="openAgent('claude')" title="Abrir Claude Code no terminal">Claude</button>
+          <button class="btn-open-ps" onclick="openCliAgentsMenu()" title="Todos os agentes CLI: instalado, versão, abrir ou link de instalação">🧰 Agentes CLI</button>
           <button class="btn-open-ps btn-ia-local" onclick="mestreChat.open()">🤖 IA Local</button>
           <button class="btn-open-ps btn-stop" id="btnPower" onclick="togglePower()" title="Parar o launcher (encerra o servidor local)">⏻ Parar</button>
         </div>
@@ -2348,6 +2330,47 @@
           if (res.ok === false || data.success !== true) throw new Error(data.output || "Falha ao abrir o terminal.");
           showToast("✅ Terminal " + label + " aberto.", "var(--accent2)");
         } catch (err) { showToast("❌ " + err.message, "#f85149"); }
+      }
+      // ===== MENU DE AGENTES CLI =====
+      // Lista vem de GET /cli-agents (scripts/cli-agents.ps1 -Action status-json).
+      // Instalado: botão Abrir. Ausente: link oficial de instalação (o Mestre nunca instala sozinho).
+      async function openCliAgentsMenu(refresh) {
+        if (serverOnline === false) { showToast("ℹ️ Inicie o Launcher primeiro.", "#00d4ff"); checkServer(); return; }
+        let box = document.getElementById("cliAgentsModal");
+        if (!box) {
+          box = document.createElement("div");
+          box.id = "cliAgentsModal";
+          box.setAttribute("role", "dialog");
+          box.setAttribute("aria-label", "Agentes CLI");
+          box.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center";
+          box.addEventListener("click", (e) => { if (e.target === box) box.remove(); });
+          document.body.appendChild(box);
+        }
+        box.innerHTML = '<div style="background:var(--card,#161b22);color:var(--text,#e6edf3);border:1px solid #30363d;border-radius:12px;padding:18px;width:min(760px,94vw);max-height:84vh;overflow:auto"><h2 style="margin:0 0 10px">🧰 Agentes CLI</h2><p>Consultando o PC…</p></div>';
+        try {
+          const res = await fetch(API + "/cli-agents" + (refresh ? "?refresh=1" : ""), { headers: PRIVILEGED_HEADERS, signal: AbortSignal.timeout(40000) });
+          const data = await res.json();
+          if (!res.ok || !data.success) throw new Error(data.output || "Falha ao listar os agentes CLI.");
+          const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+          const linhas = data.agents.map((a) => {
+            const acao = a.instalado
+              ? '<button class="btn-open-ps" data-agent="' + esc(a.id) + '">Abrir</button>'
+              : (a.instalar ? '<a href="' + esc(a.instalar) + '" target="_blank" rel="noopener noreferrer">Como instalar ↗</a>' : "—");
+            return '<tr><td style="padding:6px 8px"><b>' + esc(a.nome) + '</b></td><td style="padding:6px 8px">' +
+              (a.instalado ? "✅ " + esc(a.versao || "instalado") : "⚪ não instalado") +
+              '</td><td style="padding:6px 8px"><code>' + esc(a.comando) + '</code></td><td style="padding:6px 8px">' + acao + "</td></tr>";
+          }).join("");
+          const instalados = data.agents.filter((a) => a.instalado).length;
+          box.firstChild.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 style="margin:0">🧰 Agentes CLI</h2><span>' + instalados + " de " + data.agents.length + ' instalados</span><span><button class="btn-open-ps" id="cliAgentsRefresh">↻ Atualizar</button> <button class="btn-open-ps" id="cliAgentsClose">✕</button></span></div>' +
+            '<p style="opacity:.8;margin:8px 0">Abrir usa o terminal na pasta do projeto. Nada é instalado automaticamente.</p>' +
+            '<table style="width:100%;border-collapse:collapse"><thead><tr><th align="left">Agente</th><th align="left">Status</th><th align="left">Comando</th><th align="left"></th></tr></thead><tbody>' + linhas + "</tbody></table>";
+          box.querySelectorAll("button[data-agent]").forEach((b) => b.addEventListener("click", () => openAgent(b.dataset.agent)));
+          box.querySelector("#cliAgentsRefresh").addEventListener("click", () => openCliAgentsMenu(true));
+          box.querySelector("#cliAgentsClose").addEventListener("click", () => box.remove());
+        } catch (err) {
+          box.remove();
+          showToast("❌ " + err.message, "#f85149");
+        }
       }
       // ===== LIGA/DESLIGA DO LAUNCHER =====
       // Um botão só, que troca de papel conforme o estado do servidor.

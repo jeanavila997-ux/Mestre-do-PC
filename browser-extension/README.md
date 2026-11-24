@@ -11,6 +11,47 @@ Extensão Manifest V3 para integrar o navegador com o **Mestre do PC V10** e, op
 - Configuração segura por token (`MESTRE_EXTENSION_TOKEN`).
 - Atalho de instalação unpacked: `pwsh -File browser-extension/INSTALAR-UNPACKED.ps1`.
 
+### 🧰 Ferramentas (v1.2.0)
+
+Ficam no popup (seção **Ferramentas**) e no botão direito (**Mestre do PC: Ferramentas**).
+Abrem um painel em janela própria que age na aba onde você clicou.
+
+- 📋 **Extrair lista de informações:** tabelas, listas, links, e-mails, telefones, preços
+  e títulos. Copiar (cola no Excel/Sheets), baixar CSV (`;`, UTF-8 com BOM) ou JSON.
+- 🧾 **JSON:** se a página for JSON, mostra formatado com busca e copiar. Em qualquer
+  página gera um **resumo em JSON** (título, URL, meta, cabeçalhos, contagens e dados
+  extraídos) e pode mandar esse resumo para a IA do Mestre (mesmo consentimento do
+  "Enviar página para IA").
+- 🎨 **Mudar design:** temas Escuro, Neon ciano (JARVIS), Leitura limpa e Alto contraste;
+  tamanho da fonte, largura do texto e esconder anúncios/banners. Só CSS injetado num
+  `<style>` próprio; nada é alterado no site. Salvo por site em `chrome.storage.local`,
+  com botão **Restaurar original**. Opcional: reaplicar sozinho ao abrir o site (pede
+  permissão de host opcional `http(s)://*/*`).
+- 🧪 **Modo dev:** frameworks detectados, erros do console capturados desde a abertura do
+  painel, tempos (Navigation/Paint Timing), cookies (só nomes e contagem, nunca valores),
+  chaves do localStorage/sessionStorage, recarregar sem cache, limpar dados do site
+  (caixa de confirmação + confirmação final) e abrir a página de extensões.
+- 🛠️ **DevTools:** atalhos F12 / Ctrl+Shift+I; com o Mestre no ar, o botão pede ao launcher
+  (`browser_enviar_f12`) para apertar F12, e ele só envia se a janela em foco for um navegador.
+  Lista de extensões de desenvolvedor com link da Chrome Web Store (React, Vue, Redux,
+  Lighthouse, Wappalyzer e JSON Formatter).
+- 📓 **NotebookLM** (nova aba + copiar o link da página para usar como fonte) e 🗒️ **OneNote**
+  (app via launcher `browser_abrir_onenote`, ou a web) com "copiar página como nota".
+
+### 🛡️ Administração
+
+Seção **Administração** no popup e no botão direito. Cada item chama uma operação fixa
+do launcher (`admin_*`, categoria "Administração" em `v10/allowed-operations.json`,
+script `scripts/admin-tools.ps1`); a extensão nunca manda comando livre.
+
+- Classes: **leitura**, **execução** e **destrutiva**. Tudo que precisa de administrador abre
+  uma janela com UAC visível (`Start-Process -Verb RunAs`).
+- Itens de execução, destrutivos ou elevados exigem marcar "Li o que esta operação faz".
+  Reiniciar/desligar o PC exigem confirmação dupla (digitar REINICIAR/DESLIGAR + confirmar)
+  e são agendados em 60 s, com botão para cancelar.
+- Não há comandos para esvaziar a Lixeira, apagar arquivos pessoais ou desligar
+  Defender, UAC ou firewall.
+
 ## Segurança
 
 A extensão só consegue falar com o launcher se:
@@ -148,6 +189,11 @@ Arquivos principais:
 - `settings.js` — armazenamento local, migração e acesso ao app local.
 - `options.html` / `options.js` — página de configurações.
 - `build.js` — script de empacotamento.
+- `tools.html` / `tools.js` — painel de Ferramentas e Administração.
+- `tools-core.js` — funções puras (extração, CSV, JSON, temas, catálogo de administração), testadas em `tools-core.test.js`.
+- `page-scripts.js` — funções injetadas na aba com `chrome.scripting` (autocontidas).
+- `tools-actions.js` — design por site e abertura do painel.
+- `mestre-api.js` — chamadas ao launcher (`/run`, `/run-status`, `/ollama/chat`).
 
 ## Permissões
 
@@ -157,7 +203,14 @@ Arquivos principais:
 - `scripting`: extrair seleção da página.
 - `host_permissions`: acesso apenas a `http://127.0.0.1:7777/*` (launcher local).
 - `notifications`: resultados e erros das ações do menu de contexto.
-- `optional_host_permissions`: outras portas de `127.0.0.1`, solicitadas ao configurar apps locais.
+- `optional_host_permissions`: outras portas de `127.0.0.1`, solicitadas ao configurar apps locais;
+  `http(s)://*/*` só se você ligar "Reaplicar sozinho ao abrir o site" no Design.
 
 Não há `content_scripts` nem recursos públicos em `<all_urls>`. A leitura da página
-usa `activeTab` e `scripting` somente após ação explícita.
+usa `activeTab` e `scripting` somente após ação explícita (popup ou botão direito).
+Sem a permissão opcional, o design salvo é reaplicado quando você abre o popup no site.
+
+## Atualizar a extensão carregada sem compactação
+
+Depois de `git pull`, abra `edge://extensions` (ou `chrome://extensions`) e clique em
+**Recarregar** (↻) no card "Mestre do PC - Integração". O token e as opções ficam.

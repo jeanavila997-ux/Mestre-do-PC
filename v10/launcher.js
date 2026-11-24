@@ -5,7 +5,7 @@
 // V10.1: suporta operações parametrizadas via {id, params} e templates seguros.
 
 import http from "node:http";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import { readFile, mkdir, writeFile } from "node:fs/promises";
 import { existsSync, readFileSync } from "node:fs";
@@ -46,6 +46,21 @@ const MAX_CONCURRENT_JOBS = 3;
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
 const JOB_RETENTION_MS = 30 * 60 * 1000;
 const MAX_CMD_LENGTH = 32768;
+// Agentes CLI do menu (mesmos ids do catálogo em scripts/cli-agents.ps1). Nunca instala nada.
+const CLI_AGENT_IDS = ["claude","opencode","codex","gemini","qwen","aider","copilot","cursor","grok","dsh","hermes","goose","kilo","cline","crush","pi","antigravity","ori","openhands","interpreter","continue","plandex","kimi","gptme","kiro","amp","droid","omp"];
+let cliAgentsCache = { at: 0, data: null };
+// pwsh 7 costuma vir só como alias da Microsoft Store (WindowsApps). O launcher
+// elevado (tarefa MestreDoPC_Admin_Launcher) nem sempre tem essa pasta no PATH,
+// então "pwsh.exe" sozinho falha; tenta caminhos completos antes.
+function resolvePwsh() {
+  const candidatos = [
+    process.env.MESTRE_PWSH_PATH,
+    "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+    process.env.LOCALAPPDATA && join(process.env.LOCALAPPDATA, "Microsoft", "WindowsApps", "pwsh.exe"),
+    process.env.USERPROFILE && join(process.env.USERPROFILE, "AppData", "Local", "Microsoft", "WindowsApps", "pwsh.exe"),
+  ].filter(Boolean);
+  return candidatos.find((p) => existsSync(p)) || "pwsh.exe";
+}
 
 // ===== Modo Livre — execução de comandos fora da whitelist =====
 // Opt-in e reversível: por padrão desligado. Quando ligado, /run-free aceita
@@ -189,6 +204,19 @@ function cors(res, origin = BASE_URL) {
   res.setHeader("Vary", "Origin");
 }
 
+// Encerra o PowerShell do job e os filhos dele (pwsh, winget...). Só kill()
+// deixava netos vivos depois do /shutdown.
+function killProcessTree(child) {
+  if (!child?.pid) return;
+  if (process.platform === "win32") {
+    try {
+      spawnSync("taskkill.exe", ["/PID", String(child.pid), "/T", "/F"], { windowsHide: true, timeout: 5000 });
+      return;
+    } catch { /* cai no kill() */ }
+  }
+  try { child.kill(); } catch { /* processo já saiu */ }
+}
+
 function isExtensionOrigin(origin) {
   if (!origin) return false;
   return EXTENSION_ORIGINS.some((allowed) => allowed === origin || (allowed.endsWith("/*") && origin.startsWith(allowed.slice(0, -1))));
@@ -243,11 +271,9 @@ function isAuthorized(req) {
   const origin = req.headers.origin || "";
   const client = req.headers["x-mestre-client"] || "";
 
-  // v10-web: a UI desktop no próprio launcher, e a PWA mobile quando a origem
-  // é localhost, LAN, túnel trycloudflare, VPS ou página estática do projeto.
-  // v11-mobile é alias do mesmo cliente. Fora da origem do launcher, um
-  // MESTRE_MOBILE_TOKEN definido passa a ser obrigatório.
-  if (client === "v10-web" || client === "v11-mobile") {
+  // v10-web: UI desktop no launcher ou em origem remota explicitamente confiável.
+  // Fora da origem do launcher, um token definido passa a ser obrigatório.
+  if (client === "v10-web") {
     if (!crossOriginMobileTokenOk(req)) return false;
     return isAllowedWebOrigin(origin, BASE_URL) || isTrustedClientOrigin(origin, mobileExtraOrigins());
   }
@@ -620,7 +646,7 @@ async function handleNppAction(action, payload) {
 const SYSTEM_STATUS_TTL_MS = 5000;
 const SYSTEM_STATUS_PS_TIMEOUT_MS = 8000;
 const SYSTEM_STATUS_RESPONSE_TIMEOUT_MS = 10000;
-const SYSTEM_STATUS_EMPTY = { cpu: 0, ramFree: 0, ramTotal: 0, diskFree: 0, diskUsed: 0, uptimeSec: 0 };
+const SYSTEM_STATUS_EMPTY = { cpu: 0, cpuCount: 0, ramFree: 0, ramTotal: 0, diskFree: 0, diskUsed: 0, uptimeSec: 0 };
 let systemStatusCache = { data: null, at: 0 };
 let systemStatusInflight = null;
 
@@ -632,12 +658,13 @@ $os = Get-WmiObject Win32_OperatingSystem
 $ramFree = [math]::Round($os.FreePhysicalMemory/1MB, 2)
 $ramTotal = [math]::Round($os.TotalVisibleMemorySize/1MB, 2)
 $cpu = (Get-WmiObject Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average
+$cpuCount = (Get-WmiObject Win32_ComputerSystem).NumberOfLogicalProcessors
 $disk = Get-PSDrive C
 $diskFree = [math]::Round($disk.Free/1GB, 2)
 $diskUsed = [math]::Round($disk.Used/1GB, 2)
 $boot = [Management.ManagementDateTimeConverter]::ToDateTime($os.LastBootUpTime)
 $uptime = [int]((Get-Date) - $boot).TotalSeconds
-@{cpu=[math]::Round($cpu,1);ramFree=$ramFree;ramTotal=$ramTotal;diskFree=$diskFree;diskUsed=$diskUsed;uptimeSec=$uptime} | ConvertTo-Json -Compress
+@{cpu=[math]::Round($cpu,1);cpuCount=$cpuCount;ramFree=$ramFree;ramTotal=$ramTotal;diskFree=$diskFree;diskUsed=$diskUsed;uptimeSec=$uptime} | ConvertTo-Json -Compress
 `], { windowsHide: true, env: cleanPSEnv() });
     const killTimer = setTimeout(() => { try { ps.kill(); } catch {} }, SYSTEM_STATUS_PS_TIMEOUT_MS);
     killTimer.unref();
@@ -683,76 +710,6 @@ function getSystemStatus(res, allowedOrigin = BASE_URL) {
     clearTimeout(timer);
     finish(data || fallback());
   });
-}
-
-const MOBILE_CSP = [
-  "default-src 'self'",
-  "img-src 'self' data: blob:",
-  "style-src 'self' 'unsafe-inline'",
-  "script-src 'self'",
-  "connect-src 'self' http: https:",
-  "font-src 'self' data:",
-  "worker-src 'self'",
-  "manifest-src 'self'",
-  "frame-ancestors 'none'",
-  "base-uri 'none'",
-  "form-action 'none'",
-].join("; ");
-
-async function serveMobile(res, requestPath, method) {
-  if (method !== "GET" && method !== "HEAD") {
-    sendJson(res, 405, { error: "Método não permitido." });
-    return true;
-  }
-  let relative = requestPath.slice("/mobile".length).replace(/^\/+/, "");
-  if (!relative || relative.endsWith("/")) relative += "index.html";
-  if (relative.includes("\0") || /(?:^|\/)\.\.(?:\/|$)/.test(relative) || /[\\<>|:"*?]/.test(relative)) {
-    sendJson(res, 403, { error: "Caminho não permitido." });
-    return true;
-  }
-  const root = resolve(__dirname, "mobile");
-  const filePath = resolve(root, relative);
-  if (filePath !== root && !filePath.startsWith(root + sep)) {
-    sendJson(res, 403, { error: "Caminho não permitido." });
-    return true;
-  }
-  const ext = extname(filePath).toLowerCase();
-  const mimeTypes = {
-    ".html": "text/html; charset=utf-8",
-    ".css": "text/css; charset=utf-8",
-    ".js": "text/javascript; charset=utf-8",
-    ".json": "application/json; charset=utf-8",
-    ".webmanifest": "application/manifest+json; charset=utf-8",
-    ".svg": "image/svg+xml",
-    ".png": "image/png",
-    ".txt": "text/plain; charset=utf-8",
-    ".md": "text/markdown; charset=utf-8",
-  };
-  const contentType = mimeTypes[ext];
-  if (!contentType) {
-    sendJson(res, 403, { error: "Extensão não permitida." });
-    return true;
-  }
-  try {
-    const content = await readFile(filePath);
-    const headers = {
-      "Content-Type": contentType,
-      "X-Content-Type-Options": "nosniff",
-      "Referrer-Policy": "no-referrer",
-      "Cache-Control": ext === ".png" || ext === ".svg" ? "public, max-age=86400" : "no-store",
-    };
-    if (ext === ".html") headers["Content-Security-Policy"] = MOBILE_CSP;
-    if (filePath.endsWith(`${sep}sw.js`) || filePath.endsWith("/sw.js")) {
-      headers["Service-Worker-Allowed"] = "/mobile/";
-      headers["Cache-Control"] = "no-store";
-    }
-    res.writeHead(200, headers);
-    if (method === "HEAD") return res.end(), true;
-    res.end(content);
-  } catch {
-    sendJson(res, 404, { error: "recurso mobile não encontrado" });
-  }
-  return true;
 }
 
 const server = http.createServer(async (req, res) => {
@@ -987,22 +944,50 @@ const server = http.createServer(async (req, res) => {
       res.on("finish", () => {
         console.log(`Encerrando launcher por solicitação da interface (jobs ativos: ${ativos}).`);
         for (const job of jobs.values()) {
-          if (job.state === "running" && job.child) {
-            try { job.child.kill(); } catch { /* processo já saiu */ }
-          }
+          if (job.state === "running" && job.child) killProcessTree(job.child);
         }
         server.close(() => process.exit(0));
-        // Rede de segurança: se alguma conexão keep-alive travar o close.
+        // Conexões keep-alive (navegador, extensão) seguravam o close e a porta 7777.
+        server.closeAllConnections?.();
+        // Rede de segurança: sai mesmo que algo ainda segure o loop.
         setTimeout(() => process.exit(0), 1500).unref();
       });
       return;
+    }
+
+    // Agentes CLI: detecção, versão, comando e link de instalação (só leitura).
+    if (path === "/cli-agents" && req.method === "GET") {
+      if (!isAuthorized(req)) return sendJson(res, 403, { success: false, output: "Cliente não autorizado." }, allowedOrigin);
+      const fresh = url.searchParams.get("refresh") === "1";
+      if (!fresh && cliAgentsCache.data && Date.now() - cliAgentsCache.at < 60000) {
+        return sendJson(res, 200, { success: true, agents: cliAgentsCache.data, cached: true }, allowedOrigin);
+      }
+      const script = join(PROJECT_DIR, "scripts", "cli-agents.ps1");
+      const agents = await new Promise((resolveAgents) => {
+        let out = "";
+        const child = spawn(resolvePwsh(), ["-NoProfile", "-File", script, "-Action", "status-json"], {
+          windowsHide: true,
+          env: { ...process.env, MESTRE_PROJETO_PATH: PROJECT_DIR },
+        });
+        const timer = setTimeout(() => { try { child.kill(); } catch {} resolveAgents(null); }, 30000);
+        child.stdout.on("data", (d) => (out += d.toString("utf8")));
+        child.on("error", () => { clearTimeout(timer); resolveAgents(null); });
+        child.on("close", () => {
+          clearTimeout(timer);
+          try { const parsed = JSON.parse(out.slice(Math.max(0, out.indexOf("[")))); resolveAgents(Array.isArray(parsed) ? parsed : [parsed]); }
+          catch { resolveAgents(null); }
+        });
+      });
+      if (!agents) return sendJson(res, 500, { success: false, output: "Falha ao consultar os agentes CLI (pwsh 7 instalado?)." }, allowedOrigin);
+      cliAgentsCache = { at: Date.now(), data: agents };
+      return sendJson(res, 200, { success: true, agents }, allowedOrigin);
     }
 
     if (path === "/open-terminal" && req.method === "POST") {
       if (!isAuthorized(req)) return sendJson(res, 403, { success: false, output: "Cliente não autorizado." }, allowedOrigin);
       const body = await readBody(req, 16 * 1024);
       const agent = String(body.agent || "pwsh").toLowerCase();
-      const allowedAgents = new Set(["pwsh", "opencode", "grok", "omp", "copilot", "claude", "llamacpp"]);
+      const allowedAgents = new Set(["pwsh", "llamacpp", ...CLI_AGENT_IDS]);
       if (!allowedAgents.has(agent)) {
         return sendJson(res, 400, { success: false, output: "Agente de terminal não permitido: " + agent }, allowedOrigin);
       }
@@ -1011,7 +996,7 @@ const server = http.createServer(async (req, res) => {
       } else {
         const script = join(PROJECT_DIR, "scripts", "cli-agents.ps1");
         const action = agent === "llamacpp" ? "llamacpp-status" : agent;
-        spawn("pwsh.exe", ["-NoProfile", "-File", script, "-Action", action], {
+        spawn(resolvePwsh(), ["-NoProfile", "-File", script, "-Action", action], {
           windowsHide: false,
           detached: true,
           stdio: "ignore",
@@ -1047,17 +1032,6 @@ const server = http.createServer(async (req, res) => {
     if (path === "/ollama/pull" && req.method === "POST") {
       if (!isAuthorized(req)) return sendJson(res, 403, { error: "Cliente não autorizado." }, allowedOrigin);
       return proxyOllamaStream("/api/pull", req, res, allowedOrigin);
-    }
-
-    // PWA Mestre Mobile V11 — arquivos de v10/mobile/ em /mobile e /mobile/*
-    // A barra final mantém CSS/JS relativos dentro de /mobile/.
-    if (path === "/mobile") {
-      res.writeHead(302, { Location: `/mobile/${url.search}`, "Cache-Control": "no-store" });
-      return res.end();
-    }
-    if (path.startsWith("/mobile/")) {
-      const served = await serveMobile(res, path, req.method);
-      if (served) return;
     }
 
     // Servir frontend estático
@@ -1218,6 +1192,9 @@ const server = http.createServer(async (req, res) => {
     }
 
     // ===== NOVO V11.2: SPA fallback — rotas de seção (ex: /8.diagnostico) servem index.html =====
+    if (path === "/mobile" || path.startsWith("/mobile/")) {
+      return sendJson(res, 404, { success: false, output: "Versão mobile removida." }, allowedOrigin);
+    }
     // Rotas de API acima já retornaram; qualquer GET sem extensão de arquivo é rota de seção.
     if (req.method === "GET" && !path.includes(".")) {
       try {
@@ -1247,7 +1224,7 @@ server.listen(PORT, HOST, async () => {
   console.log(`Ollama proxy -> ${OLLAMA_URL}`);
   console.log(`Extensão do navegador: ${EXTENSION_TOKEN ? "habilitada" : "desabilitada (defina MESTRE_EXTENSION_TOKEN)"}`);
   console.log(`Notepad++: ${NPP_TOKEN ? "habilitado" : "desabilitado (defina MESTRE_NPP_TOKEN)"}`);
-  console.log(`Dashboard /status | Streaming /ollama/chat | Notepad++ /npp | Mobile /mobile`);
+  console.log(`Dashboard /status | Streaming /ollama/chat | Notepad++ /npp`);
 });
 
 const cleanupTimer = setInterval(() => {

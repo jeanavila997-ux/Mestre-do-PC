@@ -47,6 +47,21 @@ test("Chrome: migracao, consentimento, opcoes e comando simulado", { timeout: 45
     const run = requests.find(request => request.url.endsWith("/run"));
     assert.equal(run.token, "e2e-token");
     assert.equal(JSON.parse(run.data).id, "diagnostico_completo");
+    assert.ok(await page.$("#secFerramentas") && await page.$("#secAdmin"));
+    assert.ok((await page.$$("#adminButtons button[data-op]")).length >= 20);
+
+    // Painel: reiniciar o PC só libera o botão com caixa marcada + palavra exata.
+    await page.goto(base + "/tools.html?view=admin&op=admin_reiniciar_pc");
+    await page.waitForFunction(() => !document.querySelector("#adminDetail").hidden);
+    assert.equal(await page.$eval("#btnAdminRun", (b) => b.disabled), true);
+    await page.click("#adminConfirm");
+    assert.equal(await page.$eval("#btnAdminRun", (b) => b.disabled), true);
+    await page.type("#adminTyped", "reiniciar");
+    assert.equal(await page.$eval("#btnAdminRun", (b) => b.disabled), false);
+    assert.equal(requests.filter((r) => r.url.endsWith("/run")).length, 1, "nada pode rodar sem clicar em Executar");
+    await page.click('nav button[data-view="design"]');
+    assert.equal(await page.$$eval("#designTheme option", (o) => o.length), 5);
+    assert.ok((await page.$$("#devtoolsList button")).length === 6);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
