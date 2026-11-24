@@ -271,11 +271,9 @@ function isAuthorized(req) {
   const origin = req.headers.origin || "";
   const client = req.headers["x-mestre-client"] || "";
 
-  // v10-web: a UI desktop no próprio launcher, e a PWA mobile quando a origem
-  // é localhost, LAN, túnel trycloudflare, VPS ou página estática do projeto.
-  // v11-mobile é alias do mesmo cliente. Fora da origem do launcher, um
-  // MESTRE_MOBILE_TOKEN definido passa a ser obrigatório.
-  if (client === "v10-web" || client === "v11-mobile") {
+  // v10-web: UI desktop no launcher ou em origem remota explicitamente confiável.
+  // Fora da origem do launcher, um token definido passa a ser obrigatório.
+  if (client === "v10-web") {
     if (!crossOriginMobileTokenOk(req)) return false;
     return isAllowedWebOrigin(origin, BASE_URL) || isTrustedClientOrigin(origin, mobileExtraOrigins());
   }
@@ -714,76 +712,6 @@ function getSystemStatus(res, allowedOrigin = BASE_URL) {
   });
 }
 
-const MOBILE_CSP = [
-  "default-src 'self'",
-  "img-src 'self' data: blob:",
-  "style-src 'self' 'unsafe-inline'",
-  "script-src 'self'",
-  "connect-src 'self' http: https:",
-  "font-src 'self' data:",
-  "worker-src 'self'",
-  "manifest-src 'self'",
-  "frame-ancestors 'none'",
-  "base-uri 'none'",
-  "form-action 'none'",
-].join("; ");
-
-async function serveMobile(res, requestPath, method) {
-  if (method !== "GET" && method !== "HEAD") {
-    sendJson(res, 405, { error: "Método não permitido." });
-    return true;
-  }
-  let relative = requestPath.slice("/mobile".length).replace(/^\/+/, "");
-  if (!relative || relative.endsWith("/")) relative += "index.html";
-  if (relative.includes("\0") || /(?:^|\/)\.\.(?:\/|$)/.test(relative) || /[\\<>|:"*?]/.test(relative)) {
-    sendJson(res, 403, { error: "Caminho não permitido." });
-    return true;
-  }
-  const root = resolve(__dirname, "mobile");
-  const filePath = resolve(root, relative);
-  if (filePath !== root && !filePath.startsWith(root + sep)) {
-    sendJson(res, 403, { error: "Caminho não permitido." });
-    return true;
-  }
-  const ext = extname(filePath).toLowerCase();
-  const mimeTypes = {
-    ".html": "text/html; charset=utf-8",
-    ".css": "text/css; charset=utf-8",
-    ".js": "text/javascript; charset=utf-8",
-    ".json": "application/json; charset=utf-8",
-    ".webmanifest": "application/manifest+json; charset=utf-8",
-    ".svg": "image/svg+xml",
-    ".png": "image/png",
-    ".txt": "text/plain; charset=utf-8",
-    ".md": "text/markdown; charset=utf-8",
-  };
-  const contentType = mimeTypes[ext];
-  if (!contentType) {
-    sendJson(res, 403, { error: "Extensão não permitida." });
-    return true;
-  }
-  try {
-    const content = await readFile(filePath);
-    const headers = {
-      "Content-Type": contentType,
-      "X-Content-Type-Options": "nosniff",
-      "Referrer-Policy": "no-referrer",
-      "Cache-Control": ext === ".png" || ext === ".svg" ? "public, max-age=86400" : "no-store",
-    };
-    if (ext === ".html") headers["Content-Security-Policy"] = MOBILE_CSP;
-    if (filePath.endsWith(`${sep}sw.js`) || filePath.endsWith("/sw.js")) {
-      headers["Service-Worker-Allowed"] = "/mobile/";
-      headers["Cache-Control"] = "no-store";
-    }
-    res.writeHead(200, headers);
-    if (method === "HEAD") return res.end(), true;
-    res.end(content);
-  } catch {
-    sendJson(res, 404, { error: "recurso mobile não encontrado" });
-  }
-  return true;
-}
-
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${HOST}`);
   const path = url.pathname;
@@ -1106,17 +1034,6 @@ const server = http.createServer(async (req, res) => {
       return proxyOllamaStream("/api/pull", req, res, allowedOrigin);
     }
 
-    // PWA Mestre Mobile V11 — arquivos de v10/mobile/ em /mobile e /mobile/*
-    // A barra final mantém CSS/JS relativos dentro de /mobile/.
-    if (path === "/mobile") {
-      res.writeHead(302, { Location: `/mobile/${url.search}`, "Cache-Control": "no-store" });
-      return res.end();
-    }
-    if (path.startsWith("/mobile/")) {
-      const served = await serveMobile(res, path, req.method);
-      if (served) return;
-    }
-
     // Servir frontend estático
     // Login local compartilhado com o site público.
     if (path === "/login.html") {
@@ -1275,6 +1192,9 @@ const server = http.createServer(async (req, res) => {
     }
 
     // ===== NOVO V11.2: SPA fallback — rotas de seção (ex: /8.diagnostico) servem index.html =====
+    if (path === "/mobile" || path.startsWith("/mobile/")) {
+      return sendJson(res, 404, { success: false, output: "Versão mobile removida." }, allowedOrigin);
+    }
     // Rotas de API acima já retornaram; qualquer GET sem extensão de arquivo é rota de seção.
     if (req.method === "GET" && !path.includes(".")) {
       try {
@@ -1304,7 +1224,7 @@ server.listen(PORT, HOST, async () => {
   console.log(`Ollama proxy -> ${OLLAMA_URL}`);
   console.log(`Extensão do navegador: ${EXTENSION_TOKEN ? "habilitada" : "desabilitada (defina MESTRE_EXTENSION_TOKEN)"}`);
   console.log(`Notepad++: ${NPP_TOKEN ? "habilitado" : "desabilitado (defina MESTRE_NPP_TOKEN)"}`);
-  console.log(`Dashboard /status | Streaming /ollama/chat | Notepad++ /npp | Mobile /mobile`);
+  console.log(`Dashboard /status | Streaming /ollama/chat | Notepad++ /npp`);
 });
 
 const cleanupTimer = setInterval(() => {

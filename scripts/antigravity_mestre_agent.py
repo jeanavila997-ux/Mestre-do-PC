@@ -90,7 +90,7 @@ PREFIXOS_LEITURA = (
     "relatorio_", "info_", "testar_", "teste_",
 )
 
-# Atalhos essenciais de diagnóstico (mesma base de `BUILTIN_OPS` em v10/mobile/app.js)
+# Atalhos essenciais de diagnóstico (IDs da whitelist real do Mestre)
 # usados por padrão no modo Ollama local para caber rápido no contexto de modelos 4B/7B.
 TOOLS_ESSENCIAIS_DIAGNOSTICO = (
     "relatorio_rapido_do_pc",

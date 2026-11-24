@@ -15,6 +15,8 @@ import { searchWeb, fetchWebPage, isGovBrDomain } from "./web-search.js";
 import { callGrokBotTool, callGrokRouterChat, isRouter9Model, DEFAULT_GROK_MODEL } from "./grokbot-bridge.js";
 import { reaStatus, reaDoctor, reaAnalyzeAppJs } from "../rea-bridge.js";
 import { refreshLocalMcpTokenFromFile } from "../../mcp-server/auth/local-token.js";
+import { searchObsidian, syncObsidian } from "../../mcp-server/obsidian-memory.js";
+import { isChatModel, isEmbeddingModel } from "../../mcp-server/model-catalog.js";
 import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join, dirname, isAbsolute } from "node:path";
@@ -553,6 +555,10 @@ export const TOOLS_API = {
     return checkPromptInjection(texto);
   },
 
+  sync_obsidian: async () => syncObsidian(),
+
+  search_obsidian: async ({ query, limit } = {}) => searchObsidian(query, { limit }),
+
   listar_perfis_modelo: async () => {
     return { perfis: listProfiles(), perfil_ativo: activeProfile };
   },
@@ -745,4 +751,4 @@ function listProfiles() {
   }));
 }
 
-export { guardPromptInjection, ollamaChat, executeLauncherCommand, classifyLauncherCommand, getProfileModel, getProfileOptions, buildOllamaOptions, listProfiles, getBestAvailableModel, getBestLocalModel, refreshAvailableModels, availableModels };
+export { guardPromptInjection, ollamaChat, executeLauncherCommand, classifyLauncherCommand, getProfileModel, getProfileOptions, buildOllamaOptions, listProfiles, getBestAvailableModel, getBestLocalModel, refreshAvailableModels, availableModels, localModels, isChatModel, isEmbeddingModel };

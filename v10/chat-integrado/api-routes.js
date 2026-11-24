@@ -32,7 +32,8 @@
 import { readFile, stat } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { TOOL_NAMES, executarTool, listProfiles, getProfileModel, getProfileOptions, getBestAvailableModel, getBestLocalModel, refreshAvailableModels, availableModels } from "./tools-api.js";
+import { TOOL_NAMES, executarTool, listProfiles, getProfileModel, getProfileOptions, getBestAvailableModel, getBestLocalModel, refreshAvailableModels, availableModels, localModels, isChatModel, isEmbeddingModel } from "./tools-api.js";
+import { generateKokoroSpeech } from "./kokoro-voice.js";
 import { searchWeb, fetchWebPage } from "./web-search.js";
 import * as db from "./db.js";
 import { sincronizarAgora, getStatus as getSyncStatus, iniciarSyncAutomatico } from "./mysql-sync.js";
@@ -270,6 +271,27 @@ export async function handleApiRoute(req, res, url, ctx) {
 
   // ── Tools ─────────────────────────────────────────────────────────
 
+  if (path === "/api/voice/kokoro" && method === "POST") {
+    if (!auth) return fail(res, 403, { error: "Não autorizado" }, allowedOrigin), true;
+    let body;
+    try { body = await readBody(req); }
+    catch { return fail(res, 400, { error: "JSON inválido" }, allowedOrigin), true; }
+    try {
+      const speech = await generateKokoroSpeech(body.text);
+      auditLog(AuditLevel.IA_OPERATION, "kokoro_voice", { characters: speech.characters });
+      res.writeHead(200, {
+        "Content-Type": speech.contentType,
+        "Content-Length": speech.audio.length,
+        "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
+      });
+      res.end(speech.audio);
+    } catch (error) {
+      fail(res, 502, { success: false, error: error.message }, allowedOrigin);
+    }
+    return true;
+  }
+
   if (path === "/api/tools" && method === "GET") {
     if (!auth) return fail(res, 403, { error: "Não autorizado" }, allowedOrigin), true;
     const disabled = getDisabledTools();
@@ -440,9 +462,13 @@ export async function handleApiRoute(req, res, url, ctx) {
     const profiles = listProfiles();
     const currentProfile = db.getConfig("chat_model_profile", "balanced");
     const currentModel = db.getConfig("chat_model_override", "");
+    const modelosLocais = localModels.filter(isChatModel);
     ok(res, {
       perfis: profiles,
-      modelos_disponiveis: availableModels,
+      modelos_disponiveis: availableModels.filter(isChatModel),
+      modelos_locais: modelosLocais,
+      modelos_cloud: availableModels.filter((name) => !localModels.includes(name) && isChatModel(name)),
+      modelos_embedding: localModels.filter(isEmbeddingModel),
       perfil_atual: currentProfile || "balanced",
       modelo_atual: currentModel || "",
     }, allowedOrigin);

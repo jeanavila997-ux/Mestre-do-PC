@@ -9,9 +9,8 @@ Unidade de deploy: **uma pasta só**. Nada vai para a Área de Trabalho do Windo
 | Arquivo único | `dist/vps-bundle/mestre-do-pc.tgz` |
 | VPS | `/opt/apps/mestre-do-pc` |
 | HTTPS | `https://mestre.72-62-11-116.sslip.io` |
-| App Android (PWA) | `https://mestre.72-62-11-116.sslip.io/mobile/` |
 
-O launcher Windows (`v10/launcher.js`) continua no PC, em `127.0.0.1:7777`. Na VPS sobe só o **site + PWA** em `127.0.0.1:7780`, atrás do Traefik.
+O launcher Windows (`v10/launcher.js`) continua no PC, em `127.0.0.1:7777`. Na VPS sobe só o **site estático** em `127.0.0.1:7780`, atrás do Traefik.
 
 ## Por que uma pasta só
 
@@ -47,7 +46,6 @@ Firewall da VPS: 22, 80 e 443. Porta `7780` só em loopback.
 cd /opt/apps/mestre-do-pc
 docker compose -f deploy/vps/docker-compose.yml up -d
 curl -fsS http://127.0.0.1:7780/ping
-curl -I https://mestre.72-62-11-116.sslip.io/mobile/
 ```
 
 Segredos (`.env`, chaves, tokens) **não** entram no tarball.

@@ -100,6 +100,40 @@ npm run ia -- "Resuma este projeto" --json
 
 Use `npm run test:cli` para validar somente a MESTRE EXTENSSAO.
 
+### Memória local do Obsidian
+
+O MCP expõe `sync_obsidian` e `search_obsidian`. O vault padrão é
+`%USERPROFILE%\Projetos`, configurável por `OBSIDIAN_VAULT_PATH`. O índice fica em
+`v10/data/memories`, fora do Git, e usa `nomic-embed-text` no endpoint local exclusivo
+`OBSIDIAN_OLLAMA_URL` (padrão `http://127.0.0.1:11434`). Se o modelo ainda não existir,
+instale-o separadamente com `ollama pull nomic-embed-text`.
+
+```powershell
+# Atualiza somente os arquivos novos ou modificados
+npm run ia -- --sincronizar-memoria
+
+# Usa até cinco evidências locais, com fonte e data, na resposta
+npm run ia -- "O que decidimos sobre a arquitetura?" --memoria
+```
+
+Pastas protegidas, `Referencias/`, dependências, links simbólicos e arquivos sensíveis
+ficam fora do índice. As notas são enviadas ao modelo como evidências não confiáveis,
+não como instruções. A CLI recusa modelo remoto ao usar `--memoria`; no MCP, os trechos
+retornados são entregues ao cliente que fez a chamada. Quando há resultados, a CLI marca
+a resposta com `[Memória Obsidian] 🧠`.
+
+No Chat Integrado, a busca automática usa o índice existente somente quando o provedor é
+local e `search_obsidian` está ativa; ela não reindexa o vault a cada mensagem. O catálogo
+ao vivo separa chat de embeddings e pode ser conferido com `npm run models:live`.
+
+### Voz Kokoro
+
+As respostas do chat têm o botão **🔊 Kokoro**, que usa o Voicebox local em
+`http://127.0.0.1:17493` e o perfil Dora pt-BR. A síntese só ocorre após o clique. A primeira
+ativação pede consentimento explícito para o possível download do modelo Kokoro (~350 MB);
+cancelar não chama o serviço. Nenhum áudio ou texto é enviado a um endpoint remoto por essa
+integração.
+
 ---
 
 ## OpenCode Go no chat

@@ -77,8 +77,10 @@ install skips the `@qwen-code/cua-sdk` postinstall, which calls
 that package; `v10/computer-use-client.js` resolves it from `v10/node_modules`
 or the repo root `node_modules`. Local `npm ci` on the PC still runs scripts.
 Then `npm test`, then `node --check`
-on `v10/launcher.js`, `v10/security/origin-policy.js`, `v10/mobile/app.js`,
-`v10/mobile/sw.js`, `mcp-server/index.js`, and `mcp-server/security.js`, plus
+on `v10/launcher.js`, `v10/security/origin-policy.js`,
+`v10/chat-integrado/chat-integrado.js`, `v10/chat-integrado/obsidian-chat.js`,
+`v10/chat-integrado/kokoro-voice.js`, `v10/chat-integrado/voice-output.js`,
+`mcp-server/model-catalog.js`, `mcp-server/index.js`, and `mcp-server/security.js`, plus
 `node --test v10/security/origin-policy.test.mjs`.
 
 Tests use Node's built-in test runner (no external framework). `mcp-server/test/`
