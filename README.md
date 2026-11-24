@@ -150,6 +150,12 @@ Copie as variáveis para `.env.local` (nunca commite a chave):
 
 No chat, abra o seletor de modelo e escolha **OpenCode Go**. A página **Configurar API** (`/chaves-api.html`) mostra o mesmo estado. O Go exige o header `x-opencode-session`; o launcher envia um id estável por conversa.
 
+## JARVIS no chat integrado
+
+O JARVIS aparece no mesmo seletor de provedores do chat. No PC, use `JARVIS_URL=http://127.0.0.1:3200`; não é necessário login. Para a VPS, use uma URL HTTPS e mantenha `JARVIS_USER` e `JARVIS_PASS` apenas no `.env.local` do launcher. A interface nunca recebe a senha.
+
+O launcher envia `POST /api/chat` com `X-Jarvis: 1`, interpreta o fluxo NDJSON do JARVIS e o converte para o SSE já entendido pelo chat integrado. Isso adiciona conversação e roteamento; comandos administrativos continuam protegidos pelas confirmações e pela whitelist do Mestre.
+
 ## 🛡️ Segurança e Whitelist
 
 O launcher executa exclusivamente comandos cadastrados na whitelist em [`v10/allowed-operations.json`](v10/allowed-operations.json).

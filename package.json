@@ -35,7 +35,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
-    "@qwen-code/cua-sdk": "^0.20.4"
+    "@qwen-code/cua-sdk": "^0.27.0"
   },
   "homepage": "https://github.com/jeanavila997-ux/Mestre-do-PC-V10#readme",
   "repository": {
@@ -46,6 +46,6 @@
     "url": "https://github.com/jeanavila997-ux/Mestre-do-PC-V10/issues"
   },
   "allowScripts": {
-    "@qwen-code/cua-sdk@0.20.11": true
+    "@qwen-code/cua-sdk@0.27.0": true
   }
 }

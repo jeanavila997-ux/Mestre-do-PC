@@ -27,6 +27,18 @@ Normalmente o Claude Desktop ou Codex inicia `index.js`; não é necessário man
 - `verificar_prompt` — detecta prompt injection/jailbreak.
 - `verificar_modelo_ollama` — checa se o modelo padrão está disponível (local ou cloud).
 
+### Operon e Obsidian
+
+- `operon_plan` — propõe e valida um plano com Ollama, sem gravar no Vault.
+- `operon_validate` — valida a estrutura e as dependências de um plano.
+- `operon_create` — gera os arquivos no Vault configurado; permite prévia sem escrita.
+- `operon_render_canvas` — gera o JSON Canvas do plano.
+- `operon_get` e `operon_list` — consultam Operons no Vault configurado.
+
+Configure `MESTRE_OBSIDIAN_VAULT` e consulte
+[`docs/OPERON-OBSIDIAN.md`](../docs/OPERON-OBSIDIAN.md) para detalhes,
+exemplos e limitações. Dataview e Templater não são necessários.
+
 ### Ferramentas de descoberta e relatório (V11.2)
 
 - `listar_operacoes_disponiveis` — lista as operações da whitelist (id, título,
@@ -57,6 +69,7 @@ Normalmente o Claude Desktop ou Codex inicia `index.js`; não é necessário man
 |---|---|---|
 | `MESTRE_BASE_URL` | `http://127.0.0.1:7777` | Launcher administrativo |
 | `MESTRE_PROJETO_PATH` | Diretório do launcher | Diretório usado pelas ferramentas Git/logs |
+| `MESTRE_OBSIDIAN_VAULT` | *(vazio)* | Vault existente para leitura e gravação de Operons |
 | `OLLAMA_URL` | `http://127.0.0.1:11434` | API do Ollama (auto: `https://ollama.com/api` se `OLLAMA_API_KEY` definida) |
 | `OLLAMA_API_KEY` | *(vazio)* | API key para Ollama Cloud — ativa modo cloud + auth |
 | `OLLAMA_MODEL` | `qwen2.5-coder:3b-instruct` | Modelo padrão |

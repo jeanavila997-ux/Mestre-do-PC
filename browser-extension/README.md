@@ -89,10 +89,11 @@ $env:MESTRE_EXTENSION_ORIGINS="chrome-extension://ID_CHROME, moz-extension://ID_
 
 ### 2. Gerar ícones (se necessário)
 
-Os ícones PNG já estão em `icons/`. Para regenerá-los:
+Os ícones PNG já estão em `icons/`, gerados a partir do logo oficial (`logo-mestre-transparent.png`). Para regenerá-los junto com `icon.ico`, favicons e ícones do PWA:
 
 ```bash
-node browser-extension/icons/build-icons.js
+python -m pip install pillow
+python scripts/gerar-icones.py
 ```
 
 ### 3. Carregar no Chrome / Edge

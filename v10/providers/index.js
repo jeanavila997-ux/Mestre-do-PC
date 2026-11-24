@@ -11,6 +11,7 @@ const OPENCODE_GO_BASE = "https://opencode.ai/inference/go/openai/v1";
 const PROCESS_SESSION = "ses_mestre_" + randomBytes(8).toString("hex");
 
 export const CATALOG = {
+  jarvis:    { name: "JARVIS",          type: "jarvis",     baseUrl: "http://127.0.0.1:3200",        model: "jarvis-router",             envKey: "JARVIS_PASS",       envBaseUrl: "JARVIS_URL", envUser: "JARVIS_USER", implemented: true },
   grok:      { name: "Grok (xAI)",      type: "openai",     baseUrl: "https://api.x.ai/v1",           model: "grok-4.7",                   envKey: "XAI_API_KEY",        implemented: true },
   "9router": { name: "9Router",          type: "openai",     baseUrl: "http://127.0.0.1:20128/v1",     model: "gcli/grok-4.7-build-fast",  envKey: "NINEROUTER_API_KEY", implemented: true, local: true },
   ollama:    { name: "Ollama (local)",   type: "ollama",     baseUrl: "http://127.0.0.1:11434",        model: "qwen2.5-coder:3b-instruct", envKey: null,                 implemented: true, local: true },
@@ -62,6 +63,22 @@ function httpBase(value) {
   return url.toString().replace(/\/+$/, "");
 }
 
+function isLoopbackHttp(value) {
+  let url;
+  try { url = new URL(String(value || "").trim()); } catch { return false; }
+  return url.protocol === "http:"
+    && !url.username
+    && !url.password
+    && ["127.0.0.1", "localhost", "::1", "[::1]"].includes(url.hostname.toLowerCase());
+}
+
+function jarvisBase(value) {
+  const base = httpBase(value);
+  if (!base) return "";
+  if (isLoopbackHttp(base)) return base;
+  try { return new URL(base).protocol === "https:" ? base : ""; } catch { return ""; }
+}
+
 function isOpenCodeAiHttps(value) {
   let url;
   try { url = new URL(String(value || "").trim()); } catch { return false; }
@@ -99,7 +116,9 @@ export function getProvider(id) {
   if (!base) return null;
   const saved = (load().providers || {})[id] || {};
   const apiKey = saved.apiKey || (base.envKey ? process.env[base.envKey] || "" : "");
-  const envBase = base.envBaseUrl ? httpBase(process.env[base.envBaseUrl]) : "";
+  const envBase = base.envBaseUrl
+    ? (id === "jarvis" ? jarvisBase(process.env[base.envBaseUrl]) : httpBase(process.env[base.envBaseUrl]))
+    : "";
   let baseUrl = saved.baseUrl || envBase || base.baseUrl;
   if (id === "opencode-go") {
     // A env é o único jeito de apontar outro host. URL salva na UI só entra se for https em opencode.ai.
@@ -108,14 +127,20 @@ export function getProvider(id) {
     else baseUrl = base.baseUrl;
     baseUrl = normalizeOpenCodeGoBase(baseUrl);
   }
+  if (id === "jarvis") {
+    baseUrl = jarvisBase(saved.baseUrl) || envBase || base.baseUrl;
+  }
   const model = saved.model || (base.envModel ? envText(base.envModel) : "") || base.model;
-  const needsKey = !base.local && base.type !== "ollama" && base.type !== "firecrawl";
+  const needsKey = id === "jarvis"
+    ? !isLoopbackHttp(baseUrl)
+    : !base.local && base.type !== "ollama" && base.type !== "firecrawl";
   return {
     id, ...base,
     baseUrl,
     model,
-    enabled: saved.enabled ?? (!!base.local || !!apiKey),
+    enabled: saved.enabled ?? (!!base.local || (id === "jarvis" && isLoopbackHttp(baseUrl)) || !!apiKey),
     apiKey,
+    user: base.envUser ? envText(base.envUser) : "",
     local: !!base.local,
     needsKey,
     configured: !needsKey || !!apiKey,
@@ -155,6 +180,9 @@ export function updateProvider(id, patch = {}) {
     if (k === "baseUrl" && id === "opencode-go" && !isOpenCodeAiHttps(v)) {
       throw new Error("Base URL do OpenCode Go deve usar https e o host opencode.ai. Para outro host, defina OPENCODE_GO_BASE_URL.");
     }
+    if (k === "baseUrl" && id === "jarvis" && !jarvisBase(v)) {
+      throw new Error("Base URL do JARVIS deve usar HTTPS; HTTP é aceito somente em localhost.");
+    }
     cur[k] = v;
   }
   if (patch.enabled !== undefined) cur.enabled = !!patch.enabled;
@@ -174,6 +202,12 @@ export function setDefault(id) {
 
 function headers(p, sessionId) {
   const h = { "Content-Type": "application/json" };
+  if (p.type === "jarvis") {
+    h.Accept = "application/x-ndjson";
+    h["X-Jarvis"] = "1";
+    if (p.user || p.apiKey) h.Authorization = "Basic " + Buffer.from(`${p.user || ""}:${p.apiKey || ""}`, "utf8").toString("base64");
+    return h;
+  }
   if (p.type === "anthropic") { if (p.apiKey) h["x-api-key"] = p.apiKey; h["anthropic-version"] = "2023-06-01"; }
   else if (p.apiKey) h.Authorization = "Bearer " + p.apiKey;
   if (p.userAgent) h["User-Agent"] = p.userAgent;
@@ -206,6 +240,13 @@ export async function listModels(id) {
     if (!r.ok) throw new Error("HTTP " + r.status);
     return ((await r.json()).models || []).map((m) => m.name);
   }
+  if (p.type === "jarvis") {
+    if (p.needsKey && !p.apiKey) throw new Error(notConfiguredMessage(p));
+    const r = await fetch(p.baseUrl + "/api/saude", { headers: headers(p), signal: AbortSignal.timeout(10000) });
+    if (!r.ok) throw new Error("HTTP " + r.status + " " + (await r.text()).slice(0, 200));
+    const body = await r.json();
+    return [body.modelo || p.model].filter(Boolean);
+  }
   if (p.needsKey && !p.apiKey) throw new Error(notConfiguredMessage(p));
   const r = await fetch(modelsEndpoint(p), { headers: headers(p), signal: AbortSignal.timeout(10000) });
   if (!r.ok) throw new Error("HTTP " + r.status + " " + (await r.text()).slice(0, 200));
@@ -232,9 +273,21 @@ export async function chat(messages, { provider, model, temperature, sessionId }
   for (const id of order) {
     const p = getProvider(id);
     if (!p || !p.implemented || !p.enabled || p.type === "firecrawl") continue;
-    if (!p.local && p.type !== "ollama" && !p.apiKey) continue;
+    if (p.needsKey && !p.apiKey) continue;
     try {
       const useModel = (id === (provider || order[0]) && model) || p.model;
+      if (p.type === "jarvis") {
+        const mensagem = [...messages].reverse().find((m) => m?.role === "user")?.content;
+        if (typeof mensagem !== "string" || !mensagem.trim()) throw new Error("Mensagem do usuário ausente.");
+        const conversaId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(sessionId || "")) ? sessionId : undefined;
+        const r = await fetch(p.baseUrl + "/api/chat", { method: "POST", headers: headers(p, sessionId),
+          body: JSON.stringify({ mensagem, ...(conversaId ? { conversaId } : {}) }), signal: AbortSignal.timeout(120000) });
+        const raw = await r.text();
+        if (!r.ok) throw new Error("HTTP " + r.status + " " + raw.slice(0, 200));
+        const parsed = parseJarvisNdjson(raw);
+        if (parsed.error) throw new Error(parsed.error);
+        return { provider: id, model: useModel, content: parsed.content };
+      }
       if (p.type === "anthropic") {
         const sys = messages.filter((m) => m.role === "system").map((m) => m.content).join("\n");
         const msgs = messages.filter((m) => m.role !== "system");
@@ -267,13 +320,35 @@ export async function chat(messages, { provider, model, temperature, sessionId }
 export async function chatStream(messages, res, { provider, model, sessionId } = {}) {
   const id = provider || listProviders().defaultProvider;
   const p = assertReady(id);
-  if (p.type !== "openai") throw new Error("Streaming disponível para provedores compatíveis com OpenAI (Grok, 9Router, llama.cpp, LM Studio, Groq, Mistral, DeepSeek, OpenRouter, OpenAI, Gemini, OpenCode, OpenCode Go)");
+  if (p.type !== "openai" && p.type !== "jarvis") throw new Error("Streaming disponível para provedores compatíveis com OpenAI e JARVIS.");
   const clientGone = new AbortController();
   const onClose = () => { if (!res.writableEnded) clientGone.abort(); };
   if (typeof res.on === "function") res.on("close", onClose);
   const signal = AbortSignal.any([AbortSignal.timeout(120000), clientGone.signal]);
   let started = false;
   try {
+    if (p.type === "jarvis") {
+      const mensagem = [...messages].reverse().find((m) => m?.role === "user")?.content;
+      if (typeof mensagem !== "string" || !mensagem.trim()) throw new Error("Mensagem do usuário ausente.");
+      const conversaId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(sessionId || "")) ? sessionId : undefined;
+      const r = await fetch(p.baseUrl + "/api/chat", { method: "POST", headers: headers(p, sessionId),
+        body: JSON.stringify({ mensagem, ...(conversaId ? { conversaId } : {}) }), signal });
+      if (!r.ok || !r.body) throw new Error("HTTP " + r.status + " " + (await r.text()).slice(0, 200));
+      res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", "X-Content-Type-Options": "nosniff" });
+      started = true;
+      const decoder = new TextDecoder();
+      let buffer = "";
+      for await (const chunk of r.body) {
+        if (res.writableEnded || res.destroyed) break;
+        buffer += decoder.decode(chunk, { stream: true });
+        const lines = buffer.split(/\r?\n/);
+        buffer = lines.pop() || "";
+        for (const line of lines) writeJarvisSse(line, res);
+      }
+      if (buffer.trim()) writeJarvisSse(buffer, res);
+      if (!res.writableEnded) res.write("data: [DONE]\n\n");
+      return;
+    }
     const r = await fetch(p.baseUrl + "/chat/completions", { method: "POST", headers: headers(p, sessionId),
       body: JSON.stringify({ model: model || p.model, messages, stream: true }), signal });
     if (!r.ok || !r.body) throw new Error("HTTP " + r.status + " " + (await r.text()).slice(0, 200));
@@ -293,4 +368,30 @@ export async function chatStream(messages, res, { provider, model, sessionId } =
       try { res.end(); } catch { /* cliente já encerrou */ }
     }
   }
+}
+
+function parseJarvisNdjson(raw) {
+  let content = "";
+  let error = "";
+  for (const line of String(raw || "").split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    try {
+      const event = JSON.parse(line);
+      if (event.tipo === "delta" && typeof event.texto === "string") content += event.texto;
+      if (event.tipo === "erro") error = String(event.mensagem || event.erro || "Erro do JARVIS");
+    } catch { /* ignora linha parcial/inválida */ }
+  }
+  return { content, error };
+}
+
+function writeJarvisSse(line, res) {
+  if (!line.trim() || res.writableEnded || res.destroyed) return;
+  try {
+    const event = JSON.parse(line);
+    if (event.tipo === "delta" && typeof event.texto === "string") {
+      res.write("data: " + JSON.stringify({ choices: [{ delta: { content: event.texto } }] }) + "\n\n");
+    } else if (event.tipo === "erro") {
+      res.write("data: " + JSON.stringify({ error: { message: String(event.mensagem || event.erro || "Erro do JARVIS") } }) + "\n\n");
+    }
+  } catch { /* ignora linha inválida */ }
 }
