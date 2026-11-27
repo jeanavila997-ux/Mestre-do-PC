@@ -7,6 +7,7 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { checkPromptInjection } from "../security.js";
+import { dashboardHeaders } from "./helpers/dashboard-session.js";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
 
@@ -47,10 +48,10 @@ async function startLauncher(t) {
   return base;
 }
 
-function chat(base, content) {
+async function chat(base, content) {
   return fetch(base + "/ollama/chat", {
     method: "POST",
-    headers: { "Content-Type": "application/json", "X-Mestre-Client": "v10-web", "Origin": base },
+    headers: await dashboardHeaders(base),
     body: JSON.stringify({ model: "qwen2.5-coder:1.5b", messages: [{ role: "user", content }], stream: true }),
   });
 }

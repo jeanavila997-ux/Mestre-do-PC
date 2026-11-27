@@ -81,9 +81,16 @@ test("GET /cli-agents exige cliente autorizado", async (t) => {
   assert.equal(res.status, 403);
 });
 
-test("launcher acha o pwsh por caminho completo (launcher elevado sem WindowsApps no PATH)", async () => {
-  const launcher = await readFile(join(root, "v10", "launcher.js"), "utf8");
-  assert.match(launcher, /function resolvePwsh\(\)/);
-  assert.match(launcher, /WindowsApps", "pwsh\.exe"/);
-  assert.doesNotMatch(launcher, /spawn\("pwsh\.exe"/);
+test("o shell do terminal prefere o pwsh 7 real e cai no Windows PowerShell 5.1", async () => {
+  const { resolveShell, isWindowsAppsStub } = await import("../../v10/terminal-launch.js");
+  const { join } = await import("node:path");
+  const pwsh7 = join("C:\\Program Files", "PowerShell", "7", "pwsh.exe");
+  const ps51 = join("C:\\Windows", "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
+  const stub = join("C:\\Users\\Jean\\AppData\\Local\\Microsoft", "WindowsApps", "pwsh.exe");
+  assert.equal(isWindowsAppsStub(stub), true);
+  assert.equal(resolveShell({ ProgramFiles: "C:\\Program Files", SystemRoot: "C:\\Windows" }, (file) => file === pwsh7), pwsh7);
+  assert.equal(resolveShell(
+    { ProgramFiles: "C:\\Program Files", SystemRoot: "C:\\Windows", MESTRE_PWSH_PATH: stub },
+    (file) => file === stub || file === ps51,
+  ), ps51);
 });

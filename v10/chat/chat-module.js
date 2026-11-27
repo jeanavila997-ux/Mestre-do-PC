@@ -1021,7 +1021,7 @@ export class MestreChat {
     try {
       const res = await this._request("/modo-livre", {
         method: "POST",
-        body: JSON.stringify({ enabled: next }),
+        body: JSON.stringify({ enabled: next, confirmacaoHumana: next === true }),
         signal: AbortSignal.timeout(5000),
       });
       const data = await res.json();

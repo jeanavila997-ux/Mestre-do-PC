@@ -14,6 +14,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'self'"/>
 <meta name="color-scheme" content="dark light"/>
 <link rel="stylesheet" href="/ui-tokens.css"/>
+<link rel="stylesheet" href="/aprovacoes-ui.css"/>
 <link rel="stylesheet" href="/chat-integrado/styles.css"/>
 </head>
 <body>
@@ -66,6 +67,7 @@
   </div>
 
   <div class="content-area" id="contentArea">
+    <div id="aprovacoesPendentes" hidden></div>
     <div class="thread" id="thread">
     <div class="hero-heading" id="heroHeading">
       <div class="tess-icon-big" aria-hidden="true">M</div>
@@ -163,6 +165,7 @@
   </div>
 </div>
 
+<script src="/aprovacoes-ui.js"></script>
 <script type="module" src="/chat-integrado/chat-integrado-boot.js"></script>
 </body>
 </html>

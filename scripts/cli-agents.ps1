@@ -102,15 +102,16 @@ function Get-AgentStatus {
 }
 
 function Open-AgentTerminal([string]$Title, [string]$Command) {
-  $wt = Get-Command wt.exe -ErrorAction SilentlyContinue
+  $pwsh7 = Join-Path $env:ProgramFiles 'PowerShell\7\pwsh.exe'
+  $shell = if (Test-Path -LiteralPath $pwsh7) { $pwsh7 } else { Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe' }
   $inner = "Set-Location -LiteralPath '$($Project.Replace("'","''"))'; Write-Host '=== $Title ===' -ForegroundColor Cyan; $Command"
+  $wt = Get-Command wt.exe -ErrorAction SilentlyContinue
   if ($wt) {
     Start-Process -FilePath $wt.Source -ArgumentList @(
-      '-w', '0', 'nt', '--title', $Title, '-d', $Project,
-      'pwsh', '-NoLogo', '-NoExit', '-Command', $inner
+      '-w', 'new', '-d', $Project, '--', $shell, '-NoLogo', '-NoExit', '-Command', $inner
     )
   } else {
-    Start-Process -FilePath 'pwsh.exe' -ArgumentList @('-NoLogo', '-NoExit', '-Command', $inner)
+    Start-Process -FilePath $shell -WorkingDirectory $Project -ArgumentList @('-NoLogo', '-NoExit', '-Command', $inner)
   }
   Write-Host "Terminal aberto: $Title" -ForegroundColor Green
 }

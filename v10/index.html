@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Mestre do PC __APP_VERSION__</title>
     <link rel="stylesheet" href="/ui-tokens.css" />
+    <link rel="stylesheet" href="/aprovacoes-ui.css" />
     <meta name="description" content="Launcher local do Mestre do PC: comandos PowerShell com whitelist, métricas do sistema, Ollama e Chat Integrado em 127.0.0.1." />
     <link rel="icon" type="image/png" sizes="512x512" href="/favicon.png" />
     <script>
@@ -1028,10 +1029,10 @@
             <span class="command-group-label">Agentes</span>
             <div class="command-group-actions">
               <button class="btn-open-ps" onclick="openPS()">⚡ PowerShell</button>
-              <button class="btn-open-ps" onclick="openAgent('opencode')" title="Abrir OpenCode no terminal">OpenCode</button>
-              <button class="btn-open-ps" onclick="openAgent('grok')" title="Abrir Grok CLI no terminal">Grok CLI</button>
-              <button class="btn-open-ps" onclick="openAgent('copilot')" title="Abrir GitHub Copilot CLI">Copilot</button>
-              <button class="btn-open-ps" onclick="openAgent('claude')" title="Abrir Claude Code no terminal">Claude</button>
+              <button class="btn-open-ps" data-agent="opencode" onclick="openAgent('opencode')" title="Abrir OpenCode no terminal">OpenCode</button>
+              <button class="btn-open-ps" data-agent="grok" onclick="openAgent('grok')" title="Abrir Grok CLI no terminal">Grok CLI</button>
+              <button class="btn-open-ps" data-agent="copilot" onclick="openAgent('copilot')" title="Abrir GitHub Copilot CLI">Copilot</button>
+              <button class="btn-open-ps" data-agent="claude" onclick="openAgent('claude')" title="Abrir Claude Code no terminal">Claude</button>
               <button class="btn-open-ps" onclick="openCliAgentsMenu()" title="Todos os agentes CLI: instalado, versão, abrir ou link de instalação">🧰 Agentes CLI</button>
               <button class="btn-open-ps btn-ia-local" onclick="mestreChat.open()">🤖 IA Local</button>
             </div>
@@ -1079,8 +1080,10 @@
           <div id="ollamaStatus" class="status-divider"><span id="ollamaStatusIcon">⚪</span> Ollama: <span id="ollamaStatusText">Verificando...</span></div>
           <div id="modelProfileStatus" class="status-divider" title="Perfil de modelo ativo no MCP"><span id="modelProfileIcon">🤖</span> Perfil: <span id="modelProfileText">-</span></div>
           <button class="btn-verify" onclick="refreshAll()">↻ Verificar</button>
+          <button class="btn-verify" id="modoLivreBtn" type="button" onclick="toggleModoLivre()" title="Opt-in: PowerShell fora da whitelist. Só liga com a sua confirmação.">🔒 Modo Livre</button>
         </div>
       </div>
+      <div id="aprovacoesPendentes" hidden></div>
       <!-- NOVO: Barra de favoritos -->
       <div class="favorites-bar" id="favBar">
         <span class="fav-label">⭐ Favoritos:</span>
@@ -1709,7 +1712,7 @@
         openTerminalModal(title);
         setTerminalLive("[enviando comando para o launcher...]\n", true);
         try {
-          const liveBody = opId ? { id: opId } : { cmd: code };
+          const liveBody = opId ? { id: opId, confirmado: true } : { cmd: code, confirmado: true };
           const submitRes = await fetch(API + "/run", { method: "POST", headers: PRIVILEGED_HEADERS, body: JSON.stringify(liveBody), signal: AbortSignal.timeout(10000) });
           const submitData = await submitRes.json();
           if (!submitRes.ok || submitData.success !== true || submitData.jobId == null) { setTerminalLive("❌ " + (submitData.output || "Falha ao enviar o comando."), false); return; }
@@ -1928,6 +1931,7 @@
           const activeJobs = Number(d.activeJobs || 0);
           if (d.state === "busy") { statusCard.style.background = "rgba(240,168,0,0.12)"; statusText.innerHTML = `🟡 Launcher ocupado — <strong>${activeJobs} comando(s) em execução</strong>`; }
           else { statusCard.style.background = "rgba(0,255,136,0.08)"; statusText.innerHTML = "🟢 Launcher ativo — <strong>Execução direta habilitada.</strong>"; }
+          atualizarBotoesAgentes();
         } catch {
           serverOnline = false;
           document.getElementById("serverStatus").style.background = "rgba(248,81,73,0.08)";
@@ -1958,11 +1962,48 @@
           else { ollamaEl.textContent = "Sem modelos"; ollamaEl.style.color = "#f0ad4e"; document.getElementById("ollamaStatusIcon").textContent = "🟡"; }
         } catch { document.getElementById("ollamaStatusText").textContent = "Offline"; document.getElementById("ollamaStatusText").style.color = "var(--danger)"; document.getElementById("ollamaStatusIcon").textContent = "🔴"; }
       }
-      async function refreshAll() { await checkServer(); await loadDashboard(); }
+      async function atualizarModoLivre() {
+        const btn = document.getElementById("modoLivreBtn");
+        if (!btn) return;
+        try {
+          const data = await (await fetch(API + "/modo-livre", { headers: PRIVILEGED_HEADERS, signal: AbortSignal.timeout(4000) })).json();
+          const ligado = !!data.enabled;
+          btn.textContent = ligado ? "🔓 Modo Livre" : "🔒 Modo Livre";
+          btn.style.color = ligado ? "var(--danger)" : "";
+        } catch { /* launcher ainda autenticando a sessão */ }
+      }
+      async function toggleModoLivre() {
+        let ligado = false;
+        try {
+          const atual = await (await fetch(API + "/modo-livre", { headers: PRIVILEGED_HEADERS })).json();
+          ligado = !!atual.enabled;
+        } catch { showToast("Não foi possível ler o Modo Livre", "#f85149"); return; }
+        const next = !ligado;
+        if (next) {
+          const ok = await askCommandConfirmation({
+            code: "Modo Livre",
+            reason: "Ligar o Modo Livre executa PowerShell fora da whitelist, sem confirmação por comando. A lista de bloqueio é só uma ajuda.",
+            okLabel: "Ligar Modo Livre",
+          });
+          if (!ok) return;
+        }
+        try {
+          const res = await fetch(API + "/modo-livre", {
+            method: "POST",
+            headers: PRIVILEGED_HEADERS,
+            body: JSON.stringify({ enabled: next, confirmacaoHumana: next === true }),
+          });
+          const data = await res.json();
+          if (!res.ok || data.success !== true) throw new Error(data.reason || "Falha ao alterar o Modo Livre.");
+          showToast(data.enabled ? "Modo Livre ligado" : "Modo Livre desligado", data.enabled ? "#f0a800" : "var(--accent2)");
+        } catch (e) { showToast(e.message, "#f85149"); }
+        atualizarModoLivre();
+      }
+      async function refreshAll() { await checkServer(); await loadDashboard(); await atualizarModoLivre(); }
       function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
       // ===== dispatchCommand() (padrão V7) =====
       async function dispatchCommand(code, options = {}) {
-        const body = options.id ? { id: options.id, ...(options.params ? { params: options.params } : {}) } : { cmd: code };
+        const body = options.id ? { id: options.id, ...(options.params ? { params: options.params } : {}), confirmado: true } : { cmd: code, confirmado: true };
         const submitRes = await fetch(API + "/run", { method: "POST", headers: PRIVILEGED_HEADERS, body: JSON.stringify(body), signal: AbortSignal.timeout(options.submitTimeoutMs || 10000) });
         const submitData = await submitRes.json();
         if (submitRes.ok === false || submitData.success !== true || submitData.accepted !== true || submitData.jobId == null) throw new Error(submitData.output || "Falha ao enviar o comando.");
@@ -2513,11 +2554,33 @@
         }
       }
 
+      async function atualizarBotoesAgentes() {
+        try {
+          const res = await fetch(API + "/cli-agents", { headers: PRIVILEGED_HEADERS, signal: AbortSignal.timeout(8000) });
+          if (!res.ok) return;
+          const data = await res.json();
+          const byId = new Map((data.agents || []).map((item) => [item.id, item]));
+          document.querySelectorAll("button[data-agent]").forEach((btn) => {
+            const info = byId.get(btn.dataset.agent);
+            if (!info || info.instalado) return;
+            btn.dataset.ausente = "1";
+            btn.dataset.hint = info.instalar || "";
+            btn.textContent = (info.nome || btn.dataset.agent) + " — não instalado";
+            btn.title = info.instalar ? "Não instalado. Instale em " + info.instalar : "Não instalado neste PC.";
+          });
+        } catch { /* sem pwsh o menu continua abrindo pelo botão Agentes CLI */ }
+      }
       async function openPS() {
         await openAgent("pwsh");
       }
       async function openAgent(agent) {
         if (serverOnline === false) { showToast("ℹ️ Execute o Launcher como Administrador primeiro.", "#00d4ff"); checkServer(); return; }
+        const btn = document.querySelector('button[data-agent="' + agent + '"]');
+        if (btn && btn.dataset.ausente === "1") {
+          const dica = btn.dataset.hint ? " Instale em " + btn.dataset.hint : "";
+          showToast(btn.textContent + "." + dica, "#f0a800");
+          return;
+        }
         const label = agent === "pwsh" ? "PowerShell" : agent;
         showToast("⚡ Abrindo " + label + "...", "#00d4ff");
         try {
@@ -3203,5 +3266,6 @@
         }
       });
     </script>
+    <script src="/aprovacoes-ui.js"></script>
   </body>
 </html>

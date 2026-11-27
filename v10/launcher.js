@@ -6,7 +6,7 @@
 
 import http from "node:http";
 import { spawn, spawnSync } from "node:child_process";
-import { randomUUID, timingSafeEqual } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { readFile, mkdir, writeFile } from "node:fs/promises";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -24,6 +24,9 @@ import { handleReaRoutes } from "./rea-routes.js";
 import { handleDshRoutes } from "./dsh-routes.js";
 import { handleMcpHttpEndpoint } from "./chat-integrado/grokbot-bridge.js";
 import { isAllowedWebOrigin, isNppOrigin, isTrustedClientOrigin, parseExtraOrigins } from "./security/origin-policy.js";
+import { createSessionToken, sameToken, isBrowserDocumentRequest, canBootstrapSession, injectSessionBootstrap } from "./security/session-gate.js";
+import { createApprovalStore } from "./security/approvals.js";
+import { launchConfirmedTerminal, resolveShell } from "./terminal-launch.js";
 import { isLocalMcpEnabled, validateLocalMcpToken, ensureLocalMcpToken, isLegacyMcpAllowed } from "../mcp-server/auth/local-token.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -35,6 +38,9 @@ if (HOST !== "127.0.0.1") {
 }
 const OLLAMA_URL = process.env.OLLAMA_URL || "http://127.0.0.1:11434";
 const BASE_URL = `http://${HOST}:${PORT}`;
+const SESSION_TOKEN = createSessionToken();
+const APPROVAL_TTL_MS = Math.min(120_000, Math.max(1, Number(process.env.MESTRE_APPROVAL_TTL_MS || 120_000)));
+const approvals = createApprovalStore({ ttlMs: APPROVAL_TTL_MS });
 const PROJECT_DIR = join(__dirname, "..");
 const EXTENSION_TOKEN = process.env.MESTRE_EXTENSION_TOKEN || "";
 const EXTENSION_ORIGINS = (process.env.MESTRE_EXTENSION_ORIGINS || "")
@@ -53,13 +59,7 @@ let cliAgentsCache = { at: 0, data: null };
 // elevado (tarefa MestreDoPC_Admin_Launcher) nem sempre tem essa pasta no PATH,
 // então "pwsh.exe" sozinho falha; tenta caminhos completos antes.
 function resolvePwsh() {
-  const candidatos = [
-    process.env.MESTRE_PWSH_PATH,
-    "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
-    process.env.LOCALAPPDATA && join(process.env.LOCALAPPDATA, "Microsoft", "WindowsApps", "pwsh.exe"),
-    process.env.USERPROFILE && join(process.env.USERPROFILE, "AppData", "Local", "Microsoft", "WindowsApps", "pwsh.exe"),
-  ].filter(Boolean);
-  return candidatos.find((p) => existsSync(p)) || "pwsh.exe";
+  return resolveShell(process.env, existsSync);
 }
 
 // ===== Modo Livre — execução de comandos fora da whitelist =====
@@ -104,6 +104,10 @@ async function setModoLivre(enabled) {
   return { enabled: modoLivreEnabled, expiresAt, ttlMs: MODO_LIVRE_TTL_MS };
 }
 
+// Melhor esforço, não é fronteira de segurança. Alias (ri), concatenação,
+// Invoke-Expression e codificação passam desta regex. A fronteira é a
+// confirmação humana: Modo Livre só liga no painel, e cada comando livre
+// pedido pela IA exige um clique em Permitir, de uso único.
 function isCriticalFreeCommand(cmd) {
   return /\b(Remove-Item|rm|rmdir|del|Format-Volume|Clear-Disk|Remove-Partition|Stop-Computer|Restart-Computer|shutdown|bcdedit|cipher)\b/i.test(cmd);
 }
@@ -153,17 +157,10 @@ async function reloadRegistry() {
 
 const jobs = new Map();
 
-const CORS_ALLOW_HEADERS = "Content-Type, X-Mestre-Client, X-Mestre-Extension-Token, X-Mestre-Npp-Token, X-Mestre-Mobile-Token";
+const CORS_ALLOW_HEADERS = "Content-Type, X-Mestre-Client, X-Mestre-Extension-Token, X-Mestre-Npp-Token, X-Mestre-Mobile-Token, X-Mestre-Session";
 
 function mobileExtraOrigins() {
   return parseExtraOrigins(process.env.MESTRE_MOBILE_ORIGINS || "");
-}
-
-function sameToken(left, right) {
-  const a = Buffer.from(String(left));
-  const b = Buffer.from(String(right));
-  if (a.length !== b.length || a.length === 0) return false;
-  return timingSafeEqual(a, b);
 }
 
 function headerValue(req, name) {
@@ -267,15 +264,25 @@ function isMcpHttpAuthorized(req) {
   return !origin && isDirectLoopback(req);
 }
 
+function loopbackDashboard(req) {
+  if (!isDirectLoopback(req)) return false;
+  const origin = headerValue(req, "origin");
+  return !origin || isAllowedWebOrigin(origin, BASE_URL);
+}
+
 function isAuthorized(req) {
   const origin = req.headers.origin || "";
   const client = req.headers["x-mestre-client"] || "";
 
   // v10-web: UI desktop no launcher ou em origem remota explicitamente confiável.
-  // Fora da origem do launcher, um token definido passa a ser obrigatório.
+  // No loopback da própria origem, o header X-Mestre-Client sozinho não basta:
+  // qualquer processo local consegue enviá-lo. Exige o token de sessão desta execução.
   if (client === "v10-web") {
     if (!crossOriginMobileTokenOk(req)) return false;
-    return isAllowedWebOrigin(origin, BASE_URL) || isTrustedClientOrigin(origin, mobileExtraOrigins());
+    const originOk = isAllowedWebOrigin(origin, BASE_URL) || isTrustedClientOrigin(origin, mobileExtraOrigins());
+    if (!originOk) return false;
+    if (loopbackDashboard(req)) return sameToken(headerValue(req, "x-mestre-session"), SESSION_TOKEN);
+    return true;
   }
 
   // MCP local: sempre exige o token (fail-closed). Nunca aceita origin externa.
@@ -291,12 +298,12 @@ function isAuthorized(req) {
   }
 
   // Extensão requer token e origem na allowlist
-  if (EXTENSION_TOKEN && client === "browser-extension" && req.headers["x-mestre-extension-token"] === EXTENSION_TOKEN) {
+  if (EXTENSION_TOKEN && client === "browser-extension" && sameToken(headerValue(req, "x-mestre-extension-token"), EXTENSION_TOKEN)) {
     return !origin || isExtensionOrigin(origin);
   }
   
   // Notepad++ requer token e origem local
-  if (NPP_TOKEN && client === "notepad-plus-plus" && req.headers["x-mestre-npp-token"] === NPP_TOKEN) {
+  if (NPP_TOKEN && client === "notepad-plus-plus" && sameToken(headerValue(req, "x-mestre-npp-token"), NPP_TOKEN)) {
     return isNppOrigin(origin);
   }
   
@@ -315,6 +322,17 @@ function getAllowedOrigin(req) {
   if (isExtensionOrigin(origin)) return origin;
   if (isNppOrigin(origin)) return origin;
   return BASE_URL;
+}
+
+function sendHtml(res, req, html, headers) {
+  const body = isBrowserDocumentRequest(req.headers) ? injectSessionBootstrap(html, SESSION_TOKEN) : html;
+  res.writeHead(200, headers);
+  res.end(body);
+}
+
+function runApprovalArgs(resolved, body) {
+  const params = body?.params && typeof body.params === "object" && !Array.isArray(body.params) ? body.params : {};
+  return { id: resolved.id, params };
 }
 
 function sendJson(res, status, data, allowOrigin = BASE_URL) {
@@ -518,8 +536,8 @@ const NPP_ALLOWED_ACTIONS = new Set(["explain_code", "ask_ai", "suggest_cmd", "q
 
 function isNppAuthorized(req) {
   const client = req.headers["x-mestre-client"] || "";
-  const token = req.headers["x-mestre-npp-token"] || "";
-  return NPP_TOKEN && client === "notepad-plus-plus" && token === NPP_TOKEN;
+  const token = headerValue(req, "x-mestre-npp-token");
+  return NPP_TOKEN && client === "notepad-plus-plus" && sameToken(token, NPP_TOKEN);
 }
 
 async function callOllamaChat(messages, allowOrigin = BASE_URL) {
@@ -782,6 +800,53 @@ const server = http.createServer(async (req, res) => {
       if (handled) return;
     }
 
+    if (path === "/session-bootstrap" && req.method === "GET") {
+      if (!isDirectLoopback(req) || !canBootstrapSession(req.headers, BASE_URL)) {
+        return sendJson(res, 403, { error: "Sessão do dashboard só é entregue ao navegador na própria origem." }, allowedOrigin);
+      }
+      return sendJson(res, 200, { token: SESSION_TOKEN }, allowedOrigin);
+    }
+
+    if (path === "/aprovacoes/solicitar" && req.method === "POST") {
+      if (!isAuthorized(req) || headerValue(req, "x-mestre-client") !== "mcp") {
+        return sendJson(res, 403, { ok: false, reason: "Só o cliente MCP abre um pedido. Quem aprova é a interface." }, allowedOrigin);
+      }
+      const body = await readBody(req, 8192);
+      const pending = approvals.request({ action: body.acao, args: body.args, requester: "mcp" });
+      if (!pending.ok) return sendJson(res, 400, pending, allowedOrigin);
+      return sendJson(res, 202, { ...pending, mensagem: "aguardando aprovação" }, allowedOrigin);
+    }
+
+    if (path === "/aprovacoes/pendentes" && req.method === "GET") {
+      if (!isAuthorized(req) || headerValue(req, "x-mestre-client") !== "v10-web") {
+        return sendJson(res, 403, { error: "Cliente não autorizado." }, allowedOrigin);
+      }
+      return sendJson(res, 200, { pendentes: approvals.listPending() }, allowedOrigin);
+    }
+
+    const approvalAction = path.match(/^\/aprovacoes\/([A-Za-z0-9_-]+)(?:\/(permitir|negar|consumir))?$/);
+    if (approvalAction && req.method === "GET" && !approvalAction[2]) {
+      if (!isAuthorized(req)) return sendJson(res, 403, { error: "Cliente não autorizado." }, allowedOrigin);
+      const item = approvals.get(approvalAction[1]);
+      if (!item) return sendJson(res, 404, { error: "Aprovação não encontrada." }, allowedOrigin);
+      return sendJson(res, 200, item, allowedOrigin);
+    }
+    if (approvalAction && req.method === "POST" && approvalAction[2]) {
+      const id = approvalAction[1];
+      const acao = approvalAction[2];
+      const client = headerValue(req, "x-mestre-client");
+      if (!isAuthorized(req)) return sendJson(res, 403, { ok: false, reason: "Cliente não autorizado." }, allowedOrigin);
+      if (acao === "permitir" || acao === "negar") {
+        if (client !== "v10-web") return sendJson(res, 403, { ok: false, reason: "Só a interface permite ou nega." }, allowedOrigin);
+        const result = acao === "permitir" ? approvals.permit(id) : approvals.deny(id);
+        return sendJson(res, result.ok ? 200 : 409, result, allowedOrigin);
+      }
+      if (client !== "mcp") return sendJson(res, 403, { ok: false, reason: "Consumo reservado ao cliente que pediu." }, allowedOrigin);
+      const body = await readBody(req, 8192);
+      const result = approvals.consume(id, body.acao, body.args);
+      return sendJson(res, result.ok ? 200 : 403, result, allowedOrigin);
+    }
+
     if (path === "/ping") {
       return sendJson(res, 200, {
         status: "ok",
@@ -843,6 +908,24 @@ const server = http.createServer(async (req, res) => {
       if (resolved.error) {
         return sendJson(res, 403, { success: false, output: resolved.error }, allowedOrigin);
       }
+      if (resolved.destructive) {
+        const client = headerValue(req, "x-mestre-client");
+        if (client === "v10-web") {
+          if (body.confirmado !== true) {
+            return sendJson(res, 403, { success: false, output: "Operação destrutiva exige confirmação na interface.", state: "confirmation_required" }, allowedOrigin);
+          }
+        } else {
+          const args = runApprovalArgs(resolved, body);
+          if (!body.approvalId) {
+            const pending = approvals.request({ action: "run", args, requester: client || "mcp" });
+            return sendJson(res, 409, { success: false, state: "pending", approvalId: pending.approvalId, expiresAt: pending.expiresAt, output: "aguardando aprovação", mensagem: "aguardando aprovação" }, allowedOrigin);
+          }
+          const consumed = approvals.consume(body.approvalId, "run", args);
+          if (!consumed.ok) {
+            return sendJson(res, 403, { success: false, output: consumed.reason, state: "confirmation_required" }, allowedOrigin);
+          }
+        }
+      }
       const id = runPowerShell(resolved.cmd, { id: resolved.id, destructive: resolved.destructive });
       return sendJson(res, 202, {
         success: true,
@@ -869,22 +952,30 @@ const server = http.createServer(async (req, res) => {
     }
     if (path === "/modo-livre" && req.method === "POST") {
       if (!isAuthorized(req)) return sendJson(res, 403, { success: false, reason: "Cliente não autorizado." }, allowedOrigin);
-      const body = await readBody(req, 1024);
+      const body = await readBody(req, 4096);
+      const client = headerValue(req, "x-mestre-client");
+      if (body.enabled === true) {
+        if (client === "mcp") {
+          if (!body.approvalId) {
+            const pending = approvals.request({ action: "definir_modo_livre", args: { enabled: true }, requester: "mcp" });
+            return sendJson(res, 409, { success: false, state: "pending", approvalId: pending.approvalId, expiresAt: pending.expiresAt, mensagem: "aguardando aprovação", reason: "aguardando aprovação" }, allowedOrigin);
+          }
+          const consumed = approvals.consume(body.approvalId, "definir_modo_livre", { enabled: true });
+          if (!consumed.ok) return sendJson(res, 403, { success: false, reason: consumed.reason }, allowedOrigin);
+        } else if (client !== "v10-web" || body.confirmacaoHumana !== true) {
+          return sendJson(res, 403, { success: false, reason: "O Modo Livre só liga com a sua confirmação na interface." }, allowedOrigin);
+        }
+      }
       const state = await setModoLivre(body.enabled);
-      await auditLog(AuditLevel.SECURITY, "modo_livre_toggle", state, req.headers["x-mestre-client"] || "unknown");
+      await auditLog(AuditLevel.SECURITY, "modo_livre_toggle", { enabled: state.enabled, client }, client || "unknown");
       return sendJson(res, 200, { success: true, ...state }, allowedOrigin);
     }
 
-    // Modo Livre: executa QUALQUER comando PowerShell, sem checar a whitelist
-    // de allowed-operations.json. Só responde se o Modo Livre estiver ligado
-    // (ver /modo-livre) — desligado por padrão. Toda chamada é auditada em
-    // nível SECURITY com o comando literal, já que a whitelist deixa de ser
-    // a rede de segurança aqui.
+    // Comando fora da whitelist. Pela interface, só com o Modo Livre ligado
+    // (opt-in humano). Pela IA, só com aprovação de uso único daquele comando.
+    // A regex isCriticalFreeCommand é melhor esforço e não protege o caminho da IA.
     if (path === "/run-free" && req.method === "POST") {
       if (!isAuthorized(req)) return sendJson(res, 403, { success: false, output: "Cliente não autorizado.", state: "forbidden" }, allowedOrigin);
-      if (!isModoLivreActive()) {
-        return sendJson(res, 403, { success: false, output: "Modo Livre está desligado ou expirou. Ative em /modo-livre antes de executar comandos fora da whitelist.", state: "forbidden" }, allowedOrigin);
-      }
       if (getRunningJobCount() >= MAX_CONCURRENT_JOBS) {
         return sendJson(res, 429, { success: false, output: "Limite de comandos simultâneos atingido.", state: "busy" }, allowedOrigin);
       }
@@ -893,8 +984,20 @@ const server = http.createServer(async (req, res) => {
       if (!cmd || cmd.length > MAX_CMD_LENGTH) {
         return sendJson(res, 400, { success: false, output: "Comando ausente ou excede o limite de tamanho." }, allowedOrigin);
       }
-      if (isCriticalFreeCommand(cmd)) {
-        await auditLog(AuditLevel.SECURITY, "run_free_blocked_critical", { cmd }, req.headers["x-mestre-client"] || "unknown");
+      const client = headerValue(req, "x-mestre-client");
+      if (client === "mcp") {
+        if (!body.approvalId) {
+          const pending = approvals.request({ action: "executar_comando_livre", args: { cmd }, requester: "mcp" });
+          return sendJson(res, 409, { success: false, state: "pending", approvalId: pending.approvalId, expiresAt: pending.expiresAt, output: "aguardando aprovação", mensagem: "aguardando aprovação" }, allowedOrigin);
+        }
+        const consumed = approvals.consume(body.approvalId, "executar_comando_livre", { cmd });
+        if (!consumed.ok) {
+          return sendJson(res, 403, { success: false, output: consumed.reason, state: "confirmation_required" }, allowedOrigin);
+        }
+      } else if (!isModoLivreActive()) {
+        return sendJson(res, 403, { success: false, output: "Modo Livre está desligado ou expirou. Ative em /modo-livre antes de executar comandos fora da whitelist.", state: "forbidden" }, allowedOrigin);
+      } else if (isCriticalFreeCommand(cmd)) {
+        await auditLog(AuditLevel.SECURITY, "run_free_blocked_critical", { cmd }, client || "unknown");
         return sendJson(res, 400, { success: false, output: "Comando bloqueado: operação crítica demais para o Modo Livre. Cadastre uma operação na whitelist com confirmação explícita.", state: "blocked" }, allowedOrigin);
       }
       await auditLog(AuditLevel.SECURITY, "run_free_command", { cmd, expiresAt: modoLivreExpiresAt ? new Date(modoLivreExpiresAt).toISOString() : null }, req.headers["x-mestre-client"] || "unknown");
@@ -991,19 +1094,21 @@ const server = http.createServer(async (req, res) => {
       if (!allowedAgents.has(agent)) {
         return sendJson(res, 400, { success: false, output: "Agente de terminal não permitido: " + agent }, allowedOrigin);
       }
-      if (agent === "pwsh") {
-        spawn("powershell.exe", ["-NoLogo", "-NoExit", "-Command", "Set-Location '" + __dirname.replace(/'/g, "''") + "'"], { windowsHide: false, detached: true, stdio: "ignore" }).unref();
-      } else {
-        const script = join(PROJECT_DIR, "scripts", "cli-agents.ps1");
-        const action = agent === "llamacpp" ? "llamacpp-status" : agent;
-        spawn(resolvePwsh(), ["-NoProfile", "-File", script, "-Action", action], {
-          windowsHide: false,
-          detached: true,
-          stdio: "ignore",
-          env: { ...process.env, MESTRE_PROJETO_PATH: PROJECT_DIR },
-        }).unref();
+      const conhecido = Array.isArray(cliAgentsCache.data) ? cliAgentsCache.data.find((item) => item.id === agent) : null;
+      if (conhecido && conhecido.instalado === false) {
+        const dica = conhecido.instalar ? " Instale em " + conhecido.instalar : "";
+        return sendJson(res, 400, { success: false, output: (conhecido.nome || agent) + " não instalado." + dica }, allowedOrigin);
       }
-      return sendJson(res, 200, { success: true, output: "Terminal aberto: " + agent }, allowedOrigin);
+      const opened = await launchConfirmedTerminal({
+        agent,
+        cwd: PROJECT_DIR,
+        env: { ...process.env, MESTRE_PROJETO_PATH: PROJECT_DIR },
+        exists: existsSync,
+        spawnImpl: spawn,
+        scriptPath: join(PROJECT_DIR, "scripts", "cli-agents.ps1"),
+      });
+      if (!opened.ok) return sendJson(res, 500, { success: false, output: opened.message }, allowedOrigin);
+      return sendJson(res, 200, { success: true, output: opened.message }, allowedOrigin);
     }
 
     // Notepad++ integration endpoint
@@ -1039,28 +1144,26 @@ const server = http.createServer(async (req, res) => {
     if (path === "/login.html") {
       try {
         const html = await readFile(join(PROJECT_DIR, "dist", "site", "login.html"), "utf8");
-        res.writeHead(200, {
+        return sendHtml(res, req, html, {
           "Content-Type": "text/html; charset=utf-8",
           "Content-Security-Policy": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
           "X-Content-Type-Options": "nosniff",
           "Referrer-Policy": "no-referrer",
           "Cache-Control": "no-store",
         });
-        return res.end(html);
       } catch { return sendJson(res, 404, { error: "login.html não encontrado" }); }
     }
 
     if (path === "/" || path === "/index.html") {
       try {
         const html = (await readFile(join(__dirname, "index.html"), "utf8")).replaceAll("__APP_VERSION__", APP_VERSION);
-        res.writeHead(200, {
+        return sendHtml(res, req, html, {
           "Content-Type": "text/html; charset=utf-8",
           "Content-Security-Policy": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
           "X-Content-Type-Options": "nosniff",
           "Referrer-Policy": "no-referrer",
           "Cache-Control": "no-store",
         });
-        return res.end(html);
       } catch { return sendJson(res, 404, { error: "index.html não encontrado" }); }
     }
     // Marca fica na raiz do repo; PWA e scripts ficam em v10/.
@@ -1073,6 +1176,9 @@ const server = http.createServer(async (req, res) => {
       "/manifest.json": { type: "application/manifest+json; charset=utf-8", dir: __dirname },
       "/rede-dashboard.js": { type: "text/javascript; charset=utf-8", dir: __dirname },
       "/ui-tokens.css": { type: "text/css; charset=utf-8", dir: __dirname },
+      "/session-client.js": { type: "text/javascript; charset=utf-8", dir: __dirname },
+      "/aprovacoes-ui.js": { type: "text/javascript; charset=utf-8", dir: __dirname },
+      "/aprovacoes-ui.css": { type: "text/css; charset=utf-8", dir: __dirname },
     };
     const staticFile = rootStatic[path];
     if (staticFile) {
@@ -1094,14 +1200,13 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "GET" && /^\/[a-z0-9-]+\.html$/i.test(path)) {
       try {
         const html = await readFile(join(__dirname, path.slice(1)), "utf8");
-        res.writeHead(200, {
+        return sendHtml(res, req, html, {
           "Content-Type": "text/html; charset=utf-8",
           "Content-Security-Policy": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
           "X-Content-Type-Options": "nosniff",
           "Referrer-Policy": "no-referrer",
           "Cache-Control": "no-store",
         });
-        return res.end(html);
       } catch { return sendJson(res, 404, { error: "página não encontrada" }); }
     }
 
@@ -1145,6 +1250,7 @@ const server = http.createServer(async (req, res) => {
         }
         if (ext === ".html") {
           headers["Content-Security-Policy"] = "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
+          return sendHtml(res, req, content.toString("utf8"), headers);
         }
         res.writeHead(200, headers);
         return res.end(content);
@@ -1186,6 +1292,7 @@ const server = http.createServer(async (req, res) => {
         };
         if (ext === ".html") {
           headers["Content-Security-Policy"] = "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
+          return sendHtml(res, req, content.toString("utf8"), headers);
         }
         res.writeHead(200, headers);
         return res.end(content);
@@ -1200,14 +1307,13 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "GET" && !path.includes(".")) {
       try {
         const html = (await readFile(join(__dirname, "index.html"), "utf8")).replaceAll("__APP_VERSION__", APP_VERSION);
-        res.writeHead(200, {
+        return sendHtml(res, req, html, {
           "Content-Type": "text/html; charset=utf-8",
           "Content-Security-Policy": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
           "X-Content-Type-Options": "nosniff",
           "Referrer-Policy": "no-referrer",
           "Cache-Control": "no-store",
         });
-        return res.end(html);
       } catch { return sendJson(res, 404, { error: "index.html não encontrado" }); }
     }
 
@@ -1219,6 +1325,7 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, HOST, async () => {
   console.log(`Mestre do PC V10 - Launcher ativo em http://${HOST}:${PORT}`);
+  console.log("Sessão do dashboard: token aleatório desta execução (não é gravado em disco).");
   console.log(`Operações cadastradas: ${allowedOperations.length}; templates: ${allowedTemplates.length}`);
   isElevated = await detectarElevacao();
   console.log(`Elevação: ${isElevated ? "Administrador" : "usuário comum (comandos administrativos vão falhar)"}`);
