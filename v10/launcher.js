@@ -14,6 +14,7 @@ import { dirname, extname, join, resolve, sep } from "node:path";
 import { checkPromptInjection } from "../mcp-server/security.js";
 import { auditLog, AuditLevel } from "../mcp-server/audit-logger.js";
 import { handleApiRoute } from "./chat-integrado/api-routes.js";
+import { handleUserLibraryRoutes } from "./chat-integrado/user-library-routes.js";
 import { loadOperationRegistry, clearOperationRegistryCache } from "./operation-registry.js";
 import { handleMemoryRoutes } from "./memory-routes.js";
 import { handleOperationRoutes } from "./operation-routes.js";
@@ -735,6 +736,12 @@ const server = http.createServer(async (req, res) => {
     // ── Chaves de API & Provedores: rotas /providers* ───────────────
     if (path === "/providers" || path.startsWith("/providers/")) {
       const handled = await handleProviderRoutes(req, res, url, { sendJson, readBody, allowedOrigin, isAuthorized });
+      if (handled) return;
+    }
+
+    // ── Memória, biblioteca e personas do Chat Integrado ────────
+    if (path === "/api/user-library" || path.startsWith("/api/user-library/")) {
+      const handled = await handleUserLibraryRoutes(req, res, url, { isAuthorized, allowedOrigin });
       if (handled) return;
     }
 
