@@ -508,16 +508,87 @@ function escapeHtml(text) {
     .replace(/'/g, "&#39;");
 }
 
+const CODE_KEYWORDS = {
+  powershell: ["function", "if", "else", "elseif", "foreach", "param", "return", "try", "catch", "finally", "throw", "while", "switch", "filter", "begin", "process", "end", "for"],
+  javascript: ["const", "let", "var", "function", "return", "if", "else", "for", "while", "class", "import", "export", "async", "await", "new", "try", "catch", "from", "of"],
+  python: ["def", "class", "return", "if", "elif", "else", "for", "while", "import", "from", "try", "except", "with", "as", "lambda", "yield", "async", "await"],
+  shell: ["if", "then", "else", "fi", "for", "while", "do", "done", "case", "esac", "function", "echo", "export"],
+  sql: ["select", "from", "where", "and", "or", "insert", "into", "update", "delete", "join", "left", "right", "on", "group", "order", "by", "limit", "as"],
+};
+
+function codeLanguage(lang) {
+  const key = String(lang || "").toLowerCase();
+  if (["powershell", "pwsh", "ps1"].includes(key)) return "powershell";
+  if (["js", "javascript", "jsx", "ts", "tsx", "mjs", "cjs"].includes(key)) return "javascript";
+  if (["py", "python"].includes(key)) return "python";
+  if (["sh", "bash", "shell", "zsh"].includes(key)) return "shell";
+  if (key === "sql") return "sql";
+  return "";
+}
+
+function highlightCode(code, lang) {
+  const keywords = CODE_KEYWORDS[codeLanguage(lang)];
+  if (!keywords) return escapeHtml(code);
+  const known = new Set(keywords);
+  let out = "";
+  let i = 0;
+  const push = (cls, text) => {
+    const safe = escapeHtml(text);
+    out += cls ? `<span class="${cls}">${safe}</span>` : safe;
+  };
+  while (i < code.length) {
+    const ch = code[i];
+    const atLine = i === 0 || code[i - 1] === "\n";
+    if (code.startsWith("//", i) || (ch === "#" && atLine)) {
+      const end = code.indexOf("\n", i);
+      const stop = end === -1 ? code.length : end;
+      push("tok-cmt", code.slice(i, stop));
+      i = stop;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === "`") {
+      let j = i + 1;
+      while (j < code.length && code[j] !== ch) {
+        j += code[j] === "\\" ? 2 : 1;
+      }
+      if (j < code.length) j += 1;
+      push("tok-str", code.slice(i, j));
+      i = j;
+      continue;
+    }
+    const word = /^[A-Za-z_][\w-]*/.exec(code.slice(i));
+    if (word) {
+      const token = word[0];
+      if (known.has(token.toLowerCase())) push("tok-kw", token);
+      else if (/^[A-Z][A-Za-z0-9]+-[A-Za-z]/.test(token)) push("tok-cmd", token);
+      else push("", token);
+      i += token.length;
+      continue;
+    }
+    const num = /^\d+(?:\.\d+)?/.exec(code.slice(i));
+    if (num) {
+      push("tok-num", num[0]);
+      i += num[0].length;
+      continue;
+    }
+    push("", ch);
+    i += 1;
+  }
+  return out;
+}
+
 function renderMarkdown(text) {
   if (text == null) return "";
-  let html = escapeHtml(String(text));
-
-  // 1. Blocos de código (preserva conteúdo bruto)
   const codeBlocks = [];
-  html = html.replace(/```([\s\S]*?)```/g, (m, code) => {
-    codeBlocks.push(`<pre><code>${code.trim()}</code></pre>`);
+  const slotted = String(text).replace(/```(?:([a-zA-Z0-9_+#-]*)\r?\n)?([\s\S]*?)```/g, (_m, lang, code) => {
+    const clean = code.replace(/^\r?\n/, "").replace(/\s+$/, "");
+    const label = (lang || "texto").toLowerCase();
+    codeBlocks.push(
+      `<pre class="code-block" data-lang="${escapeHtml(label)}"><div class="code-bar"><span class="code-lang">${escapeHtml(label)}</span><button type="button" class="code-copy">Copiar</button></div><code>${highlightCode(clean, lang)}</code></pre>`,
+    );
     return `\u0000CODE${codeBlocks.length - 1}\u0000`;
   });
+  let html = escapeHtml(slotted);
 
   // 2. Títulos
   html = html.replace(/^### (.*)$/gm, "<h4>$1</h4>");
@@ -595,17 +666,64 @@ function renderMarkdown(text) {
 
 // ── Messages UI ─────────────────────────────────────────────────────
 
-function addMessage(text, role, extra = {}) {
-  const container = $("messagesContainer");
+function parseStamp(value) {
+  if (value instanceof Date) return value;
+  if (value == null || value === "") return null;
+  const raw = String(value).trim();
+  const iso = raw.includes("T") ? raw : raw.replace(" ", "T") + "Z";
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatStamp(value) {
+  const date = value instanceof Date ? value : parseStamp(value);
+  if (!date) return "";
+  return date.toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+function formatListStamp(value) {
+  const date = parseStamp(value);
+  if (!date) return "";
+  const startToday = new Date();
+  startToday.setHours(0, 0, 0, 0);
+  const startYesterday = new Date(startToday);
+  startYesterday.setDate(startYesterday.getDate() - 1);
+  if (date >= startYesterday) return date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+}
+
+function userInitials() {
+  const raw = ($("userAvatar")?.textContent || "JE").trim();
+  return (raw.slice(0, 2) || "JE").toUpperCase();
+}
+
+function createMessageShell(role, createdAt) {
   const row = document.createElement("div");
   row.className = "msg-row" + (role === "user" ? " user" : "");
-
   const avatar = document.createElement("div");
   avatar.className = "msg-avatar " + (role === "user" ? "user" : "ai");
-  avatar.textContent = role === "user" ? "JA" : "M";
-
+  avatar.textContent = role === "user" ? userInitials() : "M";
+  avatar.setAttribute("aria-hidden", "true");
+  const col = document.createElement("div");
+  col.className = "msg-col";
   const body = document.createElement("div");
-  body.className = "msg-body" + (extra.toolResult ? " tool-result" : "");
+  body.className = "msg-body";
+  const time = document.createElement("time");
+  time.className = "msg-time";
+  const when = parseStamp(createdAt) || new Date();
+  time.dateTime = when.toISOString();
+  time.textContent = formatStamp(when);
+  col.append(body, time);
+  row.append(avatar, col);
+  return { row, body };
+}
+
+function addMessage(text, role, extra = {}) {
+  const container = $("messagesContainer");
+  const shell = createMessageShell(role, extra.createdAt);
+  const row = shell.row;
+  const body = shell.body;
+  if (extra.toolResult) body.classList.add("tool-result");
 
   if (role === "ai" || extra.toolResult) {
     body.innerHTML = renderMarkdown(text);
@@ -641,8 +759,6 @@ function addMessage(text, role, extra = {}) {
     body.appendChild(list);
   }
 
-  row.appendChild(avatar);
-  row.appendChild(body);
   container.appendChild(row);
   container.scrollTop = container.scrollHeight;
   return body;
@@ -929,16 +1045,9 @@ function updateStreamingMessage(text) {
     let forcarScroll = false;
     if (!streamingBodyEl) {
       removeTyping();
-      const row = document.createElement("div");
-      row.className = "msg-row";
-      const avatar = document.createElement("div");
-      avatar.className = "msg-avatar ai";
-      avatar.textContent = "M";
-      streamingBodyEl = document.createElement("div");
-      streamingBodyEl.className = "msg-body";
-      row.appendChild(avatar);
-      row.appendChild(streamingBodyEl);
-      container.appendChild(row);
+      const shell = createMessageShell("ai");
+      streamingBodyEl = shell.body;
+      container.appendChild(shell.row);
       forcarScroll = true;
     }
     const estavaNoFim = container.scrollHeight - container.scrollTop - container.clientHeight < 120;
@@ -1421,19 +1530,61 @@ function conversationTitle(raw) {
   return `${cleaned.slice(0, 41).trimEnd()}…`;
 }
 
+function conversationBucket(conv) {
+  const date = parseStamp(conv.atualizada_em || conv.criada_em);
+  if (!date) return "Anteriores";
+  const startToday = new Date();
+  startToday.setHours(0, 0, 0, 0);
+  const startYesterday = new Date(startToday);
+  startYesterday.setDate(startYesterday.getDate() - 1);
+  if (date >= startToday) return "Hoje";
+  if (date >= startYesterday) return "Ontem";
+  return "Anteriores";
+}
+
 function renderConversas() {
   const list = $("chatHistory");
-  list.innerHTML = "";
+  const query = ($("convSearch")?.value || "").trim().toLowerCase();
+  list.replaceChildren();
+  const filtered = state.conversas.filter((conv) => {
+    const title = String(conv.titulo || "");
+    return !query || title.toLowerCase().includes(query) || conversationTitle(title).toLowerCase().includes(query);
+  });
+  if (!filtered.length) {
+    const empty = document.createElement("p");
+    empty.className = "conv-empty";
+    empty.textContent = query ? "Nenhuma conversa com esse texto." : "Nenhuma conversa ainda.";
+    list.appendChild(empty);
+    return;
+  }
+  for (const name of ["Hoje", "Ontem", "Anteriores"]) {
+    const items = filtered.filter((conv) => conversationBucket(conv) === name);
+    if (!items.length) continue;
+    const head = document.createElement("div");
+    head.className = "conv-group";
+    head.textContent = name;
+    list.appendChild(head);
+    for (const conv of items) appendConversaItem(list, conv);
+  }
+}
 
-  for (const conv of state.conversas) {
+function appendConversaItem(list, conv) {
+    const base = conversationTitle(conv.titulo);
+    const when = formatListStamp(conv.atualizada_em || conv.criada_em);
     const item = document.createElement("button");
     item.type = "button";
     item.className = "chat-item" + (conv.id === state.conversaId ? " active" : "");
     const label = document.createElement("span");
     label.className = "chat-label";
-    label.textContent = conversationTitle(conv.titulo);
+    label.textContent = base;
     item.appendChild(label);
-    item.title = conv.titulo || "Conversa";
+    if (when) {
+      const meta = document.createElement("span");
+      meta.className = "chat-when";
+      meta.textContent = when;
+      item.appendChild(meta);
+    }
+    item.title = when ? `${conv.titulo || "Conversa"} · ${when}` : (conv.titulo || "Conversa");
 
     const del = document.createElement("span");
     del.className = "del-btn";
@@ -1454,7 +1605,6 @@ function renderConversas() {
 
     item.addEventListener("click", () => loadConversa(conv.id));
     list.appendChild(item);
-  }
 }
 
 async function loadConversa(id) {
@@ -1474,6 +1624,7 @@ async function loadConversa(id) {
     addMessage(msg.content, role, {
       toolName: msg.tool_name || undefined,
       toolResult: msg.tool_result ? true : false,
+      createdAt: msg.criada_em,
     });
     state.messages.push({ role: msg.role, content: msg.content });
   }
@@ -1870,17 +2021,17 @@ function updateModelBadge() {
     : state.provedorAtivo === "jarvis" ? state.jarvis : null;
   if (externalProvider) {
     const nome = externalProvider.name || externalProvider.id;
-    span.textContent = externalProvider.configured ? `🔀 ${nome}` : `🔀 ${nome} · não configurado`;
+    span.textContent = externalProvider.configured ? `Modelo · ${nome}` : `Modelo · ${nome} · não configurado`;
     document.body.dataset.modelo = externalProvider.model || "";
     return;
   }
   if (state.perfilAtivo && state.perfis.length) {
     const p = state.perfis.find(x => x.id === state.perfilAtivo);
-    span.textContent = `🔀 ${p?.label || state.perfilAtivo}`;
+    span.textContent = `Modelo · ${p?.label || state.perfilAtivo}`;
   } else if (state.modeloAtivo) {
-    span.textContent = `🔀 ${state.modeloAtivo}`;
+    span.textContent = `Modelo · ${state.modeloAtivo}`;
   } else {
-    span.textContent = "🔀 Auto";
+    span.textContent = "Modelo · Auto";
   }
   document.body.dataset.modelo = state.modeloAtivo || "";
 }
@@ -2105,6 +2256,20 @@ export async function initChatIntegrado() {
   // Collapse sidebar
   $("collapseBtn").addEventListener("click", () => {
     document.body.classList.toggle("sidebar-collapsed");
+  });
+
+  $("convSearch")?.addEventListener("input", () => renderConversas());
+  $("messagesContainer")?.addEventListener("click", async (ev) => {
+    const btn = ev.target.closest?.(".code-copy");
+    if (!btn) return;
+    const code = btn.closest("pre")?.querySelector("code")?.textContent || "";
+    try {
+      await navigator.clipboard.writeText(code);
+      btn.textContent = "Copiado";
+    } catch {
+      btn.textContent = "Falhou";
+    }
+    setTimeout(() => { btn.textContent = "Copiar"; }, 1400);
   });
 
   // New chat

@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Mestre do PC __APP_VERSION__</title>
+    <link rel="stylesheet" href="/ui-tokens.css" />
     <meta name="description" content="Launcher local do Mestre do PC: comandos PowerShell com whitelist, métricas do sistema, Ollama e Chat Integrado em 127.0.0.1." />
     <link rel="icon" type="image/png" sizes="512x512" href="/favicon.png" />
     <script>
@@ -380,86 +381,220 @@
         padding: 20px 12px;
         box-shadow: 18px 0 36px rgba(0,0,0,0.35);
       }
-      .header {
+      .header.command-bar {
         display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 18px;
-        flex-wrap: wrap;
+        flex-direction: column;
+        align-items: stretch;
         gap: 12px;
+        margin-bottom: 16px;
+        padding: 14px 16px 12px;
+        background:
+          linear-gradient(180deg, rgba(0, 212, 255, 0.07), transparent 48%),
+          var(--panel);
+        border: 1px solid rgba(0, 212, 255, 0.22);
+        border-radius: 14px;
       }
-      .header h1 { font-size: 1.5rem; }
-      .header-license { font-size: 1.2rem; color: #8b949e; margin-left: 10px; }
+      .command-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .header h1 {
+        font-size: 1.35rem;
+        font-weight: 650;
+        letter-spacing: -0.02em;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        line-height: 1.2;
+      }
+      .brand-name { white-space: nowrap; }
+      .version-pill {
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        color: #041018;
+        background: var(--accent);
+        border-radius: 999px;
+        padding: 2px 8px;
+        line-height: 1.4;
+      }
+      body.light .version-pill { color: #fff; }
+      .header-license { font-size: 0.95rem; color: var(--text-muted, #a8b6c4); font-weight: 600; }
       .header-license-name { color: var(--accent2); }
-      .header-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+      .command-tools { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+      .command-search {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        min-height: 44px;
+        padding: 0 12px 0 14px;
+        background: rgba(0, 0, 0, 0.28);
+        border: 1px solid rgba(0, 212, 255, 0.35);
+        border-radius: 10px;
+      }
+      body.light .command-search { background: #fff; }
+      .command-search:focus-within {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.18);
+      }
+      .search-glyph { color: var(--accent); font-size: 1.05rem; line-height: 1; }
       .search {
-        padding: 9px 16px;
-        background: var(--card);
-        border: 1px solid var(--border);
-        border-radius: 50px;
+        flex: 1;
+        min-width: 0;
+        width: auto;
+        padding: 10px 0;
+        background: transparent;
+        border: 0;
+        border-radius: 0;
         color: var(--text);
-        font-size: 0.9rem;
+        font-size: 0.95rem;
         outline: none;
-        width: 220px;
       }
-      .search:focus { border-color: var(--accent); }
+      .search-kbd {
+        font-family: inherit;
+        font-size: 0.72rem;
+        color: var(--text-muted, #a8b6c4);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 2px 6px;
+        white-space: nowrap;
+      }
+      .command-groups {
+        display: grid;
+        grid-template-columns: minmax(0, 1.7fr) minmax(220px, 1fr);
+        gap: 12px 18px;
+      }
+      .command-group { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+      .command-group-label {
+        font-size: 0.75rem;
+        font-weight: 650;
+        color: var(--text-muted, #a8b6c4);
+      }
+      .command-group-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
       .btn-open-ps {
-        padding: 9px 16px;
-        background: rgba(0,212,255,0.15);
-        border: 1px solid var(--accent);
-        border-radius: 20px;
-        color: var(--accent);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 34px;
+        padding: 6px 12px;
+        background: rgba(0, 212, 255, 0.08);
+        border: 1px solid rgba(0, 212, 255, 0.45);
+        border-radius: 8px;
+        color: var(--text);
         cursor: pointer;
-        font-size: 0.85rem;
-        font-weight: 600;
-        transition: 0.2s;
+        font: inherit;
+        font-size: 0.82rem;
+        font-weight: 650;
+        line-height: 1.2;
+        text-decoration: none;
+        white-space: nowrap;
+        transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
       }
-      .btn-open-ps:hover { background: var(--accent); color: #000; }
-      .btn-stop { border-color: rgba(248,81,73,0.5); color: var(--danger); }
+      .btn-open-ps:hover { background: var(--accent); color: #041018; border-color: var(--accent); }
+      body.light .btn-open-ps:hover { color: #fff; }
+      .btn-open-ps:focus-visible,
+      .btn-theme:focus-visible,
+      .search:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      .btn-stop {
+        background: rgba(248, 81, 73, 0.12);
+        border-color: rgba(248, 81, 73, 0.75);
+        color: #ffb4ae;
+      }
+      body.light .btn-stop { color: #a40e26; }
       .btn-stop:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
-      .btn-start { border-color: rgba(0,255,136,0.5); color: var(--accent2); }
-      .btn-start:hover { background: var(--accent2); color: #000; border-color: var(--accent2); }
+      .btn-start { border-color: rgba(0, 255, 136, 0.55); color: var(--accent2); background: rgba(0, 255, 136, 0.08); }
+      .btn-start:hover { background: var(--accent2); color: #041018; border-color: var(--accent2); }
       .btn-start.aguardando { animation: neonGreenPulse 1.5s ease-in-out infinite; }
-      .btn-ia-local { background: linear-gradient(135deg, #a200ff, #00d4ff); color: white; border: none; }
-      /* ===== NOVO: botão tema ===== */
+      .btn-ia-local {
+        background: rgba(162, 0, 255, 0.14);
+        border: 1px solid rgba(210, 160, 255, 0.75);
+        color: #f0e4ff;
+      }
+      body.light .btn-ia-local { color: #5a32a3; }
+      .btn-ia-local:hover { background: #8b2be2; color: #fff; border-color: #8b2be2; }
       .btn-theme {
-        padding: 9px 14px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 34px;
+        min-height: 34px;
+        padding: 6px 10px;
         background: var(--card);
         border: 1px solid var(--border);
-        border-radius: 20px;
+        border-radius: 8px;
         color: var(--text);
         cursor: pointer;
         font-size: 1rem;
-        transition: 0.2s;
+        transition: border-color 0.15s ease, background 0.15s ease;
       }
-      .btn-theme:hover { border-color: var(--accent2); }
+      .btn-theme:hover { border-color: var(--accent); }
       /* ===== NOVO: dashboard ===== */
       .dashboard {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-        gap: 14px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
         margin-bottom: 20px;
+        width: 100%;
       }
       .metric-card {
         background: var(--panel);
         border: 1px solid var(--border);
+        border-left: 3px solid rgba(0, 212, 255, 0.55);
         border-radius: 12px;
-        padding: 16px;
+        padding: 14px 16px 12px;
         position: relative;
         overflow: hidden;
+        min-width: 0;
       }
-      .metric-card::before {
-        content: '';
-        position: absolute;
-        top: 0; left: 0; right: 0;
-        height: 2px;
-        background: linear-gradient(90deg, var(--accent), var(--accent2));
+      .metric-card::before { content: none; }
+      .metric-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+      .metric-icon { font-size: 1.05rem; line-height: 1; }
+      .metric-value {
+        font-size: clamp(1.55rem, 2.2vw, 2rem);
+        font-weight: 720;
+        color: var(--text);
+        font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+        font-variant-numeric: tabular-nums;
+        min-height: 1.2em;
+        line-height: 1.15;
+        margin-top: 8px;
+        overflow-wrap: anywhere;
       }
-      .metric-icon { font-size: 1.3rem; margin-bottom: 8px; min-height: 1.3rem; }
-      .metric-value { font-size: 1.6rem; font-weight: 700; color: var(--accent); font-family: "Cascadia Mono", Consolas, monospace; min-height: 1.6em; line-height: 1.6em; overflow-wrap: anywhere; }
-      .metric-label { font-size: 0.72rem; color: #8b949e; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px; min-height: 1em; }
-      .progress-bar { height: 4px; background: var(--card); border-radius: 2px; overflow: hidden; margin-top: 10px; min-height: 4px; }
-      .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 0.6s; }
+      .metric-label {
+        font-size: 0.8rem;
+        color: var(--text-muted, #a8b6c4);
+        font-weight: 650;
+        letter-spacing: 0;
+        text-transform: none;
+        margin-top: 0;
+        min-height: 1em;
+      }
+      .metric-foot { min-height: 1.1em; margin-top: 4px; }
+      .metric-hint { font-size: 0.75rem; color: var(--text-muted, #a8b6c4); }
+      .progress-bar { height: 6px; background: rgba(255, 255, 255, 0.08); border-radius: 99px; overflow: hidden; margin-top: 10px; min-height: 6px; }
+      body.light .progress-bar { background: rgba(0, 0, 0, 0.08); }
+      .progress-fill { height: 100%; background: var(--accent); transition: width 0.45s ease; }
+      .metric-card[data-tone="ok"] { border-left-color: var(--ok, #3ddc97); }
+      .metric-card[data-tone="warn"] { border-left-color: var(--warning); }
+      .metric-card[data-tone="danger"] { border-left-color: var(--danger); }
+      .metric-card[data-tone="ok"] .progress-fill { background: var(--ok, #3ddc97); }
+      .metric-card[data-tone="warn"] .progress-fill { background: var(--warning); }
+      .metric-card[data-tone="danger"] .progress-fill { background: #ff6b63; }
+      .metric-card[data-tone="ok"] .metric-value { color: #8dffc0; }
+      .metric-card[data-tone="warn"] .metric-value { color: #f0c14d; }
+      .metric-card[data-tone="danger"] .metric-value { color: #ff9b94; }
+      body.light .metric-card[data-tone="ok"] .metric-value { color: #116329; }
+      body.light .metric-card[data-tone="warn"] .metric-value { color: #7d4e00; }
+      body.light .metric-card[data-tone="danger"] .metric-value { color: #a40e26; }
       .info-bar {
         background: rgba(0,212,255,0.07);
         border: 1px solid rgba(0,212,255,0.2);
@@ -767,11 +902,17 @@
       /* ===== PWA & RESPONSIVIDADE MOBILE ANDROID ===== */
       .btn-pwa-install {
         display: none;
-        background: linear-gradient(135deg, #00ff88, #00d4ff);
-        color: #000 !important;
-        font-weight: 800;
-        border: none;
-        box-shadow: 0 0 14px rgba(0, 255, 136, 0.45);
+        border-color: rgba(0, 255, 136, 0.7);
+        color: var(--accent2);
+      }
+      @media (max-width: 980px) {
+        .command-groups { grid-template-columns: 1fr; }
+      }
+      @media (max-width: 420px) {
+        .dashboard { grid-template-columns: 1fr; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .metric-card, .btn-open-ps, .progress-fill { transition: none; }
       }
       .mobile-menu-btn {
         display: none;
@@ -813,32 +954,30 @@
           max-width: 100vw !important;
           overflow-x: hidden;
         }
-        .header {
-          padding: 12px 14px;
+        .header.command-bar {
+          padding: 12px;
           gap: 10px;
         }
         .header h1 {
-          font-size: 1.15rem;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          width: 100%;
+          font-size: 1.05rem;
+          width: auto;
+          flex: 1 1 auto;
         }
-        .header-right {
-          width: 100%;
-          justify-content: flex-start;
-          gap: 6px;
-        }
+        .command-tools { width: auto; }
+        .command-groups { grid-template-columns: 1fr; }
+        .search-kbd { display: none; }
         .search, .search:focus {
-          width: 100% !important;
-          flex: 1 1 100%;
+          width: auto !important;
+          flex: 1 1 auto;
+          min-width: 0;
         }
         .btn-open-ps {
-          padding: 8px 11px;
-          font-size: 0.78rem;
+          min-height: 40px;
+          padding: 8px 12px;
+          font-size: 0.8rem;
         }
         .dashboard {
-          grid-template-columns: repeat(2, 1fr);
+          grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 8px;
         }
         .metric-card { padding: 12px 10px; }
@@ -865,30 +1004,73 @@
       <div id="nav"></div>
     </nav>
     <div class="main" id="main-content" role="main">
-      <div class="header">
-        <h1><button class="mobile-menu-btn" onclick="document.body.classList.toggle('mobile-nav-open')" title="Menu de categorias">☰</button> 🛡️ Mestre do PC <span id="appVersion">__APP_VERSION__</span> <span class="header-license">| <span class="header-license-name">JEAN</span></span></h1>
-        <div class="header-right"><a id="btnChavesApi" href="/chaves-api.html" title="Configurar APIs" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;margin-right:8px;border-radius:8px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;font-size:13px">🔑 Configurar API</a>
-          <input type="text" id="searchInput" class="search" placeholder="🔍 Buscar comando..." />
-          <button class="btn-open-ps btn-pwa-install" id="pwaInstallBtn" onclick="installPwaApp()" title="Instalar aplicativo no Android / PC">📲 Instalar App</button>
-          <button class="btn-theme" id="themeToggle" onclick="toggleTheme()" title="Alternar tema">🌙</button>
-          <a href="/novidades-v11.html" style="text-decoration:none"><button class="btn-open-ps" style="background:linear-gradient(135deg,#00d4ff,#00ff88);color:#000;font-weight:700" title="Ver novidades da V11.2">🎉 Novidades V11.2</button></a>
-          <a href="/gerenciar-comandos.html" style="text-decoration:none"><button class="btn-open-ps" style="background:linear-gradient(135deg,#a200ff,#00d4ff);color:#fff;font-weight:700" title="Editar, ativar e desativar comandos e ferramentas">⚙️ Gerenciar</button></a>
-          <button class="btn-open-ps" onclick="openPS()">⚡ PowerShell</button>
-          <button class="btn-open-ps" onclick="openAgent('opencode')" title="Abrir OpenCode no terminal">OpenCode</button>
-          <button class="btn-open-ps" onclick="openAgent('grok')" title="Abrir Grok CLI no terminal">Grok CLI</button>
-          <button class="btn-open-ps" onclick="openAgent('copilot')" title="Abrir GitHub Copilot CLI">Copilot</button>
-          <button class="btn-open-ps" onclick="openAgent('claude')" title="Abrir Claude Code no terminal">Claude</button>
-          <button class="btn-open-ps" onclick="openCliAgentsMenu()" title="Todos os agentes CLI: instalado, versão, abrir ou link de instalação">🧰 Agentes CLI</button>
-          <button class="btn-open-ps btn-ia-local" onclick="mestreChat.open()">🤖 IA Local</button>
-          <button class="btn-open-ps btn-stop" id="btnPower" onclick="togglePower()" title="Parar o launcher (encerra o servidor local)">⏻ Parar</button>
+      <header class="header command-bar">
+        <div class="command-top">
+          <h1>
+            <button class="mobile-menu-btn" onclick="document.body.classList.toggle('mobile-nav-open')" title="Menu de categorias" aria-label="Menu de categorias">☰</button>
+            <span class="brand-mark" aria-hidden="true">🛡️</span>
+            <span class="brand-name">Mestre do PC</span>
+            <span class="version-pill" id="appVersion">__APP_VERSION__</span>
+            <span class="header-license"><span class="header-license-name">JEAN</span></span>
+          </h1>
+          <div class="command-tools">
+            <button class="btn-theme" id="themeToggle" onclick="toggleTheme()" title="Alternar tema" aria-label="Alternar tema">🌙</button>
+            <button class="btn-open-ps btn-stop" id="btnPower" onclick="togglePower()" title="Parar o launcher (encerra o servidor local)">⏻ Parar</button>
+          </div>
         </div>
-      </div>
-      <!-- NOVO: Dashboard de métricas -->
+        <label class="command-search">
+          <span class="search-glyph" aria-hidden="true">🔍</span>
+          <input type="search" id="searchInput" class="search" placeholder="Buscar comando..." aria-label="Buscar comando" autocomplete="off" />
+          <kbd class="search-kbd">Ctrl+K</kbd>
+        </label>
+        <div class="command-groups">
+          <section class="command-group" aria-label="Agentes">
+            <span class="command-group-label">Agentes</span>
+            <div class="command-group-actions">
+              <button class="btn-open-ps" onclick="openPS()">⚡ PowerShell</button>
+              <button class="btn-open-ps" onclick="openAgent('opencode')" title="Abrir OpenCode no terminal">OpenCode</button>
+              <button class="btn-open-ps" onclick="openAgent('grok')" title="Abrir Grok CLI no terminal">Grok CLI</button>
+              <button class="btn-open-ps" onclick="openAgent('copilot')" title="Abrir GitHub Copilot CLI">Copilot</button>
+              <button class="btn-open-ps" onclick="openAgent('claude')" title="Abrir Claude Code no terminal">Claude</button>
+              <button class="btn-open-ps" onclick="openCliAgentsMenu()" title="Todos os agentes CLI: instalado, versão, abrir ou link de instalação">🧰 Agentes CLI</button>
+              <button class="btn-open-ps btn-ia-local" onclick="mestreChat.open()">🤖 IA Local</button>
+            </div>
+          </section>
+          <section class="command-group" aria-label="Sistema">
+            <span class="command-group-label">Sistema</span>
+            <div class="command-group-actions">
+              <a id="btnChavesApi" class="btn-open-ps" href="/chaves-api.html" title="Configurar APIs">🔑 Configurar API</a>
+              <a class="btn-open-ps" href="/gerenciar-comandos.html" title="Editar, ativar e desativar comandos e ferramentas">⚙️ Gerenciar</a>
+              <a class="btn-open-ps" href="/novidades-v11.html" title="Ver novidades da V11.2">🎉 Novidades V11.2</a>
+              <button class="btn-open-ps btn-pwa-install" id="pwaInstallBtn" onclick="installPwaApp()" title="Instalar aplicativo no Android / PC">📲 Instalar App</button>
+            </div>
+          </section>
+        </div>
+      </header>
       <div class="dashboard" id="dashboard">
-        <div class="metric-card"><div class="metric-icon">🖥️</div><div class="metric-value" id="mCpu">--</div><div class="metric-label">CPU %</div><div class="progress-bar"><div class="progress-fill" id="mCpuBar" style="width:0%"></div></div></div>
-        <div class="metric-card"><div class="metric-icon">📊</div><div class="metric-value" id="mRam">--</div><div class="metric-label">RAM Livre (GB)</div><div class="progress-bar"><div class="progress-fill" id="mRamBar" style="width:0%"></div></div></div>
-        <div class="metric-card"><div class="metric-icon">💾</div><div class="metric-value" id="mDisk">--</div><div class="metric-label">Disco Livre (GB)</div><div class="progress-bar"><div class="progress-fill" id="mDiskBar" style="width:0%"></div></div></div>
-        <div class="metric-card"><div class="metric-icon">⏱️</div><div class="metric-value" id="mUp">--</div><div class="metric-label">Uptime</div></div>
+        <article class="metric-card" id="cardCpu" data-tone="neutral">
+          <div class="metric-top"><span class="metric-label" id="labelCpu">CPU</span><span class="metric-icon" aria-hidden="true">🖥️</span></div>
+          <div class="metric-value" id="mCpu">--</div>
+          <div class="metric-foot"><span class="metric-hint" id="mCpuHint">uso do processador</span></div>
+          <div class="progress-bar" id="mCpuMeter" role="meter" aria-labelledby="labelCpu" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="progress-fill" id="mCpuBar" style="width:0%"></div></div>
+        </article>
+        <article class="metric-card" id="cardRam" data-tone="neutral">
+          <div class="metric-top"><span class="metric-label" id="labelRam">RAM livre (GB)</span><span class="metric-icon" aria-hidden="true">📊</span></div>
+          <div class="metric-value" id="mRam">--</div>
+          <div class="metric-foot"><span class="metric-hint" id="mRamHint">memória disponível</span></div>
+          <div class="progress-bar" id="mRamMeter" role="meter" aria-labelledby="labelRam" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="uso da RAM"><div class="progress-fill" id="mRamBar" style="width:0%"></div></div>
+        </article>
+        <article class="metric-card" id="cardDisk" data-tone="neutral">
+          <div class="metric-top"><span class="metric-label" id="labelDisk">Disco livre (GB)</span><span class="metric-icon" aria-hidden="true">💾</span></div>
+          <div class="metric-value" id="mDisk">--</div>
+          <div class="metric-foot"><span class="metric-hint" id="mDiskHint">espaço disponível</span></div>
+          <div class="progress-bar" id="mDiskMeter" role="meter" aria-labelledby="labelDisk" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="uso do disco"><div class="progress-fill" id="mDiskBar" style="width:0%"></div></div>
+        </article>
+        <article class="metric-card" id="cardUp" data-tone="neutral">
+          <div class="metric-top"><span class="metric-label" id="labelUp">Tempo ligado</span><span class="metric-icon" aria-hidden="true">⏱️</span></div>
+          <div class="metric-value" id="mUp">--</div>
+          <div class="metric-foot"><span class="metric-hint">desde a última inicialização</span></div>
+        </article>
       </div>
       <div class="info-bar" id="serverStatus">
         <div class="status-container">
@@ -1541,22 +1723,41 @@
           showToast(ok ? "✅ Comando concluído" : "❌ Comando falhou", ok ? "var(--accent2)" : "#f85149");
         } catch (e) { setTerminalLive("❌ Erro: " + e.message, false); showToast("❌ Falha na conexão", "#f85149"); }
       }
+      function paintMetric(cardId, barId, meterId, hintId, pct, known, hint) {
+        const card = document.getElementById(cardId);
+        const bar = document.getElementById(barId);
+        const meter = document.getElementById(meterId);
+        const hintEl = document.getElementById(hintId);
+        const clamped = Math.max(0, Math.min(100, Number(pct) || 0));
+        const tone = !known ? "neutral" : clamped >= 85 ? "danger" : clamped >= 65 ? "warn" : "ok";
+        if (card) card.dataset.tone = tone;
+        if (bar) bar.style.width = (known ? clamped : 0) + "%";
+        if (meter) {
+          meter.setAttribute("aria-valuenow", known ? String(Math.round(clamped)) : "0");
+          if (hint) meter.setAttribute("aria-valuetext", hint);
+        }
+        if (hintEl && hint) hintEl.textContent = hint;
+      }
       // ===== NOVO V10: loadDashboard() — métricas em tempo real (inspirado V8/V9) =====
       async function loadDashboard() {
         try {
           const r = await fetch(API + "/status", { signal: AbortSignal.timeout(8000) });
           if (!r.ok) return;
           const d = await r.json();
-          const cpuPct = d.cpu != null ? Math.min(100, d.cpu) : 0;
-          const ramPct = d.ramTotal ? Math.max(0, Math.min(100, 100 - (d.ramFree / d.ramTotal * 100))) : 0;
-          const diskPct = (d.diskUsed || d.diskFree) ? (d.diskUsed / (d.diskUsed + d.diskFree) * 100) : 0;
-          document.getElementById("mCpu").textContent = d.cpu != null ? d.cpu.toFixed(0) + "%" : "--";
+          const cpuKnown = d.cpu != null;
+          const ramKnown = d.ramTotal > 0 && d.ramFree != null;
+          const diskTotal = Number(d.diskUsed || 0) + Number(d.diskFree || 0);
+          const diskKnown = diskTotal > 0 && d.diskUsed != null && d.diskFree != null;
+          const cpuPct = cpuKnown ? Math.min(100, d.cpu) : 0;
+          const ramPct = ramKnown ? Math.max(0, Math.min(100, 100 - (d.ramFree / d.ramTotal * 100))) : 0;
+          const diskPct = diskKnown ? (d.diskUsed / diskTotal * 100) : 0;
+          document.getElementById("mCpu").textContent = cpuKnown ? d.cpu.toFixed(0) + "%" : "--";
           document.getElementById("mRam").textContent = d.ramFree != null ? d.ramFree.toFixed(1) : "--";
           document.getElementById("mDisk").textContent = d.diskFree != null ? d.diskFree.toFixed(0) : "--";
           document.getElementById("mUp").textContent = d.uptimeSec != null ? fmtUptime(d.uptimeSec) : (d.uptime != null ? fmtUptime(d.uptime) : "--");
-          document.getElementById("mCpuBar").style.width = cpuPct + "%";
-          document.getElementById("mRamBar").style.width = ramPct + "%";
-          document.getElementById("mDiskBar").style.width = diskPct + "%";
+          paintMetric("cardCpu", "mCpuBar", "mCpuMeter", "mCpuHint", cpuPct, cpuKnown, cpuKnown ? Math.round(cpuPct) + "% em uso" : "uso do processador");
+          paintMetric("cardRam", "mRamBar", "mRamMeter", "mRamHint", ramPct, ramKnown, ramKnown ? Math.round(ramPct) + "% em uso" : "memória disponível");
+          paintMetric("cardDisk", "mDiskBar", "mDiskMeter", "mDiskHint", diskPct, diskKnown, diskKnown ? Math.round(diskPct) + "% em uso" : "espaço disponível");
         } catch {}
       }
       // ===== NOVO V10: fmtUptime(sec) =====
@@ -2720,7 +2921,16 @@
       }
       // ===== NOVO V10: Atalhos de teclado =====
       document.addEventListener("keydown", (e) => {
-        if (e.ctrlKey && e.key === "k") { e.preventDefault(); document.getElementById("searchInput").focus(); }
+        if ((e.ctrlKey || e.metaKey) && (e.key === "k" || e.key === "K")) {
+          const alvo = e.target;
+          const editando = alvo && (alvo.tagName === "TEXTAREA" || (alvo.tagName === "INPUT" && alvo.id !== "searchInput"));
+          if (!editando) {
+            e.preventDefault();
+            const busca = document.getElementById("searchInput");
+            busca.focus();
+            busca.select();
+          }
+        }
         if (e.ctrlKey && e.key === "/") { e.preventDefault(); mestreChat.open(); }
         if (e.key === "Escape") { mestreChat.close(); closeTerminalModal(); cancelParam(); closeWebModal(); }
       });
