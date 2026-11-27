@@ -15,7 +15,7 @@ const secret = "JBSWY3DPEHPK3PXP";
 await writeFile(authFile, JSON.stringify({ users: [{ username: "jean", passwordHash: `${salt.toString("hex")}:${passwordHash.toString("hex")}`, totpSecret: secret }] }));
 process.env.MOBILE_AUTH_FILE = authFile;
 process.env.MOBILE_COOKIE_SECURE = "0";
-const { createMobileGateway } = await import("../server.mjs");
+const { createMobileGateway, toolRequiresConfirmation } = await import("../server.mjs");
 const server = createMobileGateway();
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
 const port = server.address().port;
@@ -33,6 +33,21 @@ test("login exige senha e TOTP e cria sessão", async () => {
   assert.equal(verified.status, 200); const cookie = verified.headers.get("set-cookie").split(";")[0];
   const session = await fetch(`${base}/api/session`, { headers: { cookie } });
   assert.deepEqual(await session.json(), { ok: true, user: "jean" });
+});
+
+test("confirmação de ferramenta falha fechada quando o catálogo não responde", async () => {
+  assert.equal(await toolRequiresConfirmation("qualquer", {
+    loadOperationRegistry: async () => { throw new Error("catálogo indisponível"); },
+    launcherRequest: async () => { throw new Error("não deve chegar aqui"); },
+  }), true);
+  assert.equal(await toolRequiresConfirmation("desconhecida", {
+    loadOperationRegistry: async () => ({ getById: () => null }),
+    launcherRequest: async () => ({ ok: false }),
+  }), true);
+  assert.equal(await toolRequiresConfirmation("leitura", {
+    loadOperationRegistry: async () => ({ getById: () => ({ destructive: false }) }),
+    launcherRequest: async () => { throw new Error("não deve chegar aqui"); },
+  }), false);
 });
 
 test.after(async () => { await new Promise((resolve) => server.close(resolve)); await rm(temp, { recursive: true, force: true }); });

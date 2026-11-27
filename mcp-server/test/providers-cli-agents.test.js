@@ -1,4 +1,6 @@
 import test from "node:test";
+import "./helpers/launcher-test-env.js";
+import { dashboardHeaders } from "./helpers/dashboard-session.js";
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
@@ -70,7 +72,7 @@ test("/open-terminal rejeita agente fora da allowlist", async (t) => {
   await waitForServer(base);
   const res = await fetch(base + "/open-terminal", {
     method: "POST",
-    headers: { "Content-Type": "application/json", "X-Mestre-Client": "v10-web" },
+    headers: await dashboardHeaders(base),
     body: JSON.stringify({ agent: "cmd.exe /c calc" }),
   });
   assert.equal(res.status, 400);

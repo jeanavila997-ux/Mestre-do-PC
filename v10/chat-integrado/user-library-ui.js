@@ -104,9 +104,12 @@ export function initUserLibraryUi({
     if (!profile) return;
     const state = getState();
     if (state.perfilAtivo === profile && !state.provedorAtivo) return;
+    const known = (state.perfis || []).find((item) => item.id === profile);
+    const label = known?.label || profile;
+    const model = known?.model ? ` O modelo efetivo, já com o que foi salvo no editor de perfis, é ${known.model}.` : "";
     const ok = await openModal({
       title: "Perfil sugerido",
-      body: `A persona "${persona.name}" sugere o perfil de modelo "${profile}". Ativar agora? A persona continua valendo mesmo se você recusar.`,
+      body: `A persona "${persona.name}" sugere o perfil "${label}".${model} Ativar agora? A persona continua valendo mesmo se você recusar.`,
       okText: "Ativar perfil",
       cancelText: "Agora não",
     });
@@ -117,6 +120,32 @@ export function initUserLibraryUi({
       return;
     }
     if (reloadProfiles) await reloadProfiles();
+  }
+
+  function fillSuggestedProfiles(selected = "") {
+    const select = $("personaProfile");
+    if (!select) return;
+    const current = selected || select.value;
+    select.replaceChildren();
+    const none = document.createElement("option");
+    none.value = "";
+    none.textContent = "Sem perfil sugerido";
+    select.append(none);
+    for (const profile of getState().perfis || []) {
+      const option = document.createElement("option");
+      option.value = String(profile.id);
+      option.textContent = profile.model
+        ? `${profile.label || profile.id} · ${profile.model}`
+        : String(profile.label || profile.id);
+      select.append(option);
+    }
+    if (current && ![...select.options].some((option) => option.value === current)) {
+      const extra = document.createElement("option");
+      extra.value = current;
+      extra.textContent = current;
+      select.append(extra);
+    }
+    if ([...select.options].some((option) => option.value === current)) select.value = current;
   }
 
   async function onPersonaPicked() {
@@ -421,7 +450,7 @@ export function initUserLibraryUi({
           editingPersonaId = item.id;
           $("personaName").value = item.name;
           $("personaBody").value = item.body;
-          $("personaProfile").value = item.suggestedProfile || "";
+          fillSuggestedProfiles(item.suggestedProfile || "");
         }),
         button("Duplicar", "", async () => {
           const saved = await apiPost(`/api/user-library/personas/${item.id}/duplicate`, {});
@@ -519,6 +548,7 @@ export function initUserLibraryUi({
     if (name === "snippets") loadSnippets();
     if (name === "profile") loadProfile();
     if (name === "personas") {
+      fillSuggestedProfiles();
       refreshPersonaSelect(getState().conversaId || "").then(renderPersonas);
     }
   }

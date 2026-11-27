@@ -554,7 +554,8 @@ if (Test-Path $launcherJs) {
             Write-Log "Tarefa '$launcherTask' disparada." 'INFO'
         } catch {
             Write-Log "Falha ao disparar tarefa: $_ — iniciando direto." 'WARN'
-            $nodeExe = (Get-Command node).Source
+            . (Join-Path $ProjectRoot 'scripts\Resolve-MestreNode.ps1')
+            $nodeExe = Resolve-MestreNode
             Start-Process -FilePath $nodeExe `
                 -ArgumentList "`"$launcherJs`"" `
                 -WorkingDirectory (Join-Path $ProjectRoot 'v10') `
@@ -563,7 +564,9 @@ if (Test-Path $launcherJs) {
     } else {
         # Fallback: sem tarefa registrada, inicia direto (pode faltar elevação).
         Write-Log "Tarefa '$launcherTask' não registrada — iniciando direto (sem elevação garantida)." 'WARN'
-        $nodeExe = (Get-Command node).Source
+        . (Join-Path $ProjectRoot 'scripts\Resolve-MestreNode.ps1')
+        $nodeExe = Resolve-MestreNode
+        if (-not $nodeExe) { throw 'Node.js não encontrado no PATH nem em %LOCALAPPDATA%\Programs\nodejs.' }
         Start-Process -FilePath $nodeExe `
             -ArgumentList "`"$launcherJs`"" `
             -WorkingDirectory (Join-Path $ProjectRoot 'v10') `
@@ -594,7 +597,7 @@ Write-Log 'Registrando tarefas agendadas...' 'STEP'
 
 # Tarefa do Launcher — reutiliza o script oficial (aponta para v10\launcher.js,
 # RunLevel Highest, trigger AtLogon).
-$registerScript = Join-Path $ProjectRoot 'Register-MestreTask.ps1'
+$registerScript = Join-Path $ProjectRoot 'scripts\Register-MestreTask.ps1'
 if (Test-Path $registerScript) {
     try {
         & $registerScript -InstallDir $ProjectRoot

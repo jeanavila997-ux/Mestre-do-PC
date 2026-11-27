@@ -60,7 +60,11 @@ self.addEventListener("fetch", (event) => {
     url.pathname === "/status" ||
     url.pathname === "/mcp-status" ||
     url.pathname === "/run-status" ||
-    url.pathname === "/modo-livre"
+    url.pathname === "/modo-livre" ||
+    url.pathname === "/session-bootstrap" ||
+    url.pathname === "/aprovacoes" ||
+    url.pathname.startsWith("/aprovacoes/") ||
+    url.pathname.startsWith("/api/model-profiles")
   ) {
     return;
   }

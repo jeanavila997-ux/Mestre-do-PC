@@ -14,7 +14,7 @@ function send(res, status, data, origin) {
     "Content-Type": "application/json; charset=utf-8",
     "Access-Control-Allow-Origin": origin || "http://127.0.0.1:7777",
     "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, X-Mestre-Client, X-Mestre-Extension-Token, X-Mestre-Npp-Token, X-Mestre-Mcp-Token",
+    "Access-Control-Allow-Headers": "Content-Type, X-Mestre-Client, X-Mestre-Extension-Token, X-Mestre-Npp-Token, X-Mestre-Mcp-Token, X-Mestre-Session",
     Vary: "Origin",
     "X-Content-Type-Options": "nosniff",
     "Cache-Control": "no-store",

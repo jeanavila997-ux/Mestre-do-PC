@@ -6,10 +6,10 @@
 
 $ErrorActionPreference = "Stop"
 
-$node = Get-Command node -ErrorAction SilentlyContinue
-$nodeExe = if ($node) { $node.Source } else { $null }
+. (Join-Path $PSScriptRoot "Resolve-MestreNode.ps1")
+$nodeExe = Resolve-MestreNode
 if (-not $nodeExe) {
-    Write-Error "Node.js não encontrado. Instale Node.js LTS antes de registrar o launcher."
+    Write-Error "Node.js não encontrado no PATH nem em %LOCALAPPDATA%\Programs\nodejs. Instale o Node.js LTS antes de registrar o launcher."
     exit 1
 }
 

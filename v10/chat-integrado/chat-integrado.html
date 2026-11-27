@@ -14,6 +14,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'self'"/>
 <meta name="color-scheme" content="dark light"/>
 <link rel="stylesheet" href="/ui-tokens.css"/>
+<link rel="stylesheet" href="/aprovacoes-ui.css"/>
 <link rel="stylesheet" href="/chat-integrado/styles.css"/>
 </head>
 <body>
@@ -73,6 +74,7 @@
   </div>
 
   <div class="content-area" id="contentArea">
+    <div id="aprovacoesPendentes" hidden></div>
     <div class="thread" id="thread">
     <div class="hero-heading" id="heroHeading">
       <div class="tess-icon-big" aria-hidden="true">M</div>
@@ -186,11 +188,6 @@
           <textarea id="personaBody" rows="5" placeholder="Prompt de sistema" aria-label="Prompt de sistema"></textarea>
           <select id="personaProfile" aria-label="Perfil de modelo sugerido">
             <option value="">Sem perfil sugerido</option>
-            <option value="fast">fast</option>
-            <option value="balanced">balanced</option>
-            <option value="agent">agent</option>
-            <option value="coding">coding</option>
-            <option value="reasoning">reasoning</option>
           </select>
           <button type="button" id="personaSave" class="lib-btn">Salvar persona</button>
         </div>
@@ -262,6 +259,7 @@
   </div>
 </div>
 
+<script src="/aprovacoes-ui.js"></script>
 <script type="module" src="/chat-integrado/chat-integrado-boot.js"></script>
 </body>
 </html>

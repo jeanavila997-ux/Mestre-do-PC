@@ -36,7 +36,13 @@ jobs:
         shell: pwsh
         run: |
           node --check v10/launcher.js
+          node --check v10/terminal-launch.js
           node --check v10/security/origin-policy.js
+          node --check v10/security/session-gate.js
+          node --check v10/security/approvals.js
+          node --check v10/model-profile-overrides.js
+          node --check deploy/vps/server.mjs
+          node --check mobile/gateway/server.mjs
           node --check v10/chat-integrado/chat-integrado.js
           node --check v10/chat-integrado/user-library.js
           node --check v10/chat-integrado/user-library-pure.js
@@ -46,6 +52,9 @@ jobs:
           node --check v10/chat-integrado/kokoro-voice.js
           node --check v10/chat-integrado/voice-output.js
           node --check mcp-server/model-catalog.js
-          node --test v10/security/origin-policy.test.mjs
+          node --test v10/security/origin-policy.test.mjs v10/security/session-gate.test.mjs v10/security/approvals.test.mjs deploy/vps/server.test.mjs mobile/gateway/test/gateway.test.mjs
           node --check mcp-server/index.js
+          node --check mcp-server/security/webhook-url.js
+          node --check mcp-server/security/table-path.js
+          node --check mcp-server/security/visual-script.js
           node --check mcp-server/security.js
