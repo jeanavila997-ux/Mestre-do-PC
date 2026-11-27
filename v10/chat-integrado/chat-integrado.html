@@ -31,6 +31,8 @@
     <summary class="nav-item"><span class="nav-icon">☰</span><span>Mais</span></summary>
     <div class="nav-group">
       <button type="button" class="nav-item" id="btnMemories"><span class="nav-icon">🧠</span><span>Memórias</span></button>
+      <button type="button" class="nav-item" id="btnLearningNav"><span class="nav-icon">🧩</span><span>Memória</span></button>
+      <button type="button" class="nav-item" id="btnBibliotecaNav"><span class="nav-icon">📚</span><span>Biblioteca</span></button>
       <button type="button" class="nav-item" id="btnToolsNav"><span class="nav-icon">🛠️</span><span>Ferramentas</span></button>
       <button type="button" class="nav-item" id="btnSkillsNav"><span class="nav-icon">SK</span><span>Skills</span></button>
       <button type="button" class="nav-item" id="btnChavesApiNav"><span class="nav-icon">🔑</span><span>Configurar API</span></button>
@@ -63,6 +65,11 @@
     <a href="/" class="top-btn mobile-dash-link" title="Voltar ao Painel Principal" id="btnBackDashboardTop">← Painel</a>
     <button type="button" class="top-btn" title="Novo chat" id="btnNewChatTop">＋</button>
     <button type="button" class="top-btn" id="btnTheme" title="Alternar tema">◐</button>
+    <label class="persona-picker">
+      <span>Persona</span>
+      <select id="personaSelect" aria-label="Persona ativa"></select>
+      <small id="personaScope">padrão</small>
+    </label>
     <div class="credits-badge" id="statusBadge"><span class="status-dot" aria-hidden="true"></span><span>Online</span></div>
   </div>
 
@@ -113,6 +120,91 @@
       <div class="mem-list"></div>
     </div>
 
+    <div class="memories-panel learning-panel" id="learningPanel">
+      <div class="lib-head">
+        <strong>Memória de aprendizagem</strong>
+        <label class="lib-toggle"><input type="checkbox" id="autoLearnToggle" /> Aprender automaticamente</label>
+      </div>
+      <p class="lib-note">Fatos, preferências, decisões e lições ficam neste PC. O modelo local só lê o trecho recuperado, marcado como dado.</p>
+      <div class="lib-toolbar">
+        <input type="search" id="learningSearch" placeholder="Buscar memórias..." aria-label="Buscar memórias" />
+        <select id="learningType" aria-label="Filtrar por tipo">
+          <option value="">Todos os tipos</option>
+          <option value="fato">Fato</option>
+          <option value="preferência">Preferência</option>
+          <option value="decisão">Decisão</option>
+          <option value="lição">Lição</option>
+        </select>
+      </div>
+      <div class="lib-toolbar">
+        <button type="button" id="learningExport" class="lib-btn">Exportar JSON</button>
+        <button type="button" id="learningImport" class="lib-btn">Importar JSON</button>
+        <input type="file" id="learningImportFile" hidden accept="application/json,.json" />
+      </div>
+      <div id="learningList" class="lib-list"></div>
+      <div class="lib-audit">
+        <strong>Registro desta conversa</strong>
+        <div id="learningAudit" class="lib-note">Abra uma conversa para ver modelo, persona e memórias usadas.</div>
+      </div>
+    </div>
+
+    <div class="memories-panel learning-panel" id="bibliotecaPanel">
+      <div class="lib-head"><strong>Biblioteca</strong></div>
+      <div class="lib-tabs" role="tablist">
+        <button type="button" class="lib-tab on" data-tab="prompts">Prompts</button>
+        <button type="button" class="lib-tab" data-tab="snippets">Códigos</button>
+        <button type="button" class="lib-tab" data-tab="profile">Sobre mim</button>
+        <button type="button" class="lib-tab" data-tab="personas">Personas</button>
+      </div>
+      <div id="libTabPrompts" class="lib-tab-panel">
+        <div class="lib-form">
+          <input type="text" id="promptTitle" placeholder="Título do prompt" aria-label="Título do prompt" />
+          <textarea id="promptBody" rows="4" placeholder="Texto. Use {{texto}} para pedir um valor ao usar." aria-label="Texto do prompt"></textarea>
+          <button type="button" id="promptSave" class="lib-btn">Salvar prompt</button>
+        </div>
+        <input type="search" id="promptSearch" placeholder="Buscar prompts..." aria-label="Buscar prompts" />
+        <div id="promptList" class="lib-list"></div>
+      </div>
+      <div id="libTabSnippets" class="lib-tab-panel" hidden>
+        <p class="lib-note">Códigos salvos não rodam sozinhos. Para executar, cole no chat e use Executar na whitelist.</p>
+        <input type="search" id="snippetSearch" placeholder="Buscar códigos..." aria-label="Buscar códigos" />
+        <div id="snippetList" class="lib-list"></div>
+      </div>
+      <div id="libTabProfile" class="lib-tab-panel" hidden>
+        <p class="lib-note">Isto entra no chat local como dado sobre você, não como ordem.</p>
+        <div class="lib-form">
+          <input type="text" id="profileName" placeholder="Nome" aria-label="Nome" />
+          <input type="text" id="profileAddress" placeholder="Como te chamar" aria-label="Como te chamar" />
+          <textarea id="profilePreferences" rows="2" placeholder="Preferências" aria-label="Preferências"></textarea>
+          <textarea id="profileProjects" rows="2" placeholder="Projetos" aria-label="Projetos"></textarea>
+          <textarea id="profileNotes" rows="2" placeholder="Notas" aria-label="Notas"></textarea>
+          <button type="button" id="profileSave" class="lib-btn">Salvar sobre mim</button>
+        </div>
+      </div>
+      <div id="libTabPersonas" class="lib-tab-panel" hidden>
+        <p class="lib-note">A persona vale a partir da próxima mensagem. O padrão cobre conversas sem escolha própria.</p>
+        <div class="lib-form">
+          <input type="text" id="personaName" placeholder="Nome da persona" aria-label="Nome da persona" />
+          <textarea id="personaBody" rows="5" placeholder="Prompt de sistema" aria-label="Prompt de sistema"></textarea>
+          <select id="personaProfile" aria-label="Perfil de modelo sugerido">
+            <option value="">Sem perfil sugerido</option>
+          </select>
+          <button type="button" id="personaSave" class="lib-btn">Salvar persona</button>
+        </div>
+        <div class="lib-toolbar">
+          <button type="button" id="personaRestore" class="lib-btn">Restaurar exemplos</button>
+          <button type="button" id="personaMakeDefault" class="lib-btn">Definir selecionada como padrão</button>
+          <button type="button" id="personaUseDefault" class="lib-btn">Usar o padrão nesta conversa</button>
+        </div>
+        <div id="personaList" class="lib-list"></div>
+      </div>
+      <div class="lib-toolbar">
+        <button type="button" id="bibliotecaExport" class="lib-btn">Exportar JSON</button>
+        <button type="button" id="bibliotecaImport" class="lib-btn">Importar JSON</button>
+        <input type="file" id="bibliotecaImportFile" hidden accept="application/json,.json" />
+      </div>
+    </div>
+
     <div class="composer-box">
       <div class="active-memories" id="activeMemories"></div>
       <textarea class="composer-input" id="promptInput" placeholder="Pergunte qualquer coisa, use / para uma skill ou 🔧 para ferramentas..." aria-label="Mensagem"></textarea>
@@ -138,6 +230,8 @@
         <div class="menu-item" id="itemTools"><span>🛠️ Ferramentas</span></div>
         <div class="menu-item" id="itemSkills"><span>Skills</span></div>
         <div class="menu-item" id="itemMemories"><span>🧠 Memórias</span></div>
+        <div class="menu-item" id="itemLearning"><span>🧩 Memória</span></div>
+        <div class="menu-item" id="itemBiblioteca"><span>📚 Biblioteca</span></div>
         <div class="menu-item" id="itemSync"><span>📡 Status Sync</span></div>
         <div class="menu-item" id="itemAudit"><span>📝 Auditoria</span></div>
         <div class="menu-item" id="itemClear"><span>🗑️ Limpar Chat</span></div>

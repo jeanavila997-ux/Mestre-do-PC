@@ -14,8 +14,18 @@
 import { applySkillShortcut, buildAttachmentContext, filterSkills } from "./chat-utils.js";
 import { fetchObsidianEvidence } from "./obsidian-chat.js";
 import { attachKokoroButton } from "./voice-output.js";
+import { initUserLibraryUi } from "./user-library-ui.js";
 
 const BASE = ""; // mesma origem do launcher
+
+let libraryUi = {
+  prepare: async () => null,
+  decorate() {},
+  showTurnMeta() {},
+  onConversation() {},
+  afterTurn: async () => null,
+};
+let pendingTurnMeta = null;
 
 const LS_SESSION = "mestre-site-session";
 const MAX_TEXT_FILE_BYTES = 2 * 1024 * 1024;
@@ -432,6 +442,8 @@ function refreshAria() {
     ["btnSkills", "skillsLibraryPanel"],
     ["btnModelSelect", "modelsMenu"],
     ["btnMemories", "memoriesPanel"],
+    ["btnLearningNav", "learningPanel"],
+    ["btnBibliotecaNav", "bibliotecaPanel"],
     ["btnToolsNav", "toolsPanel"],
     ["btnSkillsNav", "skillsLibraryPanel"],
   ];
@@ -732,6 +744,7 @@ function addMessage(text, role, extra = {}) {
   } else {
     body.textContent = text;
   }
+  libraryUi.decorate(body, text, role);
 
   if (extra.toolName) {
     const meta = document.createElement("div");
@@ -815,7 +828,7 @@ function renderActiveMemoryChips() {
 
 // ── Streaming via /ollama/chat ──────────────────────────────────────
 
-async function streamOllamaReply(userText) {
+async function streamOllamaReply(userText, libraryContext = null) {
   const history = selectHistoryForApi(state.messages);
   const externalProvider = state.provedorAtivo === "opencode-go"
     ? state.opencodeGo
@@ -824,7 +837,9 @@ async function streamOllamaReply(userText) {
   // Memória automática somente no Ollama local; nunca enviar notas a provedores externos.
   const obsidianEvidence = useExternalProvider ? null : await fetchObsidianEvidence(userText, { post: apiPost });
   const messages = [
-    { role: "system", content: SYSTEM_PROMPT },
+    { role: "system", content: libraryContext?.systemPrompt || SYSTEM_PROMPT },
+    ...(!useExternalProvider && libraryContext?.profileBlock ? [{ role: "system", content: libraryContext.profileBlock }] : []),
+    ...(!useExternalProvider && libraryContext?.memoryBlock ? [{ role: "system", content: libraryContext.memoryBlock }] : []),
     ...(obsidianEvidence ? [obsidianEvidence] : []),
     ...history.map((message, index, msgs) =>
       index === msgs.length - 1 && message.role === "user"
@@ -860,7 +875,7 @@ async function streamOllamaReply(userText) {
           state.modeloAtivo = model;
           updateModelBadge();
         }
-        return text;
+        return { text, model: useExternalProvider ? (externalProvider.model || model) : model };
       } catch (err) {
         if (err.name === "AbortError" && !err.timedOut) throw err;
         if (controller.signal.aborted && !err.timedOut) throw err;
@@ -1201,6 +1216,7 @@ async function startFreshChat() {
     try { state.abortController.abort(); } catch { /* ignore */ }
   }
   resetChatView();
+  try { await libraryUi.onConversation(null); } catch { /* a persona volta ao padrão na próxima leitura */ }
   try {
     const data = await apiGet("/api/profiles");
     const ativo = (data.perfis || []).find((p) => p.id === state.perfilAtivo);
@@ -1238,7 +1254,12 @@ function finalizeStreamingMessage() {
   }
   pendingStreamText = null;
   attachRunButtons(streamingBodyEl);
-  if (finalText) attachKokoroButton(streamingBodyEl, finalText, { confirm: openModal, notify: notifyVoiceError });
+  if (finalText) {
+    libraryUi.decorate(streamingBodyEl, finalText, "ai");
+    attachKokoroButton(streamingBodyEl, finalText, { confirm: openModal, notify: notifyVoiceError });
+  }
+  if (pendingTurnMeta) libraryUi.showTurnMeta(streamingBodyEl, pendingTurnMeta);
+  pendingTurnMeta = null;
   streamingBodyEl = null;
 }
 
@@ -1639,6 +1660,7 @@ async function loadConversa(id) {
   }
 
   renderConversas();
+  libraryUi.onConversation(id);
 }
 
 async function newConversa() {
@@ -1647,6 +1669,7 @@ async function newConversa() {
   state.messages = [];
   resetChatView();
   $("messagesContainer").innerHTML = "";
+  libraryUi.onConversation(data.id);
   loadConversas();
 }
 
@@ -2004,6 +2027,8 @@ function closeAllMenus() {
   $("toolsPanel")?.classList.remove("show");
   $("skillsLibraryPanel")?.classList.remove("show");
   $("memoriesPanel")?.classList.remove("show");
+  $("learningPanel")?.classList.remove("show");
+  $("bibliotecaPanel")?.classList.remove("show");
   hideSkillsMenu();
   refreshAria();
 }
@@ -2126,6 +2151,7 @@ async function sendMessage() {
   if (!state.conversaId) {
     const conv = await apiPost("/api/conversas", { titulo: conversationTitle(visibleMessage) });
     state.conversaId = conv.id;
+    await libraryUi.onConversation(conv.id);
     loadConversas();
   }
 
@@ -2155,18 +2181,40 @@ async function sendMessage() {
   $("btnSend").style.display = "none";
 
   try {
-    const reply = await streamOllamaReply(attachmentContext.text);
+    let prepared = null;
+    try {
+      prepared = await libraryUi.prepare({
+        query: attachmentContext.text,
+        conversationId: state.conversaId,
+        includePersonal: !state.provedorAtivo,
+      });
+    } catch { prepared = null; }
+    const result = await streamOllamaReply(attachmentContext.text, prepared);
+    const reply = result?.text || "";
+    const answeredModel = result?.model || state.modeloAtivo || "";
     removeTyping();
 
     if (reply) {
-      // O balão já foi criado e atualizado pelo streaming.
+      pendingTurnMeta = {
+        model: answeredModel,
+        personaName: prepared?.persona?.name || "",
+        memories: prepared?.memories || [],
+      };
       finalizeStreamingMessage();
       state.messages.push({ role: "assistant", content: reply });
 
-      // Salva resposta no banco
       apiPost(`/api/conversas/${state.conversaId}/msg`, {
         role: "assistant",
         content: reply,
+      }).catch(() => {});
+      libraryUi.afterTurn({
+        userText: attachmentContext.text,
+        assistantText: reply,
+        model: answeredModel,
+        conversationId: state.conversaId,
+        memoryIds: (prepared?.memories || []).map((item) => item.id),
+        personaId: prepared?.persona?.id || "",
+        learn: !state.provedorAtivo,
       }).catch(() => {});
     } else {
       addMessage("(resposta vazia)", "ai");
@@ -2245,6 +2293,16 @@ export async function initChatIntegrado() {
 
   // Modal próprio (substituto acessível de alert/confirm/prompt)
   initModal();
+  libraryUi = initUserLibraryUi({
+    apiGet,
+    apiPost,
+    apiPut,
+    apiDelete,
+    openModal,
+    getState: () => state,
+    reloadProfiles: () => loadProfiles(),
+    closeMenus: () => closeAllMenus(),
+  });
 
   // Theme toggle (+ color-scheme para controles/scrollbar nativos seguirem o tema)
   const aplicarColorScheme = () => {
