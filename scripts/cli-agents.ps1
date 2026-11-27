@@ -1,7 +1,11 @@
-﻿#Requires -Version 7
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
   Status e lançamento de agentes CLI no terminal do Mestre do PC.
+
+  status-json também roda no Windows PowerShell 5.1: devolve a lista sem a
+  sonda de versão em paralelo (isso é exclusivo do pwsh 7). O restante do
+  script prefere o pwsh 7 quando ele existe.
 
 .DESCRIPTION
   Catálogo único ($Agentes): cada agente tem detecção (se está instalado), versão,
@@ -88,6 +92,11 @@ function Get-AgentStatus {
     foreach ($n in $a.cmds) { $path = Find-Cmd $n; if ($path) { $cmd = $n; break } }
     [pscustomobject]@{ id = $a.id; nome = $a.nome; instalado = [bool]$path; caminho = $path; comando = $a.abrir; instalar = $a.instalar; versao = $null }
   }
+  # Windows PowerShell 5.1 não tem ForEach-Object -Parallel. A lista ainda sai;
+  # a versão fica em branco e o menu mostra "instalado".
+  if ($PSVersionTable.PSVersion.Major -lt 7) {
+    return @($base)
+  }
   # Versões em paralelo, com limite de tempo (CLIs em Node demoram ~1s cada).
   $versoes = $base | Where-Object instalado | ForEach-Object -ThrottleLimit 8 -Parallel {
     $p = $_.caminho
@@ -134,12 +143,12 @@ switch ($Action) {
   'status' {
     Write-Host "===== Agentes CLI =====" -ForegroundColor Cyan
     foreach ($s in Get-AgentStatus) {
-      if ($s.instalado) { Write-Host ("{0,-24} {1,-14} {2}" -f $s.nome, ($s.versao ?? '?'), $s.caminho) -ForegroundColor Green }
+      if ($s.instalado) { Write-Host ("{0,-24} {1,-14} {2}" -f $s.nome, $(if ($s.versao) { $s.versao } else { '?' }), $s.caminho) -ForegroundColor Green }
       else { Write-Host ("{0,-24} não instalado  {1}" -f $s.nome, $s.instalar) -ForegroundColor Yellow }
     }
     foreach ($n in @('llama-server', 'llama-cli')) {
       $p = Find-Cmd $n
-      Write-Host ("{0,-24} {1}" -f $n, ($p ?? 'não encontrado no PATH'))
+      Write-Host ("{0,-24} {1}" -f $n, $(if ($p) { $p } else { 'não encontrado no PATH' }))
     }
     Write-Host ""
     Write-Host ("llama.cpp  :8080  {0}" -f (Probe-Http 'http://127.0.0.1:8080/v1/models'))
