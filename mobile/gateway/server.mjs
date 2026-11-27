@@ -84,15 +84,23 @@ async function proxyStream(res, path, body) {
   try { const upstream = await launcherRequest(path, { method: "POST", body: JSON.stringify(body), headers: { "Content-Type": "application/json" } }); res.writeHead(upstream.status, { "Content-Type": upstream.headers.get("content-type") || "application/x-ndjson", "Cache-Control": "no-store", "X-Accel-Buffering": "no" }); if (!upstream.body) return res.end(); for await (const chunk of upstream.body) res.write(chunk); res.end(); }
   catch (error) { if (!res.headersSent) json(res, 502, { error: error.message }); else res.end(); }
 }
-async function toolRequiresConfirmation(name) {
-  try { const registry = await loadOperationRegistry(); const operation = registry.getById(name); if (operation) return Boolean(operation.destructive); } catch {}
+export async function toolRequiresConfirmation(name, deps = {}) {
+  const loadRegistry = deps.loadOperationRegistry || loadOperationRegistry;
+  const request = deps.launcherRequest || launcherRequest;
   try {
-    const response = await launcherRequest("/api/tools");
-    if (!response.ok) return false;
+    const registry = await loadRegistry();
+    const operation = registry.getById(name);
+    if (operation) return Boolean(operation.destructive);
+  } catch {
+    return true;
+  }
+  try {
+    const response = await request("/api/tools");
+    if (!response.ok) return true;
     const data = await response.json();
     return Boolean(data.metadata?.[name]?.destructive || data.metadata?.[name]?.isDestructive || data.metadata?.[name]?.requiresConfirmation);
   } catch {
-    return false;
+    return true;
   }
 }
 

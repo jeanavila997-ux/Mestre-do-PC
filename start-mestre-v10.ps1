@@ -78,9 +78,10 @@ function Start-MestreLauncher {
         throw "Launcher nao encontrado: $LauncherJs"
     }
 
-    $nodeExe = (Get-Command node -ErrorAction SilentlyContinue).Source
+    . (Join-Path $PSScriptRoot "scripts\Resolve-MestreNode.ps1")
+    $nodeExe = Resolve-MestreNode
     if (-not $nodeExe) {
-        throw "Node.js nao encontrado no PATH. Instale o Node.js 20+ e reinicie o terminal."
+        throw "Node.js nao encontrado no PATH nem em %LOCALAPPDATA%\Programs\nodejs. Instale o Node.js 22+ e reinicie o terminal."
     }
 
     # Inicia o launcher Node.js em background. Para elevacao garantida, use a

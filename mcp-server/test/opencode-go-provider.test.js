@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 import "./helpers/launcher-test-env.js";
+import { dashboardHeaders } from "./helpers/dashboard-session.js";
 import { CATALOG } from "../../v10/providers/index.js";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
@@ -269,7 +270,7 @@ test("POST /providers/chat sem chave responde 400 e o launcher continua no ar", 
   });
   assert.equal(spoof.status, 403);
 
-  const headers = { "Content-Type": "application/json", "X-Mestre-Client": "v10-web", Origin: base };
+  const headers = await dashboardHeaders(base);
   const listed = await fetch(base + "/providers", { headers });
   assert.equal(listed.status, 200);
   const catalog = await listed.json();

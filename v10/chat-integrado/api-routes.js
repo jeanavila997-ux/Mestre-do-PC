@@ -33,6 +33,7 @@ import { readFile, stat } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { TOOL_NAMES, executarTool, listProfiles, getProfileModel, getProfileOptions, getBestAvailableModel, getBestLocalModel, refreshAvailableModels, availableModels, localModels, isChatModel, isEmbeddingModel } from "./tools-api.js";
+import { saveProfileOverride, resetProfileOverride } from "../model-profile-overrides.js";
 import { generateKokoroSpeech } from "./kokoro-voice.js";
 import { searchWeb, fetchWebPage } from "./web-search.js";
 import * as db from "./db.js";
@@ -182,7 +183,7 @@ function ok(res, data, origin) {
     "Content-Type": "application/json; charset=utf-8",
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, X-Mestre-Client, X-Mestre-Extension-Token, X-Mestre-Npp-Token",
+    "Access-Control-Allow-Headers": "Content-Type, X-Mestre-Client, X-Mestre-Extension-Token, X-Mestre-Npp-Token, X-Mestre-Session",
     "Vary": "Origin",
     "X-Content-Type-Options": "nosniff",
     "Cache-Control": "no-store",
@@ -196,7 +197,7 @@ function fail(res, status, data, origin) {
     "Content-Type": "application/json; charset=utf-8",
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, X-Mestre-Client, X-Mestre-Extension-Token, X-Mestre-Npp-Token",
+    "Access-Control-Allow-Headers": "Content-Type, X-Mestre-Client, X-Mestre-Extension-Token, X-Mestre-Npp-Token, X-Mestre-Session",
     "Vary": "Origin",
     "X-Content-Type-Options": "nosniff",
     "Cache-Control": "no-store",
@@ -232,7 +233,7 @@ export async function handleApiRoute(req, res, url, ctx) {
     res.writeHead(204, {
       "Access-Control-Allow-Origin": allowedOrigin,
       "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, X-Mestre-Client, X-Mestre-Extension-Token, X-Mestre-Npp-Token",
+      "Access-Control-Allow-Headers": "Content-Type, X-Mestre-Client, X-Mestre-Extension-Token, X-Mestre-Npp-Token, X-Mestre-Session",
       "Vary": "Origin",
     });
     res.end();
@@ -452,6 +453,32 @@ export async function handleApiRoute(req, res, url, ctx) {
     }
     
     fail(res, 400, { error: "Parâmetros inválidos" }, allowedOrigin);
+    return true;
+  }
+
+  if (path === "/api/model-profiles" && method === "GET") {
+    if (!auth) return fail(res, 403, { error: "Não autorizado" }, allowedOrigin), true;
+    ok(res, { perfis: listProfiles() }, allowedOrigin);
+    return true;
+  }
+
+  const profileEdit = path.match(/^\/api\/model-profiles\/([A-Za-z0-9_-]+)(\/restaurar)?$/);
+  if (profileEdit && (method === "PUT" || method === "POST")) {
+    if (!auth) return fail(res, 403, { error: "Não autorizado" }, allowedOrigin), true;
+    const profileId = profileEdit[1];
+    if (profileEdit[2] === "/restaurar") {
+      const result = resetProfileOverride(profileId);
+      if (!result.ok) return fail(res, result.status, { error: result.reason }, allowedOrigin), true;
+      auditLog(AuditLevel.INFO, "model_profile_reset", { profileId, model: result.model });
+      ok(res, { success: true, perfil: profileId, model: result.model, mensagem: "Perfil restaurado para o padrão." }, allowedOrigin);
+      return true;
+    }
+    let body;
+    try { body = await readBody(req); } catch { fail(res, 400, { error: "JSON inválido" }, allowedOrigin); return true; }
+    const result = saveProfileOverride(profileId, body.model);
+    if (!result.ok) return fail(res, result.status, { error: result.reason }, allowedOrigin), true;
+    auditLog(AuditLevel.INFO, "model_profile_save", { profileId, model: result.model });
+    ok(res, { success: true, perfil: profileId, model: result.model, mensagem: "Modelo do perfil salvo. Vale para as próximas conversas." }, allowedOrigin);
     return true;
   }
 

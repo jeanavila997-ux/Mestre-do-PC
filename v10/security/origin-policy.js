@@ -9,6 +9,8 @@ export function isLoopbackOrigin(origin) {
   }
 }
 
+// Origin ausente não autentica ninguém. Alguns clientes locais e a navegação
+// de documento não mandam o header; quem decide acesso é o launcher, com token.
 export function isAllowedWebOrigin(origin, baseUrl) {
   if (!origin) return true;
   try {
@@ -65,6 +67,7 @@ function hostMatchesSuffix(hostname, entry) {
  * na VPS e nas páginas estáticas conhecidas do projeto.
  */
 export function isTrustedClientOrigin(origin, extraList = []) {
+  // Mesma ressalva de isAllowedWebOrigin: vazio não é credencial.
   if (!origin) return true;
   let parsed;
   try {

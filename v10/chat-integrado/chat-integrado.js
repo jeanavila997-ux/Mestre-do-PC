@@ -1194,13 +1194,22 @@ async function runSuggestedCommand(cmd, triggerBtn = null) {
 }
 
 /** Reinicia a thread local (mesmo efeito do botão Novo chat). */
-function startFreshChat() {
+async function startFreshChat() {
   state.conversaId = null;
   state.messages = [];
   if (state.abortController) {
     try { state.abortController.abort(); } catch { /* ignore */ }
   }
   resetChatView();
+  try {
+    const data = await apiGet("/api/profiles");
+    const ativo = (data.perfis || []).find((p) => p.id === state.perfilAtivo);
+    if (ativo?.model) {
+      state.modeloAtivo = ativo.model;
+      document.body.dataset.modelo = ativo.model;
+      updateModelBadge();
+    }
+  } catch { /* perfil segue o que já estava na tela */ }
 }
 
 const WHITELIST_DEMO_RAM =

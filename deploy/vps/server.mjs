@@ -29,7 +29,12 @@ const TYPES = {
 };
 
 function safePath(urlPath) {
-  const decoded = decodeURIComponent(String(urlPath || "/").split("?")[0]);
+  let decoded;
+  try {
+    decoded = decodeURIComponent(String(urlPath || "/").split("?")[0]);
+  } catch {
+    return null;
+  }
   const relative = decoded.replace(/^\/+/, "");
   const full = resolve(SITE_ROOT, relative);
   const root = SITE_ROOT.endsWith(sep) ? SITE_ROOT : SITE_ROOT + sep;
@@ -163,7 +168,8 @@ async function apiRoute(req, res, url) {
 }
 // ---- end API proxy ----
 
-const server = http.createServer((req, res) => {
+function handleRequest(req, res) {
+  try {
   { const u0 = new URL(req.url || "/", "http://x"); if (u0.pathname.startsWith("/api/") || u0.pathname.startsWith("/v1/") || u0.pathname === "/ollama/chat") return apiRoute(req, res, u0); }
   if (req.method !== "GET" && req.method !== "HEAD") {
     return send(res, 405, "Method Not Allowed");
@@ -194,8 +200,18 @@ const server = http.createServer((req, res) => {
   });
   if (req.method === "HEAD") return res.end();
   createReadStream(target).pipe(res);
-});
+  } catch {
+    if (!res.headersSent) send(res, 400, "Requisição inválida");
+  }
+}
 
-server.listen(PORT, HOST, () => {
+export function createSiteServer() {
+  return http.createServer(handleRequest);
+}
+
+const isDirectRun = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isDirectRun) {
+createSiteServer().listen(PORT, HOST, () => {
   console.log(`Mestre site VPS em http://${HOST}:${PORT} (root ${SITE_ROOT})`);
 });
+}

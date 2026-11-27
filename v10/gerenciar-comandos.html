@@ -175,6 +175,7 @@ h1{font-size:22px;background:linear-gradient(135deg,var(--accent),var(--accent2)
     <div class="field">
       <label>📦 Perfis de Modelo (Recomendado)</label>
       <div id="perfisList" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div id="perfilEditor" hidden style="margin-top:12px;padding:12px;border:1px solid var(--border);border-radius:8px"></div>
     </div>
     
     <div class="field" style="margin-top:16px">
@@ -519,11 +520,76 @@ function renderPerfisList(selectedId) {
   const perfisList = document.getElementById("perfisList");
   perfisList.innerHTML = perfisData.map((p) => `
     <div class="perfil-card ${selectedId === p.id ? 'selected' : ''}" onclick="selecionarPerfil('${p.id}')">
-      <div class="p-name">${escapeHtml(p.label)}</div>
-      <div class="p-desc">${escapeHtml(p.description)}</div>
-      <div class="p-model">${escapeHtml(p.model)}</div>
+      <div class="p-name">${escapeHtml(p.label || p.id)}</div>
+      <div class="p-desc">${escapeHtml(p.description || "")}</div>
+      <div class="p-model">${escapeHtml(p.model || "Nenhum modelo definido")}</div>
+      <button class="btn" type="button" style="margin-top:8px" onclick="editarPerfil('${p.id}', event)">Editar</button>
     </div>
   `).join("");
+}
+
+async function editarPerfil(id, event) {
+  if (event) event.stopPropagation();
+  const perfil = perfisData.find((p) => p.id === id);
+  if (!perfil) return;
+  const box = document.getElementById("perfilEditor");
+  let names = [];
+  try {
+    const tags = await (await fetch(API + "/ollama/tags")).json();
+    names = (tags.models || []).map((m) => m.name).filter(Boolean);
+  } catch { names = []; }
+  const options = ['<option value="">— escolher modelo instalado —</option>']
+    .concat(names.map((name) => `<option value="${escapeHtml(name)}"${name === perfil.model ? " selected" : ""}>${escapeHtml(name)}</option>`))
+    .join("");
+  box.hidden = false;
+  box.innerHTML = `
+    <div class="field"><label>Editar ${escapeHtml(perfil.label || id)}</label>
+      <select id="perfilModeloLista">${options}</select>
+    </div>
+    <div class="field" style="margin-top:8px"><label>Ou digite um modelo (inclusive nome cloud)</label>
+      <input id="perfilModeloTexto" value="${escapeHtml(perfil.model || "")}" maxlength="128" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn" type="button" onclick="cancelarEdicaoPerfil()">Cancelar</button>
+      <button class="btn" type="button" onclick="restaurarPerfil('${id}')">Restaurar padrão</button>
+      <button class="btn primary" type="button" onclick="salvarPerfil('${id}')">Salvar</button>
+    </div>`;
+  document.getElementById("perfilModeloLista").addEventListener("change", (ev) => {
+    if (ev.target.value) document.getElementById("perfilModeloTexto").value = ev.target.value;
+  });
+}
+
+function cancelarEdicaoPerfil() {
+  const box = document.getElementById("perfilEditor");
+  box.hidden = true;
+  box.innerHTML = "";
+}
+
+async function salvarPerfil(id) {
+  const model = document.getElementById("perfilModeloTexto").value.trim();
+  try {
+    const r = await fetch(API + "/api/model-profiles/" + encodeURIComponent(id), {
+      method: "PUT", headers: H, body: JSON.stringify({ model }),
+    });
+    const d = await r.json();
+    if (!r.ok || d.success !== true) throw new Error(d.error || "Falha ao salvar");
+    toast(d.mensagem || "Modelo salvo");
+    cancelarEdicaoPerfil();
+    await carregarModelos();
+  } catch (e) { toast("❌ " + e.message, "err"); }
+}
+
+async function restaurarPerfil(id) {
+  try {
+    const r = await fetch(API + "/api/model-profiles/" + encodeURIComponent(id) + "/restaurar", {
+      method: "POST", headers: H, body: "{}",
+    });
+    const d = await r.json();
+    if (!r.ok || d.success !== true) throw new Error(d.error || "Falha ao restaurar");
+    toast(d.mensagem || "Padrão restaurado");
+    cancelarEdicaoPerfil();
+    await carregarModelos();
+  } catch (e) { toast("❌ " + e.message, "err"); }
 }
 
 function openModelSwitch() {

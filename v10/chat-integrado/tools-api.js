@@ -17,6 +17,7 @@ import { reaStatus, reaDoctor, reaAnalyzeAppJs } from "../rea-bridge.js";
 import { refreshLocalMcpTokenFromFile } from "../../mcp-server/auth/local-token.js";
 import { searchObsidian, syncObsidian } from "../../mcp-server/obsidian-memory.js";
 import { isChatModel, isEmbeddingModel } from "../../mcp-server/model-catalog.js";
+import { effectiveModel, listEffectiveProfiles } from "../model-profile-overrides.js";
 import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join, dirname, isAbsolute } from "node:path";
@@ -89,8 +90,11 @@ function isLocalModelAvailable(modelName) {
 // ── Helpers internos ────────────────────────────────────────────────
 
 function getProfileModel(profile = activeProfile) {
-  const p = modelProfiles.profiles[profile];
-  return process.env.OLLAMA_MODEL || p?.model || "qwen2.5-coder:3b-instruct";
+  const fallback = modelProfiles.profiles[profile]?.model || "";
+  const saved = effectiveModel(profile, "");
+  if (saved) return saved;
+  if (process.env.OLLAMA_MODEL && profile === activeProfile) return process.env.OLLAMA_MODEL;
+  return fallback || "qwen2.5-coder:3b-instruct";
 }
 
 /**
@@ -742,13 +746,7 @@ export async function executarTool(nome, args = {}) {
 }
 
 function listProfiles() {
-  return Object.entries(modelProfiles.profiles).map(([key, p]) => ({
-    id: key,
-    label: p.label || key,
-    model: p.model,
-    ramMin: p.ramMin,
-    gpu: p.gpu,
-  }));
+  return listEffectiveProfiles();
 }
 
 export { guardPromptInjection, ollamaChat, executeLauncherCommand, classifyLauncherCommand, getProfileModel, getProfileOptions, buildOllamaOptions, listProfiles, getBestAvailableModel, getBestLocalModel, refreshAvailableModels, availableModels, localModels, isChatModel, isEmbeddingModel };

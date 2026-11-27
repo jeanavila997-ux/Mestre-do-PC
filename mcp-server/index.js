@@ -23,6 +23,10 @@ import * as operonDomain from "./operon/index.js";
 import { createOperonMcp, operonToolSchemas } from "./operon/mcp.js";
 
 import { isLocalMcpEnabled, refreshLocalMcpTokenFromFile } from "./auth/local-token.js"; // força carga de .env.local e expõe o token
+import { assertPublicWebhookUrl } from "./security/webhook-url.js";
+import { resolveTablePath } from "./security/table-path.js";
+import { analisarPrintInvocation } from "./security/visual-script.js";
+import { effectiveModel } from "../v10/model-profile-overrides.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -47,6 +51,63 @@ const MESTRE_RUN_FREE_URL = MESTRE_BASE_URL + "/run-free";
 const MESTRE_STATUS_URL = MESTRE_BASE_URL + "/run-status";
 const MESTRE_CLASSIFY_URL = MESTRE_BASE_URL + "/classify";
 const MESTRE_MODO_LIVRE_URL = MESTRE_BASE_URL + "/modo-livre";
+
+async function waitHumanApproval(approvalId, expiresAt) {
+  const deadline = Math.min(Date.now() + 120_000, Date.parse(expiresAt) || (Date.now() + 120_000));
+  while (Date.now() < deadline) {
+    const res = await fetch(`${MESTRE_BASE_URL}/aprovacoes/${encodeURIComponent(approvalId)}`, {
+      headers: mcpHeaders(),
+      signal: AbortSignal.timeout(5000),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (data.status && data.status !== "pending") return data;
+    await sleep(400);
+  }
+  return { status: "pending", approvalId, mensagem: "aguardando aprovação" };
+}
+
+async function pedirAprovacaoHumana(acao, args) {
+  const res = await fetch(`${MESTRE_BASE_URL}/aprovacoes/solicitar`, {
+    method: "POST",
+    headers: mcpHeaders(),
+    body: JSON.stringify({ acao, args }),
+    signal: AbortSignal.timeout(5000),
+  });
+  const pending = await res.json().catch(() => ({}));
+  if (res.status !== 202 || !pending.approvalId) {
+    return { ok: false, status: "error", approvalId: "", mensagem: pending.reason || "Não foi possível pedir aprovação." };
+  }
+  const decision = await waitHumanApproval(pending.approvalId, pending.expiresAt);
+  if (decision.status !== "approved") {
+    return { ok: false, status: decision.status || "pending", approvalId: pending.approvalId, mensagem: "aguardando aprovação" };
+  }
+  const consumed = await fetch(`${MESTRE_BASE_URL}/aprovacoes/${encodeURIComponent(pending.approvalId)}/consumir`, {
+    method: "POST",
+    headers: mcpHeaders(),
+    body: JSON.stringify({ acao, args }),
+    signal: AbortSignal.timeout(5000),
+  });
+  const gate = await consumed.json().catch(() => ({}));
+  if (!consumed.ok || gate.ok !== true) {
+    return { ok: false, status: "rejected", approvalId: pending.approvalId, mensagem: gate.reason || "Aprovação recusada." };
+  }
+  return { ok: true, approvalId: pending.approvalId };
+}
+
+async function retryAfterApproval(url, payload, pending) {
+  const decision = await waitHumanApproval(pending.approvalId, pending.expiresAt);
+  if (decision.status !== "approved") {
+    return { ok: false, approvalId: pending.approvalId, status: decision.status || "pending", mensagem: "aguardando aprovação" };
+  }
+  const res = await fetch(url, {
+    method: "POST",
+    headers: mcpHeaders(),
+    body: JSON.stringify({ ...payload, approvalId: pending.approvalId }),
+    signal: AbortSignal.timeout(10000),
+  });
+  const data = await res.json().catch(() => ({}));
+  return { ok: res.ok, statusCode: res.status, data };
+}
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -268,9 +329,16 @@ async function executeLauncherCommand(commandOrPayload, options = {}) {
     signal: AbortSignal.timeout(options.submitTimeoutMs || 10000),
   });
 
-  const submitData = await submitRes.json();
+  let submitData = await submitRes.json();
+  if (submitRes.status === 409 && submitData.state === "pending" && submitData.approvalId) {
+    const retried = await retryAfterApproval(MESTRE_RUN_URL, payload, submitData);
+    if (!retried.ok) {
+      throw new Error(`${retried.mensagem || "aguardando aprovação"} (${submitData.approvalId})`);
+    }
+    submitData = retried.data;
+  }
   if (
-    submitRes.ok === false ||
+    submitRes.status !== 409 && submitRes.ok === false ||
     submitData.success !== true ||
     submitData.accepted !== true ||
     submitData.jobId == null
@@ -326,11 +394,8 @@ async function executeLauncherCommand(commandOrPayload, options = {}) {
   throw new Error("Timeout aguardando conclusão do comando no Launcher.");
 }
 
-// Executa um comando PowerShell arbitrário via /run-free, fora da whitelist de
-// allowed-operations.json. Só funciona se o Modo Livre estiver ligado no
-// launcher (ver /modo-livre) — se estiver desligado, o launcher responde 403.
-// Toda chamada é auditada em nível SECURITY, já que aqui não há whitelist
-// como rede de segurança.
+// Comando fora da whitelist. A IA não executa sozinha: o launcher abre um
+// pedido e esta função espera o clique em Permitir no painel.
 async function executeFreeCommand(cmd, options = {}) {
   await auditLog(AuditLevel.SECURITY, "execute_free_command", { cmd });
 
@@ -341,8 +406,15 @@ async function executeFreeCommand(cmd, options = {}) {
     signal: AbortSignal.timeout(options.submitTimeoutMs || 10000),
   });
 
-  const submitData = await submitRes.json();
-  if (submitRes.ok === false || submitData.success !== true || submitData.accepted !== true || submitData.jobId == null) {
+  let submitData = await submitRes.json();
+  if (submitRes.status === 409 && submitData.state === "pending" && submitData.approvalId) {
+    const retried = await retryAfterApproval(MESTRE_RUN_FREE_URL, { cmd }, submitData);
+    if (!retried.ok) {
+      throw new Error(`${retried.mensagem || "aguardando aprovação"} (${submitData.approvalId})`);
+    }
+    submitData = retried.data;
+  }
+  if (submitRes.status !== 409 && submitRes.ok === false || submitData.success !== true || submitData.accepted !== true || submitData.jobId == null) {
     await auditLog(AuditLevel.ERROR, "execute_free_command_failed", { cmd, error: submitData.output });
     throw new Error(submitData.output || "Falha ao enviar comando livre para o Launcher.");
   }
@@ -695,6 +767,22 @@ ${code}`,
 /**
  * Enviar mensagem formatada para Discord webhook
  */
+async function postWebhook(webhookUrl, body) {
+  const allowed = await assertPublicWebhookUrl(webhookUrl);
+  if (!allowed.ok) throw new Error(allowed.reason);
+  const res = await fetch(allowed.href, {
+    method: "POST",
+    redirect: "manual",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(15000),
+  });
+  if (res.status >= 300 && res.status < 400) {
+    throw new Error("Redirecionamento de webhook não é aceito.");
+  }
+  return res;
+}
+
 async function sendDiscordWebhook(webhookUrl, title, message, color = "00ff00") {
   // Auditoria
   await auditLog(AuditLevel.WEBHOOK, "discord_webhook_send", {
@@ -714,12 +802,7 @@ async function sendDiscordWebhook(webhookUrl, title, message, color = "00ff00") 
     },
   };
 
-  const res = await fetch(webhookUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ embeds: [embed] }),
-    signal: AbortSignal.timeout(15000),
-  });
+  const res = await postWebhook(webhookUrl, { embeds: [embed] });
 
   if (!res.ok) {
     await auditLog(AuditLevel.ERROR, "discord_webhook_failed", {
@@ -754,12 +837,7 @@ async function sendTeamsWebhook(webhookUrl, title, message, theme = "Information
     }],
   };
 
-  const res = await fetch(webhookUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(15000),
-  });
+  const res = await postWebhook(webhookUrl, body);
 
   if (!res.ok) {
     throw new Error(`Teams retornou HTTP ${res.status}`);
@@ -782,12 +860,7 @@ async function sendSlackWebhook(webhookUrl, message, channel, emoji = ":robot_fa
     body.channel = channel;
   }
 
-  const res = await fetch(webhookUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(15000),
-  });
+  const res = await postWebhook(webhookUrl, body);
 
   if (!res.ok) {
     throw new Error(`Slack retornou HTTP ${res.status}`);
@@ -1125,10 +1198,9 @@ const EXTRA_TOOLS = [
     inputSchema: {
       type: "object",
       properties: {
-        nome_tabela: { type: "string", description: "Nome do CSV em 02_DADOS/03_final/" },
-        approval_id: { type: "string", description: "Token de aprovação humano." },
+        nome_tabela: { type: "string", description: "Nome do CSV em 02_DADOS/03_final/. Sem caminho nem .." },
       },
-      required: ["nome_tabela", "approval_id"],
+      required: ["nome_tabela"],
     },
   },
   {
@@ -1145,7 +1217,7 @@ const EXTRA_TOOLS = [
   },
   {
     name: "definir_modo_livre",
-    description: "Liga ou desliga o Modo Livre no Launcher. Com o Modo Livre ligado, 'executar_comando_livre' passa a rodar qualquer comando PowerShell, fora da whitelist de allowed-operations.json. Desligado por padrão. Opcionalmente aceita TTL em ms para desativação automática.",
+    description: "Pede para ligar ou desliga o Modo Livre. Ligar NÃO acontece sozinho: o painel mostra Permitir/Negar e só o clique humano libera. Desligar é imediato.",
     inputSchema: {
       type: "object",
       properties: {
@@ -1157,7 +1229,7 @@ const EXTRA_TOOLS = [
   },
   {
     name: "executar_comando_livre",
-    description: "Executa um comando PowerShell arbitrário, sem checar a whitelist de allowed-operations.json. Só funciona com o Modo Livre ligado ('definir_modo_livre'). Use com cautela: não há barreira de segurança além da auditoria — comandos destrutivos ou digitados incorretamente rodam do mesmo jeito.",
+    description: "Pede para executar um comando PowerShell fora da whitelist. O painel mostra o comando exato e só roda depois do clique em Permitir. A IA não aprova a si mesma.",
     inputSchema: {
       type: "object",
       properties: {
@@ -1880,17 +1952,20 @@ Responda apenas com o comando PowerShell, nada mais.`,
 
   if (name === "congelar_tabela_final") {
     const nomeTabela = args?.nome_tabela;
-    const approvalId = args?.approval_id;
-    if (!nomeTabela || !approvalId) {
-      throw new McpError(ErrorCode.InvalidParams, "Parâmetros 'nome_tabela' e 'approval_id' são obrigatórios.");
+    if (!nomeTabela) {
+      throw new McpError(ErrorCode.InvalidParams, "Parâmetro 'nome_tabela' é obrigatório.");
+    }
+    const located = resolveTablePath(FINAL_TABLE_DIR, nomeTabela);
+    if (!located.ok) {
+      return { isError: true, content: [{ type: "text", text: located.reason }] };
     }
     try {
-      const valid = await validateApprovalId(approvalId);
-      if (!valid) {
-        await auditLog(AuditLevel.SECURITY, "congelar_tabela_final_unauthorized", { nomeTabela, approvalId });
-        return { isError: true, content: [{ type: "text", text: "🚫 Token de aprovação inválido ou expirado. Operação bloqueada." }] };
+      const gate = await pedirAprovacaoHumana("congelar_tabela_final", { nome_tabela: nomeTabela });
+      if (!gate.ok) {
+        await auditLog(AuditLevel.SECURITY, "congelar_tabela_final_unauthorized", { nomeTabela, status: gate.status });
+        return { isError: gate.status !== "pending", content: [{ type: "text", text: `${gate.mensagem} (${gate.approvalId || ""})`.trim() }] };
       }
-      const filePath = join(FINAL_TABLE_DIR, nomeTabela.endsWith(".csv") ? nomeTabela : `${nomeTabela}.csv`);
+      const filePath = located.filePath;
       if (!existsSync(filePath)) {
         return { isError: true, content: [{ type: "text", text: `❌ Tabela não encontrada: ${filePath}` }] };
       }
@@ -1913,6 +1988,13 @@ Responda apenas com o comando PowerShell, nada mais.`,
     try {
       if (!MESTRE_PROJETO_PATH) {
         return { isError: true, content: [{ type: "text", text: "❌ MESTRE_PROJETO_PATH não definido." }] };
+      }
+      const gate = await pedirAprovacaoHumana("gerar_snapshot_git", {
+        mensagem_commit: mensagemCommit,
+        fase_cronograma: args?.fase_cronograma || "",
+      });
+      if (!gate.ok) {
+        return { isError: gate.status !== "pending", content: [{ type: "text", text: `${gate.mensagem} (${gate.approvalId || ""})`.trim() }] };
       }
       const fase = args?.fase_cronograma ? ` [${args.fase_cronograma}]` : "";
       const msg = `snapshot: ${mensagemCommit}${fase}`;
@@ -1937,21 +2019,44 @@ Responda apenas com o comando PowerShell, nada mais.`,
   if (name === "definir_modo_livre") {
     try {
       const ativar = !!args?.ativar;
-      const ttlMs = args?.ttlMs ? Number(args.ttlMs) : 300000;
+      if (!ativar) {
+        const res = await fetch(MESTRE_MODO_LIVRE_URL, {
+          method: "POST",
+          headers: mcpHeaders(),
+          body: JSON.stringify({ enabled: false }),
+          signal: AbortSignal.timeout(5000),
+        });
+        const data = await res.json();
+        if (!res.ok || data.success !== true) {
+          return { isError: true, content: [{ type: "text", text: `Falha ao desligar o Modo Livre: ${data.reason || "erro desconhecido"}` }] };
+        }
+        return { content: [{ type: "text", text: "🔒 Modo Livre desativado." }] };
+      }
       const res = await fetch(MESTRE_MODO_LIVRE_URL, {
         method: "POST",
         headers: mcpHeaders(),
-        body: JSON.stringify({ enabled: ativar, ttlMs }),
+        body: JSON.stringify({ enabled: true }),
         signal: AbortSignal.timeout(5000),
       });
       const data = await res.json();
-      if (!res.ok || data.success !== true) {
-        return { isError: true, content: [{ type: "text", text: `Falha ao alterar o Modo Livre: ${data.reason || "erro desconhecido"}` }] };
+      if (res.status === 409 && data.approvalId) {
+        const decision = await waitHumanApproval(data.approvalId, data.expiresAt);
+        if (decision.status !== "approved") {
+          return { content: [{ type: "text", text: `aguardando aprovação (${data.approvalId}). A IA não liga o Modo Livre sozinha.` }] };
+        }
+        const second = await fetch(MESTRE_MODO_LIVRE_URL, {
+          method: "POST",
+          headers: mcpHeaders(),
+          body: JSON.stringify({ enabled: true, approvalId: data.approvalId }),
+          signal: AbortSignal.timeout(5000),
+        });
+        const done = await second.json();
+        if (!second.ok || done.success !== true) {
+          return { isError: true, content: [{ type: "text", text: done.reason || "A aprovação não liberou o Modo Livre." }] };
+        }
+        return { content: [{ type: "text", text: "🔓 Modo Livre ativado depois da sua confirmação no painel." }] };
       }
-      const msg = data.enabled
-        ? `🔓 Modo Livre ativado (TTL: ${ttlMs}ms). Comandos fora da whitelist podem ser executados via 'executar_comando_livre'.`
-        : "🔒 Modo Livre desativado.";
-      return { content: [{ type: "text", text: msg }] };
+      return { isError: true, content: [{ type: "text", text: data.reason || "O Modo Livre só liga com confirmação na interface." }] };
     } catch (e) {
       return { isError: true, content: [{ type: "text", text: `Falha ao falar com o Launcher: ${e.message}` }] };
     }
@@ -2163,68 +2268,9 @@ Responda apenas com o comando PowerShell, nada mais.`,
     }
     try {
       const { spawn } = await import("node:child_process");
-      const pythonScript = `
-import sys, os, json, winreg
-# Read API key from registry (setx)
-try:
-    k = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Environment")
-    key = winreg.QueryValueEx(k, "TYPESAFE_API_KEY")[0]
-    os.environ["TYPESAFE_API_KEY"] = key
-except:
-    pass
-
-from PIL import Image as PILImage
-from typesafe_sdk import Choice, Noul, Image, TypeSafeClient
-
-img_path = sys.argv[1]
-img = PILImage.open(img_path)
-w, h = img.size
-if min(w, h) < 280:
-    canvas = PILImage.new("RGB", (512, 512), (255, 255, 255))
-    img = img.convert("RGBA")
-    canvas.paste(img, ((512 - w) // 2, (512 - h) // 2), img)
-    img = canvas
-
-with TypeSafeClient(
-    model="jev-1.14.0",
-    headers={"TypeSafe-Danger-Zone-Images": "true"},
-    timeout=60,
-    retry=None,
-) as client:
-    questions = {
-        "categoria": Choice(
-            instructions="Classifique o erro visível na imagem \`print\`. Considere o contexto: ${contexto}",
-            criteria={
-                "bsod": "Tela azul da morte (BSOD) com código de parada.",
-                "driver": "Erro de driver de vídeo/Geforce/NVIDIA/AMD.",
-                "instalador": "Assistente de instalação (wizard, próximo, concluir).",
-                "update": "Tela de Windows Update (baixando, instalando, reiniciar).",
-                "dialogo": "Diálogo de erro/confirmação/permissão (UAC, app crash).",
-                "outro": "Nenhum dos acima (desktop normal, app rodando, etc.)."
-            },
-        ),
-        "dialogo_aberto": Noul(
-            instructions="Há um diálogo de erro, confirmação ou UAC aberto na imagem \`print\`?"
-        ),
-    }
-    resp = client.system_one(
-        state={"print": Image(img)},
-        questions=questions,
-    )
-
-choice = resp.choices.get("categoria")
-noul = resp.nouls.get("dialogo_aberto")
-result = {
-    "categoria": choice.choice if choice else "erro",
-    "confianca_categoria": choice.confidence if choice else 0,
-    "probabilidades": choice.probabilities if choice else {},
-    "dialogo_aberto": noul.noul if noul else None,
-    "usage": {"input": resp.usage.input_tokens, "output": resp.usage.output_tokens}
-}
-print(json.dumps(result, ensure_ascii=False))
-`
+      const invocation = analisarPrintInvocation(MESTRE_PYTHON, imagePath, contexto);
       const result = await new Promise((resolve, reject) => {
-        const proc = spawn(MESTRE_PYTHON, ["-c", pythonScript, imagePath], {
+        const proc = spawn(invocation.command, invocation.args, {
           timeout: 90000,
         });
         let stdout = "", stderr = "";

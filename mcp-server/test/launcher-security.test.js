@@ -1,5 +1,6 @@
 import test from "node:test";
 import { TEST_MCP_TOKEN } from "./helpers/launcher-test-env.js";
+import { dashboardHeaders } from "./helpers/dashboard-session.js";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
@@ -114,8 +115,18 @@ test("launcher Node aceita id+params e rejeita comandos não cadastrados", async
     headers: { "Content-Type": "application/json", "X-Mestre-Client": "mcp", "X-Mestre-Mcp-Token": TEST_MCP_TOKEN },
     body: JSON.stringify({ id: "encerrar_processo", params: { nome: "notepad" } }),
   });
-  assert.equal(tpl.status, 202);
-  const tplSubmit = await tpl.json();
+  assert.equal(tpl.status, 409);
+  const pendente = await tpl.json();
+  assert.equal(pendente.mensagem, "aguardando aprovação");
+  const web = await dashboardHeaders(base);
+  assert.equal((await fetch(base + `/aprovacoes/${pendente.approvalId}/permitir`, { method: "POST", headers: web, body: "{}" })).status, 200);
+  const autorizado = await fetch(base + "/run", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Mestre-Client": "mcp", "X-Mestre-Mcp-Token": TEST_MCP_TOKEN },
+    body: JSON.stringify({ id: "encerrar_processo", params: { nome: "notepad" }, approvalId: pendente.approvalId }),
+  });
+  assert.equal(autorizado.status, 202);
+  const tplSubmit = await autorizado.json();
   assert.equal(tplSubmit.success, true);
 
   const bad = await fetch(base + "/run", {
@@ -218,11 +229,11 @@ test("Modo Livre expira e bloqueia comandos destrutivos críticos", async (t) =>
 
   await waitForServer(base);
 
-  const headers = { "Content-Type": "application/json", "X-Mestre-Client": "v10-web", "Origin": base };
+  const headers = await dashboardHeaders(base);
   const enabled = await fetch(base + "/modo-livre", {
     method: "POST",
     headers,
-    body: JSON.stringify({ enabled: true }),
+    body: JSON.stringify({ enabled: true, confirmacaoHumana: true }),
   });
   assert.equal(enabled.status, 200);
 
@@ -233,7 +244,7 @@ test("Modo Livre expira e bloqueia comandos destrutivos críticos", async (t) =>
   await fetch(base + "/modo-livre", {
     method: "POST",
     headers,
-    body: JSON.stringify({ enabled: true }),
+    body: JSON.stringify({ enabled: true, confirmacaoHumana: true }),
   });
   const blocked = await fetch(base + "/run-free", {
     method: "POST",
