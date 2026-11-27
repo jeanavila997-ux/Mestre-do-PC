@@ -1383,6 +1383,66 @@ body.light .msg-row.user .msg-body { background: #ddf4ff; }
 }
 .code-copy:hover { border-color: var(--accent); }
 .code-copy:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.code-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.code-save { border: 1px solid var(--border); background: transparent; color: var(--text); border-radius: 6px; padding: 2px 8px; font: inherit; font-size: 11px; cursor: pointer; }
+.code-save:hover { border-color: var(--accent); }
+
+.persona-picker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.persona-picker select {
+  max-width: 180px;
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font: inherit;
+}
+.persona-picker small { white-space: nowrap; }
+
+.learning-panel { max-height: min(70vh, 560px); }
+.lib-head, .lib-toolbar, .lib-tabs { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+.lib-head { justify-content: space-between; }
+.lib-note, .lib-empty { color: var(--text-muted); font-size: 12px; line-height: 1.4; margin: 0 0 8px; }
+.lib-toggle { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--text); }
+.lib-form { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.lib-form input, .lib-form textarea, .lib-form select, .lib-toolbar input, .lib-toolbar select, .learning-panel > input[type="search"] {
+  width: 100%;
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 13px;
+}
+.lib-toolbar input, .lib-toolbar select { width: auto; flex: 1; min-width: 120px; }
+.lib-btn, .msg-library-btn {
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.lib-btn:hover, .msg-library-btn:hover { border-color: var(--accent); }
+.lib-tab { border: 1px solid transparent; background: transparent; color: var(--text-muted); border-radius: 8px; padding: 4px 8px; cursor: pointer; font: inherit; }
+.lib-tab.on { color: var(--text); border-color: var(--border); background: var(--card); }
+.lib-list { display: flex; flex-direction: column; gap: 8px; }
+.msg-library-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.learning-meta { margin-top: 8px; color: var(--text-muted); font-size: 12px; line-height: 1.4; }
+@media (max-width: 768px) {
+  .persona-picker small { display: none; }
+  .persona-picker select { max-width: 120px; }
+}
 .tok-kw { color: #7ee7ff; }
 .tok-str { color: #9dffc8; }
 .tok-cmt { color: #8b9bb0; font-style: italic; }

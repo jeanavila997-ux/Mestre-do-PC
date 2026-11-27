@@ -12,6 +12,8 @@ const STATIC_ASSETS = [
   "/chat-integrado/chat-integrado.js",
   "/chat-integrado/chat-integrado-boot.js",
   "/chat-integrado/chat-utils.js",
+  "/chat-integrado/user-library-ui.js",
+  "/chat-integrado/user-library-pure.js",
   "/chat/chat-module.js",
   "/chat/chat-styles.css",
   "/rede-dashboard.js",
