@@ -1072,6 +1072,7 @@ const server = http.createServer(async (req, res) => {
       "/sw.js": { type: "text/javascript; charset=utf-8", dir: __dirname },
       "/manifest.json": { type: "application/manifest+json; charset=utf-8", dir: __dirname },
       "/rede-dashboard.js": { type: "text/javascript; charset=utf-8", dir: __dirname },
+      "/ui-tokens.css": { type: "text/css; charset=utf-8", dir: __dirname },
     };
     const staticFile = rootStatic[path];
     if (staticFile) {

@@ -49,7 +49,8 @@ async function checkStatus() {
       const modelo = document.body.dataset.modelo || "";
       badge.replaceChildren();
       const dot = document.createElement("span");
-      dot.textContent = "🟢";
+      dot.className = "status-dot";
+      dot.setAttribute("aria-hidden", "true");
       const label = document.createElement("span");
       label.textContent = (data.admin ? "Admin" : "Online") + (modelo ? " · " + modelo : "");
       badge.append(dot, label);
@@ -57,7 +58,7 @@ async function checkStatus() {
   } catch {
     const badge = document.getElementById("statusBadge");
     badge.classList.add("offline");
-    badge.innerHTML = `<span>🔴</span><span>Offline</span>`;
+    badge.innerHTML = `<span class="status-dot" aria-hidden="true"></span><span>Offline</span>`;
   }
 }
 

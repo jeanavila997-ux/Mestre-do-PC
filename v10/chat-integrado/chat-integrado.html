@@ -13,6 +13,7 @@
 <link rel="icon" type="image/png" sizes="48x48" href="/chat-integrado/favicon-48.png"/>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'self'"/>
 <meta name="color-scheme" content="dark light"/>
+<link rel="stylesheet" href="/ui-tokens.css"/>
 <link rel="stylesheet" href="/chat-integrado/styles.css"/>
 </head>
 <body>
@@ -41,6 +42,9 @@
     </div>
   </details>
   <div class="section-title"><span>Conversas</span><span id="syncBadge" class="sync-badge">Sync: --</span></div>
+  <label class="conv-search">
+    <input type="search" id="convSearch" placeholder="Buscar conversas" aria-label="Buscar conversas" autocomplete="off" />
+  </label>
   <div class="chat-list" id="chatHistory"></div>
   <button type="button" class="user-profile" id="userProfile" title="Sair da sessão">
     <div class="user-avatar" id="userAvatar">JA</div>
@@ -58,15 +62,19 @@
     <a href="/" class="top-btn mobile-dash-link" title="Voltar ao Painel Principal" id="btnBackDashboardTop">← Painel</a>
     <button type="button" class="top-btn" title="Novo chat" id="btnNewChatTop">＋</button>
     <button type="button" class="top-btn" id="btnTheme" title="Alternar tema">◐</button>
-    <div class="credits-badge" id="statusBadge"><span>🟢</span><span>Online</span></div>
+    <div class="credits-badge" id="statusBadge"><span class="status-dot" aria-hidden="true"></span><span>Online</span></div>
   </div>
 
   <div class="content-area" id="contentArea">
     <div class="thread" id="thread">
     <div class="hero-heading" id="heroHeading">
-      <div class="tess-icon-big">M</div>
-      <h1 class="hero-title">Chat Integrado Mestre do PC</h1>
+      <div class="tess-icon-big" aria-hidden="true">M</div>
+      <div class="hero-copy">
+        <h1 class="hero-title">O que vamos verificar?</h1>
+        <p class="hero-sub">Diagnóstico, manutenção e ferramentas locais. Comandos da whitelist só rodam depois da sua confirmação.</p>
+      </div>
     </div>
+    <div class="quick-categories" id="quickCategories" aria-label="Perguntas e ações rápidas"></div>
 
     <div class="messages-container" id="messagesContainer" role="region" aria-live="polite" aria-label="Mensagens da conversa" style="display:none"></div>
     </div>
@@ -98,7 +106,7 @@
       </div>
       <div class="memory-add">
         <input type="text" id="memInput" placeholder="Nova memória..." />
-        <button id="memAddBtn">Add</button>
+        <button id="memAddBtn">Adicionar</button>
       </div>
       <div class="mem-list"></div>
     </div>
@@ -114,7 +122,7 @@
           <button class="icon-circle-btn" id="btnPlus" title="Opções" aria-label="Mais opções" aria-haspopup="true" aria-expanded="false">＋</button>
           <div class="action-pill" id="btnConnectors" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false"><span>🔧 Ferramentas (0)</span></div>
           <div class="action-pill" id="btnSkills" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false"><span>Skills (0)</span></div>
-          <div class="action-pill" id="btnModelSelect" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false"><span>🔀 Auto</span></div>
+          <div class="action-pill model-pill" id="btnModelSelect" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" title="Escolher modelo ou provedor"><span>Modelo · Auto</span></div>
         </div>
         <div class="toolbar-right">
           <button class="icon-circle-btn" id="btnMic" title="Entrada por voz" aria-label="Entrada por voz">🎤</button>
@@ -137,7 +145,6 @@
       </div>
     </div>
 
-    <div class="quick-categories" id="quickCategories" aria-label="Perguntas e ações rápidas"></div>
     </div>
   </div>
 </main>
