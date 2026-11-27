@@ -8,7 +8,7 @@ import http from "node:http";
 import { spawn, spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { readFile, mkdir, writeFile } from "node:fs/promises";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, extname, join, resolve, sep } from "node:path";
 import { checkPromptInjection } from "../mcp-server/security.js";
@@ -26,7 +26,7 @@ import { handleMcpHttpEndpoint } from "./chat-integrado/grokbot-bridge.js";
 import { isAllowedWebOrigin, isNppOrigin, isTrustedClientOrigin, parseExtraOrigins } from "./security/origin-policy.js";
 import { createSessionToken, sameToken, isBrowserDocumentRequest, canBootstrapSession, injectSessionBootstrap } from "./security/session-gate.js";
 import { createApprovalStore } from "./security/approvals.js";
-import { launchConfirmedTerminal, resolveShell } from "./terminal-launch.js";
+import { launchConfirmedTerminal, mensagemFalhaAgentesCli, resolveShell } from "./terminal-launch.js";
 import { isLocalMcpEnabled, validateLocalMcpToken, ensureLocalMcpToken, isLegacyMcpAllowed } from "../mcp-server/auth/local-token.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -55,11 +55,33 @@ const MAX_CMD_LENGTH = 32768;
 // Agentes CLI do menu (mesmos ids do catálogo em scripts/cli-agents.ps1). Nunca instala nada.
 const CLI_AGENT_IDS = ["claude","opencode","codex","gemini","qwen","aider","copilot","cursor","grok","dsh","hermes","goose","kilo","cline","crush","pi","antigravity","ori","openhands","interpreter","continue","plandex","kimi","gptme","kiro","amp","droid","omp"];
 let cliAgentsCache = { at: 0, data: null };
-// pwsh 7 costuma vir só como alias da Microsoft Store (WindowsApps). O launcher
-// elevado (tarefa MestreDoPC_Admin_Launcher) nem sempre tem essa pasta no PATH,
-// então "pwsh.exe" sozinho falha; tenta caminhos completos antes.
+// Ordem: MESTRE_PWSH_PATH real, MSI em Program Files\PowerShell\7, pacote da
+// Store (listagem ou Get-AppxPackage em cache), atalho do usuário só nesta
+// consulta com stdio encadeado, Windows PowerShell 5.1 por último.
+function pwshFs() {
+  return {
+    exists: existsSync,
+    statSize(file) {
+      try { return statSync(file).size; } catch { return undefined; }
+    },
+    readdir(dir) {
+      return readdirSync(dir);
+    },
+    execFileSync(file, args, opts) {
+      const result = spawnSync(file, args, {
+        encoding: "utf8",
+        windowsHide: true,
+        timeout: opts?.timeout ?? 20000,
+      });
+      if (result.error) throw result.error;
+      if (result.status !== 0) throw new Error((result.stderr || "").trim() || "powershell.exe recusou a consulta do pacote");
+      return result.stdout || "";
+    },
+  };
+}
+
 function resolvePwsh() {
-  return resolveShell(process.env, existsSync);
+  return resolveShell(process.env, pwshFs(), { allowAlias: true });
 }
 
 // ===== Modo Livre — execução de comandos fora da whitelist =====
@@ -1066,22 +1088,28 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 200, { success: true, agents: cliAgentsCache.data, cached: true }, allowedOrigin);
       }
       const script = join(PROJECT_DIR, "scripts", "cli-agents.ps1");
+      const shell = resolvePwsh();
       const agents = await new Promise((resolveAgents) => {
         let out = "";
-        const child = spawn(resolvePwsh(), ["-NoProfile", "-File", script, "-Action", "status-json"], {
+        let err = "";
+        const child = spawn(shell, ["-NoProfile", "-File", script, "-Action", "status-json"], {
           windowsHide: true,
           env: { ...process.env, MESTRE_PROJETO_PATH: PROJECT_DIR },
         });
         const timer = setTimeout(() => { try { child.kill(); } catch {} resolveAgents(null); }, 30000);
         child.stdout.on("data", (d) => (out += d.toString("utf8")));
+        child.stderr?.on("data", (d) => { err += d.toString("utf8"); });
         child.on("error", () => { clearTimeout(timer); resolveAgents(null); });
         child.on("close", () => {
           clearTimeout(timer);
           try { const parsed = JSON.parse(out.slice(Math.max(0, out.indexOf("[")))); resolveAgents(Array.isArray(parsed) ? parsed : [parsed]); }
-          catch { resolveAgents(null); }
+          catch {
+            if (err.trim()) console.error("[cli-agents]", shell, err.trim().slice(0, 500));
+            resolveAgents(null);
+          }
         });
       });
-      if (!agents) return sendJson(res, 500, { success: false, output: "Falha ao consultar os agentes CLI (pwsh 7 instalado?)." }, allowedOrigin);
+      if (!agents) return sendJson(res, 503, { success: false, output: mensagemFalhaAgentesCli(shell) }, allowedOrigin);
       cliAgentsCache = { at: Date.now(), data: agents };
       return sendJson(res, 200, { success: true, agents }, allowedOrigin);
     }
@@ -1104,6 +1132,7 @@ const server = http.createServer(async (req, res) => {
         cwd: PROJECT_DIR,
         env: { ...process.env, MESTRE_PROJETO_PATH: PROJECT_DIR },
         exists: existsSync,
+        io: pwshFs(),
         spawnImpl: spawn,
         scriptPath: join(PROJECT_DIR, "scripts", "cli-agents.ps1"),
       });
