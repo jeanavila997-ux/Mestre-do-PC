@@ -182,20 +182,33 @@
         </div>
       </div>
       <div id="libTabPersonas" class="lib-tab-panel" hidden>
-        <p class="lib-note">A persona vale a partir da próxima mensagem. O padrão cobre conversas sem escolha própria.</p>
-        <div class="lib-form">
-          <input type="text" id="personaName" placeholder="Nome da persona" aria-label="Nome da persona" />
-          <textarea id="personaBody" rows="5" placeholder="Prompt de sistema" aria-label="Prompt de sistema"></textarea>
-          <select id="personaProfile" aria-label="Perfil de modelo sugerido">
-            <option value="">Sem perfil sugerido</option>
+        <p class="lib-note">A persona é o jeito do assistente responder. Vale a partir da próxima mensagem. A persona padrão vale para toda conversa em que você não escolheu outra.</p>
+        <div class="lib-form persona-form">
+          <p class="persona-editing" id="personaEditing" hidden></p>
+          <label class="lib-label" for="personaName">Nome</label>
+          <input type="text" id="personaName" placeholder="Ex.: Suporte do PC" />
+          <label class="lib-label" for="personaBody">Instruções (prompt de sistema)</label>
+          <textarea id="personaBody" class="persona-body" rows="10" spellcheck="false" placeholder="Como o assistente deve responder: tom, limites, formato..."></textarea>
+          <small class="lib-hint" id="personaBodyCount">0 caracteres</small>
+          <label class="lib-label" for="personaProfile">Modelo sugerido</label>
+          <select id="personaProfile">
+            <option value="">Nenhum (continua no modelo atual)</option>
           </select>
-          <button type="button" id="personaSave" class="lib-btn">Salvar persona</button>
+          <small class="lib-hint">Ao escolher esta persona, o chat pergunta se você quer trocar para este modelo. Dá para recusar.</small>
+          <div class="persona-actions">
+            <button type="button" id="personaSave" class="lib-btn lib-btn-primary">Salvar persona</button>
+            <button type="button" id="personaCancel" class="lib-btn" hidden>Cancelar edição</button>
+          </div>
         </div>
-        <div class="lib-toolbar">
-          <button type="button" id="personaRestore" class="lib-btn">Restaurar exemplos</button>
-          <button type="button" id="personaMakeDefault" class="lib-btn">Definir selecionada como padrão</button>
-          <button type="button" id="personaUseDefault" class="lib-btn">Usar o padrão nesta conversa</button>
-        </div>
+        <details class="lib-more">
+          <summary>Mais ações</summary>
+          <div class="lib-toolbar">
+            <button type="button" id="personaMakeDefault" class="lib-btn" title="A persona escolhida no topo do chat passa a valer em toda conversa sem escolha própria">Tornar a persona do topo o padrão</button>
+            <button type="button" id="personaUseDefault" class="lib-btn" title="Esta conversa deixa a escolha própria e volta a usar a persona padrão">Voltar ao padrão nesta conversa</button>
+            <button type="button" id="personaRestore" class="lib-btn" title="Devolve os exemplos ao texto original; as suas personas ficam">Restaurar exemplos</button>
+          </div>
+        </details>
+        <h4 class="lib-subtitle">Suas personas</h4>
         <div id="personaList" class="lib-list"></div>
       </div>
       <div class="lib-toolbar">

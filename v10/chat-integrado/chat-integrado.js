@@ -2101,12 +2101,15 @@ async function loadSyncStatus() {
     const pending = Number(status.unsynced?.total || 0);
     if (status.mysqlConfigurado) {
       badge.className = "sync-badge " + (pending > 0 ? "pending" : "synced");
-      badge.textContent = `Sync: ${pending} pending`;
-      badge.title = pending > 0 ? `${pending} itens aguardando sync MySQL` : "MySQL sincronizado";
+      badge.textContent = pending > 0 ? `Sync: ${pending} aguardando` : "Sincronizado";
+      badge.title = pending > 0 ? `${pending} itens ainda não foram enviados ao MySQL` : "Tudo enviado ao MySQL";
     } else {
-      badge.className = "sync-badge " + (pending > 0 ? "pending" : "");
-      badge.textContent = pending > 0 ? `Sync: local (${pending} pend.)` : "Sync: local";
-      badge.title = "MySQL não configurado" + (pending > 0 ? ` — ${pending} itens só no SQLite local` : "");
+      // Sem MySQL configurado não existe sync: tudo fica só no SQLite deste PC.
+      // O contador antigo ("108 pend.") parecia uma fila travada.
+      badge.className = "sync-badge";
+      badge.textContent = "Salvo neste PC";
+      badge.title = "O sync com MySQL não está configurado. As conversas ficam só no banco local deste PC" +
+        (pending > 0 ? ` (${pending} itens).` : ".");
     }
   } catch { /* ignora */ }
 }

@@ -129,7 +129,7 @@ export function initUserLibraryUi({
     select.replaceChildren();
     const none = document.createElement("option");
     none.value = "";
-    none.textContent = "Sem perfil sugerido";
+    none.textContent = "Nenhum (continua no modelo atual)";
     select.append(none);
     for (const profile of getState().perfis || []) {
       const option = document.createElement("option");
@@ -441,7 +441,7 @@ export function initUserLibraryUi({
       title.textContent = item.builtinKey ? `${item.name} · exemplo` : item.name;
       const text = document.createElement("div");
       text.className = "mem-text";
-      text.textContent = item.suggestedProfile ? `Sugere o perfil ${item.suggestedProfile}` : "Sem perfil sugerido";
+      text.textContent = item.suggestedProfile ? `Modelo sugerido: ${item.suggestedProfile}` : "Usa o modelo atual";
       content.append(title, text);
       const actions = document.createElement("div");
       actions.className = "mem-actions";
@@ -451,6 +451,9 @@ export function initUserLibraryUi({
           $("personaName").value = item.name;
           $("personaBody").value = item.body;
           fillSuggestedProfiles(item.suggestedProfile || "");
+          mostrarEdicaoPersona(item.name);
+          $("personaBody").focus();
+          $("personaBody").scrollIntoView({ block: "nearest" });
         }),
         button("Duplicar", "", async () => {
           const saved = await apiPost(`/api/user-library/personas/${item.id}/duplicate`, {});
@@ -471,6 +474,32 @@ export function initUserLibraryUi({
     }
   }
 
+  // Mostra qual persona está sendo editada e o botão de cancelar; sem nome, volta ao modo "nova".
+  function mostrarEdicaoPersona(nome = "") {
+    const aviso = $("personaEditing");
+    const cancelar = $("personaCancel");
+    if (aviso) {
+      aviso.hidden = !nome;
+      aviso.textContent = nome ? `Editando: ${nome}` : "";
+    }
+    if (cancelar) cancelar.hidden = !nome;
+    atualizarContadorPersona();
+  }
+
+  function atualizarContadorPersona() {
+    const contador = $("personaBodyCount");
+    const corpo = $("personaBody");
+    if (contador && corpo) contador.textContent = `${corpo.value.length} caracteres`;
+  }
+
+  function limparFormPersona() {
+    editingPersonaId = "";
+    $("personaName").value = "";
+    $("personaBody").value = "";
+    $("personaProfile").value = "";
+    mostrarEdicaoPersona("");
+  }
+
   async function savePersona() {
     const payload = {
       name: $("personaName").value,
@@ -482,10 +511,7 @@ export function initUserLibraryUi({
       : await apiPost("/api/user-library/personas", payload);
     if (saved?.error) return tell("Persona", saved.error);
     await warnRedaction(saved);
-    editingPersonaId = "";
-    $("personaName").value = "";
-    $("personaBody").value = "";
-    $("personaProfile").value = "";
+    limparFormPersona();
     await refreshPersonaSelect(getState().conversaId || "");
     renderPersonas();
   }
@@ -592,6 +618,8 @@ export function initUserLibraryUi({
   bind("snippetSearch", "input", () => schedule(loadSnippets));
   bind("profileSave", "click", () => saveProfile());
   bind("personaSave", "click", () => savePersona());
+  bind("personaCancel", "click", () => limparFormPersona());
+  bind("personaBody", "input", () => atualizarContadorPersona());
   bind("personaRestore", "click", async () => {
     const ok = await openModal({
       title: "Restaurar exemplos",
