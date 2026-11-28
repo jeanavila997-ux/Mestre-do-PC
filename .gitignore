@@ -120,6 +120,10 @@ mobile/gateway/data/
 # Backups locais com data
 *.bak-*
 
+# Configurações locais geradas pelo instalador MCP
+.mcp.local.json
+mcp-clientes.local.json
+docs/mcp-clientes/*.local.json
 
 # sessao local do visual companion
 .superpowers/
