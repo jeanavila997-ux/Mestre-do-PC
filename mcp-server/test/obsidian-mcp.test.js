@@ -77,6 +77,9 @@ test("MCP expõe sync_obsidian e search_obsidian com vault e Ollama controlados"
     env: {
       ...process.env,
       __COMPAT_LAYER: "RunAsInvoker",
+      // Vault precisa estar dentro da home; no Actions o checkout fica em D:\a.
+      USERPROFILE: fixture,
+      HOME: fixture,
       OBSIDIAN_VAULT_PATH: vault,
       MESTRE_OBSIDIAN_INDEX_DIR: join(fixture, "store"),
       OLLAMA_URL: ollama.url,

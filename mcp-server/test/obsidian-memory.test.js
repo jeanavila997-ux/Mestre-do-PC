@@ -8,6 +8,13 @@ import { chunkMarkdown, cosineSimilarity, syncObsidian, searchObsidian } from ".
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEST_ROOT = join(__dirname, "..", "..", "temp", "obsidian-memory-tests");
 
+// O vault precisa estar dentro da pasta do usuário. No PC de desenvolvimento o
+// repo fica em C:\Users\<nome>, mas no runner do Actions o checkout fica em
+// D:\a\... (fora do perfil), então a home deste processo de teste aponta para
+// a raiz das fixtures. Cada arquivo de teste roda em processo próprio.
+process.env.USERPROFILE = TEST_ROOT;
+process.env.HOME = TEST_ROOT;
+
 async function fixture(t) {
   await mkdir(TEST_ROOT, { recursive: true });
   const root = await mkdtemp(join(TEST_ROOT, "run-"));
@@ -181,4 +188,13 @@ test("searchObsidian retorna evidência citável, aplica limites e valida consul
   const capped = await searchObsidian("alpha", { ...options, limit: 999 });
   assert.equal(capped.results.length, 10);
   await assert.rejects(searchObsidian(" ", options), /consulta/i);
+});
+
+test("syncObsidian recusa vault fora da pasta do usuário", async () => {
+  const { options } = await fixture();
+  const fora = join(TEST_ROOT, "..", "vault-fora-da-home");
+  await assert.rejects(
+    () => syncObsidian({ ...options, vaultPath: fora }),
+    /dentro da pasta do usuário/,
+  );
 });

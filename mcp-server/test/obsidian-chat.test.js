@@ -65,6 +65,10 @@ test("tools HTTP do launcher sincronizam e pesquisam o vault controlado", { time
   });
   await new Promise((resolve) => ollama.listen(0, "127.0.0.1", resolve));
   t.after(() => new Promise((resolve) => ollama.close(resolve)));
+  // Vault precisa estar dentro da home; no runner o tmpdir pode vir em 8.3
+  // (C:\Users\RUNNER~1) e não bater com USERPROFILE.
+  process.env.USERPROFILE = fixture;
+  process.env.HOME = fixture;
   process.env.OBSIDIAN_VAULT_PATH = vault;
   process.env.MESTRE_OBSIDIAN_INDEX_DIR = join(fixture, "store");
   process.env.OBSIDIAN_OLLAMA_URL = `http://127.0.0.1:${ollama.address().port}`;
