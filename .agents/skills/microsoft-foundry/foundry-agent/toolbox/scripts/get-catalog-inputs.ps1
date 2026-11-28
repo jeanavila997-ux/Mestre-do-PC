@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   Discover catalog inputs for Foundry catalog MCP connections and classify which
   auth types each matching connector supports: MANAGED OAUTH and/or USER ENTRA TOKEN.

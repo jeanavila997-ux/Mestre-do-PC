@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "mestre-do-pc": {
+      "command": "node",
+      "args": [
+        "<MESTRE_PROJETO_PATH>/mcp-server/index.js"
+      ],
+      "env": {
+        "MESTRE_PROJETO_PATH": "<MESTRE_PROJETO_PATH>",
+        "MESTRE_BASE_URL": "http://127.0.0.1:7777"
+      }
+    }
+  }
+}

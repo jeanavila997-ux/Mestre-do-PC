@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Runs the read-only AKS cluster baseline diagnostic sweep and prints a single
     labeled digest instead of many raw command dumps.

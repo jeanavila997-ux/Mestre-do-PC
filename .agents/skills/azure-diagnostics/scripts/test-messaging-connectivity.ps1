@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Probes reachability of an Azure Service Bus / Event Hubs namespace and prints
     a normalized per-check report.

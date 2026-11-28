@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Collects the invariant, read-only AKS pod-failure evidence bundle and prints a
     single labeled digest.

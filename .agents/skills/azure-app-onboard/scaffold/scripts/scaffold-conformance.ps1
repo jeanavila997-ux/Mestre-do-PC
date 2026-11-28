@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 # Scaffold -> Deploy conformance gate.
 # Checks generated IaC against the plan for the semantic defects `az bicep build`
 # cannot catch (valid Bicep, wrong values) — the class that causes deploy healing.
