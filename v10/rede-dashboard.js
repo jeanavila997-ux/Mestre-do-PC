@@ -271,6 +271,7 @@ const RedeDashboard = {
       .rd-badge.atencao { background: linear-gradient(135deg,#ffc107,#ffca28); color: #000; }
       .rd-badge.critico { background: linear-gradient(135deg,#ff5252,#ff1744); color: #fff; animation: rd-pulse 1.5s infinite; }
       .rd-badge.offline { background: linear-gradient(135deg,#6b7280,#374151); color: #fff; }
+      .rd-badge.sem-dados { background: linear-gradient(135deg,#6b7280,#4b5563); color: #fff; }
       .rd-offline { display: none; margin-bottom: 16px; padding: 10px 14px; border-radius: 10px; background: rgba(255,82,82,.1); border: 1px solid rgba(255,82,82,.35); color: #ff8a80; font-size: 13px; line-height: 1.5; }
       .rd-offline.on { display: block; }
       @keyframes rd-pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
@@ -556,7 +557,9 @@ const RedeDashboard = {
 
   // Testar rede via operações registradas
   async testarRede() {
-    const res = { pgw: null, pex: null, perda: null, dnsOk: false, httpsOk: false };
+    // dnsOk/httpsOk ficam null quando o teste não devolveu nada: "não medido"
+    // é diferente de "falhou" e não pode virar CRÍTICO.
+    const res = { pgw: null, pex: null, perda: null, dnsOk: null, httpsOk: null };
 
     try {
       // Latência do roteador: o PowerShell 5.1 devolve uma tabela em que o tempo
@@ -600,12 +603,26 @@ const RedeDashboard = {
   // Obs.: usar "x == null" (e não "!x") — latência 0ms do roteador é PERFEITA,
   // mas o "!r.pgw" antigo tratava 0 como falha e marcava CRÍTICO à toa.
   classificar(r) {
+    const mediuLatencia = r.pgw != null || r.pex != null;
+    const mediuAlgo = mediuLatencia || r.perda != null || r.dnsOk != null || r.httpsOk != null;
+    // Nenhum teste devolveu resultado: falta de dado não é rede ruim.
+    if (!mediuAlgo) return 'SEM DADOS';
     if (r.pex == null && r.perda != null && r.perda >= 75) return 'CRÍTICO';
-    if (r.pgw == null && r.pex == null) return 'CRÍTICO';
-    if (!r.dnsOk && !r.httpsOk) return 'CRÍTICO';
+    if (r.dnsOk === false && r.httpsOk === false) return 'CRÍTICO';
+    if (!mediuLatencia && r.perda == null) return 'SEM DADOS';
     if (r.pex > 200 || (r.pgw != null && r.pgw > 50)) return 'ATENÇÃO';
-    if (r.perda > 0 || !r.dnsOk || !r.httpsOk) return 'ATENÇÃO';
+    if (r.perda > 0 || r.dnsOk === false || r.httpsOk === false) return 'ATENÇÃO';
+    if (!mediuLatencia) return 'ATENÇÃO';
     return 'SAUDÁVEL';
+  },
+
+  // Nome da classe CSS do selo: sem acento e sem espaço ("CRÍTICO" -> "critico").
+  // Antes o JS gerava "crítico"/"atenção"/"saudável" e o CSS só tinha as versões
+  // sem acento, então o selo nunca ganhava cor.
+  classeSaude(saude) {
+    return String(saude || '')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase().replace(/\s+/g, '-');
   },
 
   // Atualizar informações básicas (adaptado ao tipo de conexão real)
@@ -692,8 +709,8 @@ const RedeDashboard = {
     const setOk = (id, ok) => {
       const e = document.getElementById(id);
       if (e) {
-        e.textContent = ok ? 'OK' : 'FALHA';
-        e.className = `rd-card-value ${ok ? 'ok' : 'err'}`;
+        e.textContent = ok == null ? '--' : ok ? 'OK' : 'FALHA';
+        e.className = `rd-card-value ${ok == null ? 'warn' : ok ? 'ok' : 'err'}`;
       }
     };
     setOk('rd-v-dns', r.dnsOk);
@@ -710,7 +727,7 @@ const RedeDashboard = {
     const badge = document.getElementById('rd-badge');
     if (badge) {
       badge.textContent = r.saude;
-      badge.className = `rd-badge ${r.saude.toLowerCase()}`;
+      badge.className = `rd-badge ${this.classeSaude(r.saude)}`;
     }
 
     // Histórico
@@ -725,8 +742,8 @@ const RedeDashboard = {
     tbody.innerHTML = ultimos.map(h => `
       <tr>
         <td>${h.ts.toLocaleTimeString('pt-BR')}</td>
-        <td><span class="rd-badge rd-badge-${h.saude.toLowerCase()}">${h.saude}</span></td>
-        <td>${h.tipo === 'ETHERNET' ? '—' : h.sinal + '%'}</td>
+        <td><span class="rd-badge ${this.classeSaude(h.saude)}">${h.saude}</span></td>
+        <td>${h.tipo === 'ETHERNET' ? '—' : Number(h.sinal) > 0 ? Number(h.sinal) + '%' : '--'}</td>
         <td>${h.pgw != null ? h.pgw + 'ms' : '--'}</td>
         <td>${h.pex != null ? h.pex + 'ms' : '--'}</td>
         <td>${h.perda != null ? h.perda + '%' : '--'}</td>
@@ -781,8 +798,8 @@ Gateway: ${ult.gateway}
 Latência Roteador: ${ult.pgw != null ? ult.pgw + 'ms' : 'sem resposta'}
 Latência Internet: ${ult.pex != null ? ult.pex + 'ms' : 'sem resposta'}
 Perda de pacotes: ${ult.perda != null ? ult.perda + '%' : 'não medida'}
-DNS: ${ult.dnsOk ? 'OK' : 'FALHOU'}
-HTTPS: ${ult.httpsOk ? 'OK' : 'FALHOU'}
+DNS: ${ult.dnsOk == null ? 'não medido' : ult.dnsOk ? 'OK' : 'FALHOU'}
+HTTPS: ${ult.httpsOk == null ? 'não medido' : ult.httpsOk ? 'OK' : 'FALHOU'}
 Status: ${ult.saude}
 
 O que pode estar causando problemas?`;
