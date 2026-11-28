@@ -16,6 +16,7 @@ import { auditLog, AuditLevel } from "../mcp-server/audit-logger.js";
 import { handleApiRoute } from "./chat-integrado/api-routes.js";
 import { handleUserLibraryRoutes } from "./chat-integrado/user-library-routes.js";
 import { loadOperationRegistry, clearOperationRegistryCache } from "./operation-registry.js";
+import { envolverComando, resultadoDoCodigo, RESULTADO, LIMITE_LINHA_COMANDO } from "./ps-job.js";
 import { handleMemoryRoutes } from "./memory-routes.js";
 import { handleOperationRoutes } from "./operation-routes.js";
 import { handleSoulRoutes } from "./soul-routes.js";
@@ -448,9 +449,23 @@ function runPowerShell(cmd, meta = {}) {
     startedAt: Date.now(),
     operationId: meta.id || null,
     destructive: meta.destructive || false,
+    resultado: null,
   };
   jobs.set(id, job);
-  const ps = spawn("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", cmd], {
+  // Só as operações de admin-tools.ps1 (elevado: true no catálogo) podem
+  // terminar como "aberto em janela de administrador".
+  const elevado = !!(meta.id && registry.getById(meta.id)?.elevado === true);
+  const comando = envolverComando(cmd);
+  if (comando.length > LIMITE_LINHA_COMANDO) {
+    job.state = "completed";
+    job.exitCode = -1;
+    job.success = false;
+    job.resultado = RESULTADO.FALHOU;
+    job.output = "[ERRO] Comando grande demais para a linha de comando do Windows.";
+    job.completedAt = Date.now();
+    return id;
+  }
+  const ps = spawn("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", comando], {
     windowsHide: true,
     env: cleanPSEnv({ MESTRE_PROJETO_PATH: PROJECT_DIR }),
   });
@@ -462,25 +477,30 @@ function runPowerShell(cmd, meta = {}) {
       job.state = "timed_out";
       job.exitCode = -1;
       job.success = false;
+      job.resultado = RESULTADO.TEMPO_ESGOTADO;
       job.output += "\n[ERRO] Timeout após 15 minutos.";
       job.completedAt = Date.now();
     }
   }, JOB_TIMEOUT_MS);
   timeout.unref();
-  ps.stdout.on("data", (d) => (job.output += d.toString()));
-  ps.stderr.on("data", (d) => (job.output += d.toString()));
+  ps.stdout.setEncoding("utf8");
+  ps.stderr.setEncoding("utf8");
+  ps.stdout.on("data", (d) => (job.output += d));
+  ps.stderr.on("data", (d) => (job.output += d));
   ps.on("close", (code) => {
     clearTimeout(timeout);
     if (job.state === "timed_out") return;
     job.state = "completed";
     job.exitCode = code;
-    job.success = code === 0;
+    job.resultado = resultadoDoCodigo(code, { elevado });
+    job.success = job.resultado === RESULTADO.OK;
     job.completedAt = Date.now();
   });
   ps.on("error", (e) => {
     clearTimeout(timeout);
     job.state = "completed";
     job.success = false;
+    job.resultado = RESULTADO.FALHOU;
     job.output += `\n[ERRO] ${e.message}`;
     job.completedAt = Date.now();
   });
@@ -1053,6 +1073,7 @@ const server = http.createServer(async (req, res) => {
         running: job.state === "running",
         done: job.state !== "running",
         exitCode: job.exitCode,
+        resultado: job.resultado,
         output: job.output || "",
         activeJobs: getRunningJobCount(),
         operationId: job.operationId,
