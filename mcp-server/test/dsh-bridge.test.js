@@ -247,7 +247,7 @@ test("dsh: cascata avança para o próximo provedor quando o primeiro falha", as
 
     // cwd default é a raiz do projeto; --patch antes de --json e tarefa por último.
     assert.equal(chamadas[0].cwd, bridge.PROJECT_DIR);
-    assert.match(chamadas[0].commandLine, /headless --patch [^ ]+grok\.yml --json "listar os 3 maiores arquivos"$/);
+    assert.match(chamadas[0].commandLine, /headless --patch (?:"[^"]+grok\.yml"|[^ "]+grok\.yml) --json "listar os 3 maiores arquivos"$/);
 
     // Patch do provedor: três rows endereçadas por id, só o nome da variável.
     const patch = await readFile(join(home, "patches", "grok.yml"), "utf8");
