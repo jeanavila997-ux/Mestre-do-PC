@@ -878,6 +878,9 @@
       .output-entry:hover { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); }
       .output-entry.ok { border-left-color: var(--success); }
       .output-entry.err { border-left-color: var(--danger); }
+      .output-entry.warn { border-left-color: #f0a800; }
+      .output-entry.admin { border-left-color: #58a6ff; }
+      .output-stat-pill.warn { border-color: rgba(240,168,0,0.4); color: #f0a800; }
       .output-entry-head { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 8px; align-items: baseline; }
       .output-entry-title { font-size: 0.82rem; font-weight: 600; color: var(--text); word-break: break-all; }
       .output-entry-date { font-size: 0.7rem; color: #8b949e; white-space: nowrap; }
@@ -1652,7 +1655,7 @@
           try {
             if (!await confirmBeforeExecution(item.cmd, "queue", item.id ? { id: item.id } : {})) continue;
             const data = await dispatchCommand(item.cmd, item.id ? { id: item.id } : {});
-            addOutputEntry(item.cmd, data.output || "", data.success === true && data.state === "completed");
+            addOutputEntry(item.cmd, data.output || "", data.success === true && data.state === "completed", statusDoJob(data));
             cmdHistory.push({ title: item.title, cmd: item.cmd, output: data.output || "", success: data.success, date: new Date().toISOString() });
             localStorage.setItem("mestre_v10_history", JSON.stringify(cmdHistory.slice(-200)));
           } catch (e) { showToast(`❌ Erro: ${item.title}`, "#f85149"); }
@@ -1720,10 +1723,10 @@
           const ok = data.success === true && data.state === "completed";
           lastTerminalOutput = data.output || "";
           setTerminalLive((data.output || "(sem output)") + `\n\n[exit ${data.exitCode ?? data.code}] [${data.state}]`, false);
-          addOutputEntry(code, data.output || "", ok);
+          addOutputEntry(code, data.output || "", ok, statusDoJob(data));
           cmdHistory.push({ title, cmd: code, output: data.output || "", success: data.success, date: new Date().toISOString() });
           localStorage.setItem("mestre_v10_history", JSON.stringify(cmdHistory.slice(-200)));
-          showToast(ok ? "✅ Comando concluído" : "❌ Comando falhou", ok ? "var(--accent2)" : "#f85149");
+          showToast(...toastDoStatus(statusDoJob(data)));
         } catch (e) { setTerminalLive("❌ Erro: " + e.message, false); showToast("❌ Falha na conexão", "#f85149"); }
       }
       function paintMetric(cardId, barId, meterId, hintId, pct, known, hint) {
@@ -2071,11 +2074,11 @@
           const data = await dispatchCommand(code, { ...options, onProgress(status) { content.textContent = "⏳ Comando em execução..." + (status.activeJobs > 1 ? " | Fila: " + status.activeJobs : ""); } });
           const ok = data.success === true && data.state === "completed";
           content.textContent = data.output || (ok ? "(sem output)" : "Comando finalizado sem saída.");
-          content.style.color = ok ? "#e6edf3" : "#f85149";
-          addOutputEntry(code, data.output || "", ok);
+          content.style.color = ok ? "#e6edf3" : (statusDoJob(data) === "erro" ? "#f85149" : "#f0a800");
+          addOutputEntry(code, data.output || "", ok, statusDoJob(data));
           cmdHistory.push({ title: (options.id || code).slice(0, 60), cmd: code, output: data.output || "", success: data.success, date: new Date().toISOString() });
           localStorage.setItem("mestre_v10_history", JSON.stringify(cmdHistory.slice(-200)));
-          showToast(ok ? "✅ Comando executado." : "❌ Erro na execução", ok ? "var(--accent2)" : "#f85149");
+          showToast(...toastDoStatus(statusDoJob(data)));
           checkServer();
         } catch (err) {
           content.textContent = "Erro de conexão: " + err.message;
@@ -2756,8 +2759,30 @@
         try { localStorage.setItem("mestre_v10_output_history", JSON.stringify(outputHistory.slice(-100))); }
         catch (e) { console.warn("Falha ao salvar histórico de outputs:", e); }
       }
-      function addOutputEntry(cmd, output, success) {
-        const entry = { id: Date.now() + Math.floor(Math.random() * 1000), cmd: cmd || "", output: output || "", success: success === true, date: new Date().toISOString() };
+      // Resultado real do job (launcher >= 11.2.2): "ok", "com_erros", "aberto_como_admin" ou falha.
+      // Antes só havia success, e um comando que falhava no meio aparecia com ✅.
+      function statusDoJob(data) {
+        if (data && data.resultado === "com_erros") return "aviso";
+        if (data && data.resultado === "aberto_como_admin") return "admin";
+        return data && data.success === true && data.state === "completed" ? "ok" : "erro";
+      }
+      const STATUS_INFO = {
+        ok: { icon: "✅", texto: "Sucesso", cls: "ok" },
+        aviso: { icon: "⚠️", texto: "Concluído com erros", cls: "warn" },
+        admin: { icon: "🛡️", texto: "Aberto na janela de administrador", cls: "admin" },
+        erro: { icon: "❌", texto: "Falha", cls: "err" },
+      };
+      function infoStatus(e) {
+        return STATUS_INFO[e && e.status] || (e && e.success ? STATUS_INFO.ok : STATUS_INFO.erro);
+      }
+      function toastDoStatus(status) {
+        if (status === "ok") return ["✅ Comando concluído", "var(--accent2)"];
+        if (status === "aviso") return ["⚠️ Concluído com erros: veja a saída", "#f0a800"];
+        if (status === "admin") return ["🛡️ Aberto na janela de administrador", "#58a6ff"];
+        return ["❌ Comando falhou", "#f85149"];
+      }
+      function addOutputEntry(cmd, output, success, status) {
+        const entry = { id: Date.now() + Math.floor(Math.random() * 1000), cmd: cmd || "", output: output || "", success: success === true, status: status || (success === true ? "ok" : "erro"), date: new Date().toISOString() };
         outputHistory.push(entry);
         saveOutputHistory();
         renderOutputHistory();
@@ -2767,11 +2792,13 @@
         const bar = document.getElementById("outputStats");
         if (!bar) return;
         if (!outputHistory.length) { bar.innerHTML = ""; return; }
-        const okCount = outputHistory.filter(e => e.success).length;
-        const errCount = outputHistory.length - okCount;
+        const okCount = outputHistory.filter(e => infoStatus(e).cls === "ok").length;
+        const warnCount = outputHistory.filter(e => infoStatus(e).cls === "warn").length;
+        const errCount = outputHistory.filter(e => infoStatus(e).cls === "err").length;
         bar.innerHTML = `
           <span class="output-stat-pill total">📋 ${outputHistory.length} comando${outputHistory.length === 1 ? "" : "s"}</span>
           <span class="output-stat-pill ok">✅ ${okCount} sucesso${okCount === 1 ? "" : "s"}</span>
+          ${warnCount ? `<span class="output-stat-pill warn">⚠️ ${warnCount} com erros</span>` : ""}
           <span class="output-stat-pill err">❌ ${errCount} falha${errCount === 1 ? "" : "s"}</span>
         `;
       }
@@ -2781,10 +2808,11 @@
         renderOutputStats();
         if (!outputHistory.length) { container.innerHTML = `<div class="output-empty">Nenhum comando executado ainda.</div>`; return; }
         container.innerHTML = outputHistory.slice().reverse().map(e => {
-          const icon = e.success ? "✅" : "❌";
+          const st = infoStatus(e);
+          const icon = st.icon;
           const dateStr = new Date(e.date).toLocaleString("pt-BR");
           const shortCmd = e.cmd.length > 90 ? e.cmd.slice(0, 90) + "…" : e.cmd;
-          return `<div class="output-entry ${e.success ? "ok" : "err"}">
+          return `<div class="output-entry ${st.cls}" title="${st.texto}">
             <div class="output-entry-head">
               <span class="output-entry-title">${icon} ${escapeHtml(shortCmd)}</span>
               <span class="output-entry-date">${dateStr}</span>
@@ -2815,7 +2843,7 @@
       function sendOutputToIA(id) {
         const entry = outputHistory.find(e => e.id === id);
         if (!entry) return;
-        const text = `Output do comando executado em ${new Date(entry.date).toLocaleString("pt-BR")}:\n\n${entry.cmd}\n\nResultado (${entry.success ? "sucesso" : "FALHA"}):\n${entry.output || "(sem output)"}`;
+        const text = `Output do comando executado em ${new Date(entry.date).toLocaleString("pt-BR")}:\n\n${entry.cmd}\n\nResultado (${infoStatus(entry).texto}):\n${entry.output || "(sem output)"}`;
         mestreChat.lastTerminalOutput = text;
         mestreChat.attachContext("terminal");
         mestreChat.open();
@@ -2825,7 +2853,7 @@
         const entry = outputHistory.find(e => e.id === id);
         if (!entry) return;
         const title = `Output: ${entry.cmd.slice(0, 50)}`;
-        const content = `Comando executado em ${new Date(entry.date).toLocaleString("pt-BR")}:\n\n${entry.cmd}\n\nResultado (${entry.success ? "sucesso" : "FALHA"}):\n${entry.output || "(sem output)"}`;
+        const content = `Comando executado em ${new Date(entry.date).toLocaleString("pt-BR")}:\n\n${entry.cmd}\n\nResultado (${infoStatus(entry).texto}):\n${entry.output || "(sem output)"}`;
         await mestreChat.addMemory(title, content);
         showToast("🧠 Output salvo como memória da IA", "#a200ff");
       }
@@ -2874,7 +2902,7 @@
           md += `**Data:** ${meta.data}\n**Computador:** ${meta.computador}\n`;
           md += `**Total de comandos:** ${meta.total}\n**Sucessos:** ${meta.sucessos} | **Falhas:** ${meta.falhas}\n\n---\n\n`;
           outputHistory.forEach((e, i) => {
-            md += `## ${i + 1}. ${e.success ? "✅" : "❌"} Comando\n\n**Data:** ${new Date(e.date).toLocaleString("pt-BR")}\n\n`;
+            md += `## ${i + 1}. ${infoStatus(e).icon} Comando\n\n**Data:** ${new Date(e.date).toLocaleString("pt-BR")}\n\n`;
             md += `\`\`\`powershell\n${e.cmd}\n\`\`\`\n\n**Output:**\n\n\`\`\`\n${e.output || "(sem output)"}\n\`\`\`\n\n---\n\n`;
           });
           _downloadBlob(md, "text/markdown", `mestre-output-${stamp}.md`);
@@ -2883,7 +2911,7 @@
           txt += `Data: ${meta.data}\nComputador: ${meta.computador}\n`;
           txt += `Total: ${meta.total} | Sucessos: ${meta.sucessos} | Falhas: ${meta.falhas}\n${"=".repeat(48)}\n\n`;
           outputHistory.forEach((e, i) => {
-            txt += `[${i + 1}] ${e.success ? "OK" : "FALHA"} — ${new Date(e.date).toLocaleString("pt-BR")}\n`;
+            txt += `[${i + 1}] ${infoStatus(e).texto.toUpperCase()} — ${new Date(e.date).toLocaleString("pt-BR")}\n`;
             txt += `Comando: ${e.cmd}\n\nOutput:\n${e.output || "(sem output)"}\n\n${"-".repeat(48)}\n\n`;
           });
           _downloadBlob(txt, "text/plain;charset=utf-8", `mestre-output-${stamp}.txt`);
@@ -2891,7 +2919,7 @@
           const escCsv = (v) => `"${String(v ?? "").replace(/"/g, '""').replace(/\r?\n/g, " ")}"`;
           let csv = "Numero;Status;Data;Comando;Output\n";
           outputHistory.forEach((e, i) => {
-            csv += [i + 1, e.success ? "Sucesso" : "Falha", new Date(e.date).toLocaleString("pt-BR"), escCsv(e.cmd), escCsv(e.output)].join(";") + "\n";
+            csv += [i + 1, infoStatus(e).texto, new Date(e.date).toLocaleString("pt-BR"), escCsv(e.cmd), escCsv(e.output)].join(";") + "\n";
           });
           _downloadBlob("﻿" + csv, "text/csv;charset=utf-8", `mestre-output-${stamp}.csv`);
         } else if (format === "excel") {
@@ -2899,7 +2927,7 @@
           const escXml = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
           let rows = `<Row ss:StyleID="header"><Cell><Data ss:Type="String">#</Data></Cell><Cell><Data ss:Type="String">Status</Data></Cell><Cell><Data ss:Type="String">Data</Data></Cell><Cell><Data ss:Type="String">Comando</Data></Cell><Cell><Data ss:Type="String">Output</Data></Cell></Row>`;
           outputHistory.forEach((e, i) => {
-            rows += `<Row><Cell><Data ss:Type="Number">${i + 1}</Data></Cell><Cell><Data ss:Type="String">${e.success ? "Sucesso" : "Falha"}</Data></Cell><Cell><Data ss:Type="String">${escXml(new Date(e.date).toLocaleString("pt-BR"))}</Data></Cell><Cell><Data ss:Type="String">${escXml(e.cmd)}</Data></Cell><Cell><Data ss:Type="String">${escXml(e.output).slice(0, 32000)}</Data></Cell></Row>`;
+            rows += `<Row><Cell><Data ss:Type="Number">${i + 1}</Data></Cell><Cell><Data ss:Type="String">${infoStatus(e).texto}</Data></Cell><Cell><Data ss:Type="String">${escXml(new Date(e.date).toLocaleString("pt-BR"))}</Data></Cell><Cell><Data ss:Type="String">${escXml(e.cmd)}</Data></Cell><Cell><Data ss:Type="String">${escXml(e.output).slice(0, 32000)}</Data></Cell></Row>`;
           });
           const xml = `<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Styles><Style ss:ID="header"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#4472C4" ss:Pattern="Solid"/></Style></Styles><Worksheet ss:Name="Output Mestre do PC"><Table><Column ss:Width="30"/><Column ss:Width="70"/><Column ss:Width="120"/><Column ss:Width="260"/><Column ss:Width="400"/>${rows}</Table></Worksheet></Workbook>`;
           _downloadBlob(xml, "application/vnd.ms-excel", `mestre-output-${stamp}.xls`);
@@ -2909,7 +2937,7 @@
           let body = `<h1 style="color:#00758f">Relatório de Comandos — Mestre do PC V11</h1>`;
           body += `<p><b>Data:</b> ${meta.data}<br/><b>Computador:</b> ${meta.computador}<br/><b>Total:</b> ${meta.total} | <b>Sucessos:</b> ${meta.sucessos} | <b>Falhas:</b> ${meta.falhas}</p><hr/>`;
           outputHistory.forEach((e, i) => {
-            body += `<h3>${i + 1}. ${e.success ? "✅" : "❌"} Comando — ${new Date(e.date).toLocaleString("pt-BR")}</h3>`;
+            body += `<h3>${i + 1}. ${infoStatus(e).icon} Comando — ${new Date(e.date).toLocaleString("pt-BR")}</h3>`;
             body += `<pre style="background:#f4f4f4;padding:8px;border-radius:4px;font-family:Consolas,monospace">${escHtml(e.cmd)}</pre>`;
             body += `<p><b>Output:</b></p><pre style="background:#f9f9f9;padding:8px;border-radius:4px;font-family:Consolas,monospace;white-space:pre-wrap">${escHtml(e.output) || "(sem output)"}</pre><hr/>`;
           });
@@ -2924,7 +2952,7 @@
           body += `<p><b>Total:</b> ${meta.total} &nbsp; <b>Sucessos:</b> ${meta.sucessos} &nbsp; <b>Falhas:</b> ${meta.falhas}</p><hr/>`;
           outputHistory.forEach((e, i) => {
             body += `<div style="page-break-inside:avoid;margin-bottom:14px">`;
-            body += `<h3>${i + 1}. ${e.success ? "✅" : "❌"} — ${new Date(e.date).toLocaleString("pt-BR")}</h3>`;
+            body += `<h3>${i + 1}. ${infoStatus(e).icon} — ${new Date(e.date).toLocaleString("pt-BR")}</h3>`;
             body += `<pre style="background:#f4f4f4;padding:8px;border-radius:4px;font-family:Consolas,monospace;white-space:pre-wrap">${escHtml(e.cmd)}</pre>`;
             body += `<pre style="background:#f9f9f9;padding:8px;border-radius:4px;font-family:Consolas,monospace;white-space:pre-wrap">${escHtml(e.output) || "(sem output)"}</pre></div>`;
           });

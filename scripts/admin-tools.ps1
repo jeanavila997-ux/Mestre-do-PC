@@ -76,8 +76,10 @@ if ($Elevadas.ContainsKey($Action) -and -not $Elevado) {
   $argumentos = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ('"{0}"' -f $PSCommandPath), '-Action', $Action, '-Elevado')
   try {
     Start-Process -FilePath 'powershell.exe' -Verb RunAs -ArgumentList $argumentos -ErrorAction Stop | Out-Null
-    Write-Host "Janela de administrador aberta (UAC) para $($Elevadas[$Action]). Acompanhe por lá." -ForegroundColor Green
-    exit 0
+    Write-Host "Janela de administrador aberta (UAC) para $($Elevadas[$Action]). O resultado aparece naquela janela." -ForegroundColor Cyan
+    # 10 = "aberto como admin": o painel não marca sucesso nem falha, porque o
+    # trabalho ainda vai rodar na outra janela.
+    exit 10
   } catch {
     Write-Host "UAC recusado ou falhou: $($_.Exception.Message)" -ForegroundColor Yellow
     exit 1
