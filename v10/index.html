@@ -294,6 +294,24 @@
         --warning: #f0a800;
         --purple: #a200ff;
       }
+      /* ===== Abas da tela inicial (V11.3) =====
+         Cada bloco da página diz em quais abas aparece (data-aba="inicio rede ...").
+         A aba ativa fica em body[data-aba-ativa]; durante a busca, todas as
+         categorias de comandos aparecem. */
+      .abas { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 18px; padding: 6px; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; position: sticky; top: 0; z-index: 20; }
+      .aba { flex: 1 1 auto; min-width: 110px; padding: 9px 14px; border: 1px solid transparent; border-radius: 9px; background: transparent; color: var(--text); font: inherit; font-weight: 600; cursor: pointer; opacity: .75; transition: background .15s, opacity .15s, border-color .15s; }
+      .aba:hover { opacity: 1; background: rgba(0,212,255,0.08); }
+      .aba[aria-selected="true"] { opacity: 1; background: rgba(0,212,255,0.14); border-color: rgba(0,212,255,0.45); color: var(--accent); }
+      .aba:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+      .aba-vazia { display: none; padding: 28px; text-align: center; color: #8b949e; border: 1px dashed var(--border); border-radius: 12px; }
+      #redeHost:empty { display: none; }
+      body[data-aba-ativa="inicio"] [data-aba]:not([data-aba~="inicio"]),
+      body[data-aba-ativa="comandos"] [data-aba]:not([data-aba~="comandos"]),
+      body[data-aba-ativa="rede"] [data-aba]:not([data-aba~="rede"]),
+      body[data-aba-ativa="seguranca"] [data-aba]:not([data-aba~="seguranca"]),
+      body[data-aba-ativa="ia"] [data-aba]:not([data-aba~="ia"]),
+      body[data-aba-ativa="busca"] [data-aba]:not(.category):not([data-aba~="comandos"]) { display: none !important; }
+      @media (max-width: 768px) { .aba { min-width: 0; flex: 1 1 30%; padding: 8px 6px; font-size: .85rem; } }
       /* ===== TEMA CLARO (NOVO V10) ===== */
       body.light {
         --bg: #f6f8fa;
@@ -1051,7 +1069,14 @@
           </section>
         </div>
       </header>
-      <div class="dashboard" id="dashboard">
+      <nav class="abas" id="abas" role="tablist" aria-label="Seções do painel">
+        <button type="button" class="aba" role="tab" id="aba-inicio" data-aba-alvo="inicio" aria-selected="true">🏠 Início</button>
+        <button type="button" class="aba" role="tab" id="aba-comandos" data-aba-alvo="comandos" aria-selected="false">🧰 Comandos</button>
+        <button type="button" class="aba" role="tab" id="aba-rede" data-aba-alvo="rede" aria-selected="false">📡 Rede</button>
+        <button type="button" class="aba" role="tab" id="aba-seguranca" data-aba-alvo="seguranca" aria-selected="false">🛡️ Segurança</button>
+        <button type="button" class="aba" role="tab" id="aba-ia" data-aba-alvo="ia" aria-selected="false">🤖 IA &amp; Dev</button>
+      </nav>
+      <div class="dashboard" id="dashboard" data-aba="inicio">
         <article class="metric-card" id="cardCpu" data-tone="neutral">
           <div class="metric-top"><span class="metric-label" id="labelCpu">CPU</span><span class="metric-icon" aria-hidden="true">🖥️</span></div>
           <div class="metric-value" id="mCpu">--</div>
@@ -1076,7 +1101,7 @@
           <div class="metric-foot"><span class="metric-hint">desde a última inicialização</span></div>
         </article>
       </div>
-      <div class="info-bar" id="serverStatus">
+      <div class="info-bar" id="serverStatus" data-aba="inicio">
         <div class="status-container">
           <div id="launcherStatus"><span id="launcherStatusIcon">🔴</span> <span id="statusText">Launcher offline — <strong>Execute o atalho Mestre do PC</strong></span></div>
           <div id="mcpStatus" class="status-divider"><span id="mcpStatusIcon">⚪</span> MCP: <span id="mcpStatusText">Indisponível</span></div>
@@ -1086,14 +1111,14 @@
           <button class="btn-verify" id="modoLivreBtn" type="button" onclick="toggleModoLivre()" title="Opt-in: PowerShell fora da whitelist. Só liga com a sua confirmação.">🔒 Modo Livre</button>
         </div>
       </div>
-      <div id="aprovacoesPendentes" hidden></div>
+      <div id="aprovacoesPendentes" hidden data-aba="inicio seguranca"></div>
       <!-- NOVO: Barra de favoritos -->
-      <div class="favorites-bar" id="favBar">
+      <div class="favorites-bar" id="favBar" data-aba="inicio comandos">
         <span class="fav-label">⭐ Favoritos:</span>
         <div id="favList" style="display:contents"></div>
       </div>
       <!-- NOVO: Painel de fila de comandos -->
-      <div class="queue-panel" id="queuePanel">
+      <div class="queue-panel" id="queuePanel" data-aba="inicio comandos">
         <div class="queue-header">
           <h2>📋 Fila de Comandos (<span id="queueCount">0</span>)</h2>
           <div class="queue-actions">
@@ -1131,7 +1156,8 @@
         </div>
       </div>
       <!-- Painel de Output -->
-      <div id="outputPanel" class="output-panel">
+      <div id="redeHost" data-aba="rede"></div>
+      <div id="outputPanel" class="output-panel" data-aba="inicio comandos rede seguranca ia">
         <div class="output-header">
           <span class="output-title">⚡ Output do Comando</span>
           <div class="output-header-actions">
@@ -1177,6 +1203,7 @@
         </div>
       </div>
       <div id="categories"></div>
+      <p class="aba-vazia" id="abaVazia">Nenhum comando nesta aba. Use a busca (Ctrl+K) para procurar em todas.</p>
     </div>
     <!-- Confirmação de comando (destrutivo ou fora da whitelist) -->
     <div class="cmd-confirm-overlay" id="cmdConfirmOverlay">
@@ -1270,6 +1297,72 @@
       const opsById = new Map();
       let homeCategories = [];
       const nav = document.getElementById("nav");
+      // <abas>
+      // Em que aba cada categoria de comandos aparece. O resto vai para "Comandos".
+      const ABAS = ["inicio", "comandos", "rede", "seguranca", "ia"];
+      const CATEGORIAS_POR_ABA = {
+        rede: ["rede", "velocidade"],
+        seguranca: ["seguranca", "blue team", "defender", "privacidade", "engenharia reversa (rea)"],
+        ia: ["agentes cli", "modelos", "ollama", "deepseek harness (dsh)", "integracoes", "plugins", "git", "node.js", "python", ".net",
+          "linguagens", "bibliotecas", "pacotes", "devops", "terminal", "powershell", "projeto"],
+      };
+      const CATEGORIAS_UI_IA = ["cat-web", "cat-computer-use", "cat-prompts", "cat-repos-estrela"];
+      function normalizarRotulo(texto) {
+        return String(texto || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+      }
+      function abaDaCategoria(c) {
+        if (c && CATEGORIAS_UI_IA.includes(c.id)) return "ia";
+        const rotulo = normalizarRotulo(c && c.label);
+        for (const [aba, nomes] of Object.entries(CATEGORIAS_POR_ABA)) {
+          if (nomes.includes(rotulo)) return aba;
+        }
+        return "comandos";
+      }
+      // </abas>
+      let abaAtual = "inicio";
+      function lerAbaSalva() {
+        const doHash = (location.hash.match(/^#aba=([a-z]+)$/) || [])[1];
+        if (ABAS.includes(doHash)) return doHash;
+        try { const salva = localStorage.getItem("mestre_v10_aba"); if (ABAS.includes(salva)) return salva; } catch {}
+        return "inicio";
+      }
+      function mudarAba(aba, { focar = false } = {}) {
+        if (!ABAS.includes(aba)) aba = "inicio";
+        abaAtual = aba;
+        const busca = document.getElementById("searchInput");
+        if (busca && busca.value) { busca.value = ""; busca.dispatchEvent(new Event("input")); }
+        document.body.dataset.abaAtiva = aba;
+        document.querySelectorAll("#abas .aba").forEach((b) => {
+          const ativa = b.dataset.abaAlvo === aba;
+          b.setAttribute("aria-selected", ativa ? "true" : "false");
+          b.tabIndex = ativa ? 0 : -1;
+          if (ativa && focar) b.focus();
+        });
+        try { localStorage.setItem("mestre_v10_aba", aba); } catch {}
+        if (location.hash !== "#aba=" + aba) history.replaceState(null, "", "#aba=" + aba);
+        atualizarAbaVazia();
+      }
+      function entrarNaBusca() { document.body.dataset.abaAtiva = "busca"; atualizarAbaVazia(); }
+      function sairDaBusca() { if (document.body.dataset.abaAtiva === "busca") document.body.dataset.abaAtiva = abaAtual; atualizarAbaVazia(); }
+      function atualizarAbaVazia() {
+        const aviso = document.getElementById("abaVazia");
+        if (!aviso) return;
+        const aba = document.body.dataset.abaAtiva;
+        const temCategoria = aba === "busca" || aba === "inicio" || !!document.querySelector(`#categories .category[data-aba~="${aba}"]`);
+        aviso.style.display = temCategoria ? "none" : "block";
+      }
+      document.getElementById("abas").addEventListener("click", (e) => {
+        const b = e.target.closest(".aba");
+        if (b) mudarAba(b.dataset.abaAlvo);
+      });
+      document.getElementById("abas").addEventListener("keydown", (e) => {
+        if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+        const i = ABAS.indexOf(abaAtual);
+        const prox = ABAS[(i + (e.key === "ArrowRight" ? 1 : ABAS.length - 1)) % ABAS.length];
+        mudarAba(prox, { focar: true });
+        e.preventDefault();
+      });
+      mudarAba(lerAbaSalva());
       function recolherMenuLateral() {
         document.body.classList.add("sidebar-collapsed");
       }
@@ -1285,8 +1378,9 @@
           a.textContent = c.label;
           a.dataset.index = String(index + 1);
           a.dataset.cat = c.id;
+          a.dataset.abaCat = abaDaCategoria(c);
           a.title = c.label;
-          a.onclick = () => activateCategory(c.id, { scroll: true, collapseSidebar: true });
+          a.onclick = () => { mudarAba(abaDaCategoria(c)); activateCategory(c.id, { scroll: true, collapseSidebar: true }); };
           nav.appendChild(a);
         });
       }
@@ -1471,6 +1565,7 @@
           const div = document.createElement("div");
           div.className = "category";
           div.id = c.id;
+          div.dataset.aba = abaDaCategoria(c);
           const total = (c.cmds || []).length;
           div.innerHTML = `<div class="category-header" onclick="toggleCat(this)">${escapeHtml(c.label)} <span class="badge">${total} cmds</span> <span class="chevron">▼</span></div><div class="category-content">${renderCards(c.cmds, c.id, false)}</div>`;
           container.appendChild(div);
@@ -1479,6 +1574,7 @@
         if (first) first.classList.add("active");
         bindCategoryObserver();
         renderFavorites();
+        atualizarAbaVazia();
       }
       function activateCategory(id, options = {}) {
         const { scroll = true, collapseSidebar = false } = options;
@@ -1565,6 +1661,7 @@
       }
       // ===== NOVO V10: voltarInicio() — clica na logo para voltar ao topo =====
       function voltarInicio() {
+        mudarAba("inicio");
         window.scrollTo({ top: 0, behavior: "smooth" });
         nav.querySelectorAll(".nav-item").forEach((n) => n.classList.remove("active"));
         document.querySelectorAll(".category").forEach((el) => el.classList.remove("active"));
@@ -2989,6 +3086,8 @@
       // ===== Busca em tempo real (padrão V7) =====
       document.getElementById("searchInput").addEventListener("input", function () {
         const term = this.value.toLowerCase();
+        // Busca procura em todas as abas; ao limpar, volta para a aba de antes.
+        if (term) entrarNaBusca(); else sairDaBusca();
         document.querySelectorAll(".cmd-card").forEach((card) => { card.style.display = card.textContent.toLowerCase().includes(term) ? "" : "none"; });
         document.querySelectorAll(".category").forEach((cat) => {
           const visible = [...cat.querySelectorAll(".cmd-card")].some((c) => c.style.display !== "none");
