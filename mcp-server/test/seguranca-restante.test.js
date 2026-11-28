@@ -111,3 +111,18 @@ test("Windows: o backup do registro gera o .reg de verdade", { skip: process.pla
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test("cache de credenciais e prefetch do SSD gravam onde o Windows lê", async () => {
+  const c = await catalogo();
+  const porId = new Map([...c.operations, ...c.templates].map((o) => [o.id, o]));
+  const cache = comando(porId.get("desativar_cache_credenciais"));
+  assert.match(cache, /Set-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon' -Name 'CachedLogonsCount' -Value '0' -Type String/);
+  assert.doesNotMatch(cache, /Policies\\System' -Name 'CachedLogonsCount'/);
+  const ssd = comando(porId.get("ssd_configurar_prefetch_para_ssd"));
+  assert.match(ssd, /Memory Management\\PrefetchParameters' -Name 'EnablePrefetcher' -Value 3 -Type DWord/);
+  assert.doesNotMatch(ssd, /-Name 'PrefetchParameters'/);
+  for (const id of ["desativar_cache_credenciais", "ssd_configurar_prefetch_para_ssd"]) {
+    assert.equal(porId.get(id).destructive, true, id);
+    assert.equal(porId.get(id).requerAdmin, true, id);
+  }
+});
