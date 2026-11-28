@@ -27,6 +27,7 @@ from collect import (
     _concentration_signal,
     _exact_npm_pin,
     _go_indirect,
+    _GOMOD_REQUIRE,
     _npm_all_locked,
     _npm_spec_kind,
     _pypi_version,
@@ -275,6 +276,10 @@ replace (
 
 exclude github.com/bad/mod v0.0.1
 """
+
+
+def test_gomod_requirement_regex_rejects_repeated_dot_hyphen_input():
+    assert _GOMOD_REQUIRE.match("-." * 5000 + "!") is None
 
 
 def test_gomod_blocks_and_dev_tristate(tmp_path: Path):

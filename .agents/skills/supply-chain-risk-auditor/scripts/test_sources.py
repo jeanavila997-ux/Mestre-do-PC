@@ -29,6 +29,7 @@ from sources import (
     looks_automated,
     normalize_repo,
     osv_advisories,
+    pypi_metadata,
 )
 
 # --------------------------------------------------------------- repo identifiers
@@ -56,6 +57,36 @@ def test_non_github_repo_is_an_identifier_error_not_an_api_failure(tmp_path: Pat
     http = Http(tmp_path, offline=True)
     with pytest.raises(RepoIdentifierError):
         github_repo(http, "https://sr.ht/~someone/project", None)
+
+
+@pytest.mark.parametrize(
+    "repo_id",
+    [
+        "https://github.com.evil/acme/repo",
+        "https://evil.com/github.com/acme/repo",
+        "https://github.com@evil.com/acme/repo",
+    ],
+)
+def test_github_repo_rejects_urls_with_github_as_non_host_text(tmp_path: Path, repo_id: str):
+    with pytest.raises(RepoIdentifierError):
+        github_repo(Http(tmp_path, offline=True), repo_id, None)
+
+
+@pytest.mark.parametrize(
+    ("project_url", "expected_repository"),
+    [
+        ("https://github.com/acme/repo", "github.com/acme/repo"),
+        ("https://github.com.evil/acme/repo", None),
+        ("https://evil.example/?next=github.com", None),
+        ("https://user@evil.example/acme/repo", None),
+    ],
+)
+def test_pypi_repository_uses_url_hostname(project_url: str, expected_repository: str | None):
+    class ProjectHttp:
+        def get_json(self, url: str) -> dict:
+            return {"info": {"project_urls": {"Source": project_url}}}
+
+    assert pypi_metadata(ProjectHttp(), "example")["repository"] == expected_repository
 
 
 def test_bot_heuristic_is_conservative():
