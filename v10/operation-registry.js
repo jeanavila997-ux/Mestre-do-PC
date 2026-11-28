@@ -197,6 +197,9 @@ function escapeRegex(str) {
 function validateParam(name, value, regexSource) {
   if (typeof value !== "string") return null;
   if (value.length === 0 || value.length > 1024) return null;
+  // Valor começando com "-" vira opção do programa chamado (npm, pip, winget,
+  // icacls...) quando o placeholder fica sem aspas: injeção de argumento.
+  if (value.startsWith("-")) return null;
   const re = new RegExp(`^(?:${regexSource})$`);
   return re.test(value) ? value : null;
 }
