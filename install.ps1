@@ -53,6 +53,7 @@ Write-Step "Diretorio de instalacao: $InstallDir"
 $required = @(
     "v10\launcher.js",
     "scripts\Register-MestreTask.ps1",
+    "scripts\admin-tools.ps1",
     "start-mestre.bat",
     "v10\start-v10.bat",
     "v10\index.html",

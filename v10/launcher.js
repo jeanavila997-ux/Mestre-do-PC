@@ -152,14 +152,37 @@ function cleanPSEnv(extra = {}) {
 // para conta elevada — é a checagem clássica no Windows. Roda uma vez no boot e
 // fica em cache; o estado de elevação não muda durante a vida do processo.
 let isElevated = false;
+// `net session` sozinho dá falso "sem admin" quando o serviço Servidor
+// (LanmanServer) está parado. Primeiro olha o nível de integridade do token
+// (High = S-1-16-12288, System = S-1-16-16384); se o whoami falhar, cai no net session.
 function detectarElevacao() {
   return new Promise((resolve) => {
+    const viaNetSession = () => {
+      try {
+        const p = spawn("net", ["session"], { windowsHide: true, stdio: "ignore" });
+        p.on("close", (code) => resolve(code === 0));
+        p.on("error", () => resolve(false));
+      } catch { resolve(false); }
+    };
     try {
-      const p = spawn("net", ["session"], { windowsHide: true, stdio: "ignore" });
-      p.on("close", (code) => resolve(code === 0));
-      p.on("error", () => resolve(false));
-    } catch { resolve(false); }
+      const w = spawn("whoami", ["/groups"], { windowsHide: true });
+      let saida = "";
+      w.stdout.on("data", (d) => (saida += d.toString()));
+      w.on("close", (code) => {
+        if (code === 0 && saida) return resolve(/S-1-16-(12288|16384)\b/.test(saida));
+        viaNetSession();
+      });
+      w.on("error", viaNetSession);
+    } catch { viaNetSession(); }
   });
+}
+
+// Operação marcada com requerAdmin no catálogo não roda sem elevação: antes ela
+// rodava, falhava no meio e (com o ✅ no fim do comando) aparecia como sucesso.
+const MSG_PRECISA_ADMIN = "Este comando precisa de administrador. Feche o Mestre do PC e abra pelo atalho como administrador (ou use a versão do comando em Administração, que pede o UAC).";
+function precisaAdmin(operationId) {
+  const op = operationId ? registry.getById(operationId) : null;
+  return !!(op && op.requerAdmin === true && !isElevated);
 }
 
 let registry = await loadOperationRegistry(join(__dirname, "allowed-operations.json"));
@@ -433,6 +456,7 @@ function classifyCommand(body) {
     id: resolved.id || "",
     title: meta.title || "",
     category: meta.category || "",
+    requerAdmin: meta.requerAdmin === true,
     cmd: resolved.cmd,
   };
 }
@@ -604,6 +628,7 @@ async function runAllowedOperation(operationId, params = {}) {
   if (!op) throw new Error("Operação não encontrada: " + operationId);
   const resolved = resolveCommand({ id: operationId, params });
   if (resolved.error) throw new Error(resolved.error);
+  if (precisaAdmin(operationId)) throw new Error(MSG_PRECISA_ADMIN);
   const id = runPowerShell(resolved.cmd, { id: operationId, destructive: !!op.destructive });
   return new Promise((resolve, reject) => {
     const timer = setInterval(() => {
@@ -956,6 +981,9 @@ const server = http.createServer(async (req, res) => {
       const resolved = resolveCommand(body);
       if (resolved.error) {
         return sendJson(res, 403, { success: false, output: resolved.error }, allowedOrigin);
+      }
+      if (precisaAdmin(resolved.id)) {
+        return sendJson(res, 403, { success: false, output: MSG_PRECISA_ADMIN, state: "needs_admin", requerAdmin: true }, allowedOrigin);
       }
       if (resolved.destructive) {
         const client = headerValue(req, "x-mestre-client");

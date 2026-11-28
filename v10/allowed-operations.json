@@ -62,7 +62,8 @@
       "category": "Outros",
       "destructive": true,
       "command": "Remove-Item \"$env:TEMP\\*\" -Recurse -Force -EA 0; Remove-Item \"C:\\Windows\\Temp\\*\" -Recurse -Force -EA 0; Clear-RecycleBin -Force -EA 0; Write-Host \"✅ Limpeza concluída!\" -ForegroundColor Green",
-      "description": "Executa uma limpeza rápida completa no sistema: esvazia a lixeira e limpa pastas temporárias."
+      "description": "Executa uma limpeza rápida completa no sistema: esvazia a lixeira e limpa pastas temporárias.",
+      "requerAdmin": true
     },
     {
       "id": "limpar_temp_usuario",
@@ -78,7 +79,8 @@
       "category": "Limpeza",
       "destructive": true,
       "command": "Remove-Item -Path \"C:\\Windows\\Temp\\*\" -Recurse -Force -ErrorAction SilentlyContinue",
-      "description": "Limpa TEMP do Windows."
+      "description": "Limpa TEMP do Windows.",
+      "requerAdmin": true
     },
     {
       "id": "esvaziar_lixeira",
@@ -94,7 +96,8 @@
       "category": "Limpeza",
       "destructive": true,
       "command": "Stop-Service wuauserv -Force; Remove-Item \"C:\\Windows\\SoftwareDistribution\\Download\\*\" -Recurse -Force -EA 0; Start-Service wuauserv; Write-Host \"✅ Cache WU limpo!\" -ForegroundColor Green",
-      "description": "Limpa o cache do Windows Update paralisando e reiniciando o serviço."
+      "description": "Limpa o cache do Windows Update paralisando e reiniciando o serviço.",
+      "requerAdmin": true
     },
     {
       "id": "limpar_prefetch",
@@ -102,7 +105,8 @@
       "category": "Limpeza",
       "destructive": true,
       "command": "Remove-Item \"C:\\Windows\\Prefetch\\*\" -Force -EA 0; Write-Host \"✅ Prefetch limpo!\" -ForegroundColor Green",
-      "description": "Limpa Prefetch."
+      "description": "Limpa Prefetch.",
+      "requerAdmin": true
     },
     {
       "id": "limpar_minidump_crash_logs",
@@ -110,7 +114,8 @@
       "category": "Limpeza",
       "destructive": true,
       "command": "Remove-Item \"C:\\Windows\\Minidump\\*\" -Force -EA 0; Remove-Item \"$env:LOCALAPPDATA\\CrashDumps\\*\" -Recurse -Force -EA 0; Write-Host \"✅ Dumps limpos!\" -ForegroundColor Green",
-      "description": "Limpa Minidump."
+      "description": "Limpa Minidump.",
+      "requerAdmin": true
     },
     {
       "id": "limpar_cache_dns",
@@ -126,7 +131,8 @@
       "category": "Outros",
       "destructive": true,
       "command": "Remove-Item \"$env:TEMP\\*\" -Recurse -Force -EA 0; Remove-Item \"C:\\Windows\\Temp\\*\" -Recurse -Force -EA 0; Remove-Item \"C:\\Windows\\Prefetch\\*\" -Force -EA 0; Clear-RecycleBin -Force -EA 0; ipconfig /flushdns; Write-Host \"✅ Limpeza profunda concluída!\" -ForegroundColor Green",
-      "description": "Limpeza Profunda."
+      "description": "Limpeza Profunda.",
+      "requerAdmin": true
     },
     {
       "id": "limpar_cache_do_chrome",
@@ -158,7 +164,8 @@
       "category": "Limpeza",
       "destructive": true,
       "command": "Stop-Service FontCache -Force -EA 0; Remove-Item \"$env:WINDIR\\ServiceProfiles\\LocalService\\AppData\\Local\\FontCache\\*\" -Recurse -Force -EA 0; Start-Service FontCache; Write-Host \"✅ Cache de fontes limpo!\" -ForegroundColor Green",
-      "description": "Limpa Cache de Fontes."
+      "description": "Limpa Cache de Fontes.",
+      "requerAdmin": true
     },
     {
       "id": "cleanmgr_modo_silencioso",
@@ -190,7 +197,8 @@
       "category": "Limpeza",
       "destructive": false,
       "command": "Get-EventLog -List | ForEach-Object { Clear-EventLog -LogName $_.Log -EA 0 }; Write-Host \"✅ Logs de eventos limpos!\" -ForegroundColor Green",
-      "description": "Limpa todos os logs do Event Viewer do Windows."
+      "description": "Limpa todos os logs do Event Viewer do Windows.",
+      "requerAdmin": true
     },
     {
       "id": "limpar_cache_do_microsoft_store",
@@ -222,7 +230,8 @@
       "category": "Limpeza",
       "destructive": false,
       "command": "DISM /Online /Cleanup-Image /StartComponentCleanup /ResetBase",
-      "description": "Compacta WinSxS."
+      "description": "Compacta WinSxS.",
+      "requerAdmin": true
     },
     {
       "id": "limpar_arquivos_desnecessarios_do_sistema",
@@ -230,7 +239,8 @@
       "category": "Outros",
       "destructive": false,
       "command": "DISM /Online /Cleanup-Image /StartComponentCleanup",
-      "description": "Limpa Arquivos Desnecessários do Sistema."
+      "description": "Limpa Arquivos Desnecessários do Sistema.",
+      "requerAdmin": true
     },
     {
       "id": "limpar_cache_do_spotify",
@@ -286,7 +296,8 @@
       "category": "Outros",
       "destructive": true,
       "command": "Set-Service -Name \"SysMain\" -StartupType Disabled; Stop-Service -Name \"SysMain\" -Force; Write-Host \"✅ SysMain desativado!\" -ForegroundColor Green",
-      "description": "Desativa SuperFetch."
+      "description": "Desativa SuperFetch.",
+      "requerAdmin": true
     },
     {
       "id": "reativar_superfetch_sysmain",
@@ -294,7 +305,8 @@
       "category": "Outros",
       "destructive": false,
       "command": "Set-Service -Name \"SysMain\" -StartupType Automatic; Start-Service -Name \"SysMain\"; Write-Host \"✅ SysMain reativado!\" -ForegroundColor Green",
-      "description": "Reativar SuperFetch."
+      "description": "Reativar SuperFetch.",
+      "requerAdmin": true
     },
     {
       "id": "iniciar_servico_audio",
@@ -302,7 +314,8 @@
       "category": "Sistema",
       "destructive": false,
       "command": "Start-Service -Name audiosrv -ErrorAction SilentlyContinue; if ((Get-Service -Name audiosrv).Status -eq 'Running') { Write-Host '✅ Serviço de áudio iniciado com sucesso!' -ForegroundColor Green } else { Write-Warning 'O serviço de áudio não conseguiu iniciar.' }",
-      "description": "Inicia Serviço de Áudio."
+      "description": "Inicia Serviço de Áudio.",
+      "requerAdmin": true
     },
     {
       "id": "reiniciar_servico_audio",
@@ -310,7 +323,8 @@
       "category": "Sistema",
       "destructive": false,
       "command": "Restart-Service -Name audiosrv -Force -ErrorAction SilentlyContinue; Start-Service -Name AudioEndpointBuilder -ErrorAction SilentlyContinue; Write-Host '✅ Serviço de áudio reiniciado!' -ForegroundColor Green",
-      "description": "Reinicia Serviço de Áudio."
+      "description": "Reinicia Serviço de Áudio.",
+      "requerAdmin": true
     },
     {
       "id": "verificar_status_servicos_audio",
@@ -334,7 +348,8 @@
       "category": "Destrutiva",
       "destructive": true,
       "command": "Stop-Service -Name AudioEndpointBuilder -Force -ErrorAction SilentlyContinue; Stop-Service -Name audiosrv -Force -ErrorAction SilentlyContinue; Get-PnpDevice -Class MEDIA | Where-Object { $_.FriendlyName -match 'Audio|Som|Realtek|NVIDIA|AMD|Intel' } | Disable-PnpDevice -Confirm:$false -ErrorAction SilentlyContinue; Start-Sleep -Seconds 3; Get-PnpDevice -Class MEDIA | Where-Object { $_.FriendlyName -match 'Audio|Som|Realtek|NVIDIA|AMD|Intel' } | Enable-PnpDevice -Confirm:$false -ErrorAction SilentlyContinue; Start-Service -Name AudioEndpointBuilder -ErrorAction SilentlyContinue; Start-Service -Name audiosrv -ErrorAction SilentlyContinue; Write-Host '✅ Subsistema de áudio resetado!' -ForegroundColor Green",
-      "description": "Resetar Subsistema de Áudio."
+      "description": "Resetar Subsistema de Áudio.",
+      "requerAdmin": true
     },
     {
       "id": "reparar_arquivos_sistema_audio",
@@ -342,7 +357,8 @@
       "category": "Sistema",
       "destructive": false,
       "command": "DISM /Online /Cleanup-Image /RestoreHealth; sfc /scannow",
-      "description": "Repara Arquivos do Sistema."
+      "description": "Repara Arquivos do Sistema.",
+      "requerAdmin": true
     },
     {
       "id": "verificar_modo_de_memoria_virtual",
@@ -414,7 +430,8 @@
       "category": "Processos",
       "destructive": true,
       "command": "Set-Service -Name \"NOME_SERVICO\" -StartupType Disabled; Stop-Service \"NOME_SERVICO\" -Force",
-      "description": "Desativa Serviço por Nome."
+      "description": "Desativa Serviço por Nome.",
+      "requerAdmin": true
     },
     {
       "id": "reiniciar_explorer",
@@ -526,7 +543,8 @@
       "category": "Outros",
       "destructive": false,
       "command": "netsh int ip reset; netsh winsock reset; Write-Host \"✅ TCP/IP resetado! Reinicie o PC.\" -ForegroundColor Green",
-      "description": "Resetar Pilha TCP/IP."
+      "description": "Resetar Pilha TCP/IP.",
+      "requerAdmin": true
     },
     {
       "id": "ver_adaptadores_de_rede",
@@ -558,7 +576,8 @@
       "category": "Reparo",
       "destructive": false,
       "command": "sfc /scannow",
-      "description": "Executa o sfc /scannow para reparar arquivos corrompidos do sistema."
+      "description": "Executa o sfc /scannow para reparar arquivos corrompidos do sistema.",
+      "requerAdmin": true
     },
     {
       "id": "dism_restaurar_saude",
@@ -566,7 +585,8 @@
       "category": "Reparo",
       "destructive": false,
       "command": "DISM /Online /Cleanup-Image /RestoreHealth",
-      "description": "Executa a restauração da imagem do Windows (DISM /RestoreHealth)."
+      "description": "Executa a restauração da imagem do Windows (DISM /RestoreHealth).",
+      "requerAdmin": true
     },
     {
       "id": "dism_verificar_saude",
@@ -574,7 +594,8 @@
       "category": "Reparo",
       "destructive": false,
       "command": "DISM /Online /Cleanup-Image /CheckHealth",
-      "description": "DISM Verificar Saúde."
+      "description": "DISM Verificar Saúde.",
+      "requerAdmin": true
     },
     {
       "id": "dism_scan_saude",
@@ -582,7 +603,8 @@
       "category": "Reparo",
       "destructive": false,
       "command": "DISM /Online /Cleanup-Image /ScanHealth",
-      "description": "DISM Scan Saúde."
+      "description": "DISM Scan Saúde.",
+      "requerAdmin": true
     },
     {
       "id": "reparar_windows_update",
@@ -590,7 +612,8 @@
       "category": "Atualizações",
       "destructive": true,
       "command": "net stop wuauserv; net stop cryptSvc; net stop bits; net stop msiserver; Remove-Item \"C:\\Windows\\SoftwareDistribution\" -Recurse -Force -EA 0; net start wuauserv; net start cryptSvc; net start bits; net start msiserver; Write-Host \"✅ WU reparado!\" -ForegroundColor Green",
-      "description": "Repara Windows Update."
+      "description": "Repara Windows Update.",
+      "requerAdmin": true
     },
     {
       "id": "reparar_net_framework",
@@ -598,7 +621,8 @@
       "category": "Memória",
       "destructive": false,
       "command": "DISM /Online /Enable-Feature /FeatureName:NetFx3 /All",
-      "description": "Repara .NET Framework."
+      "description": "Repara .NET Framework.",
+      "requerAdmin": true
     },
     {
       "id": "verificar_erros_de_boot",
@@ -710,7 +734,8 @@
       "category": "Reparo",
       "destructive": false,
       "command": "Write-Host \"Etapa 1/2: DISM...\" -ForegroundColor Yellow; DISM /Online /Cleanup-Image /ScanHealth; Write-Host \"Etapa 2/2: SFC...\" -ForegroundColor Yellow; sfc /scannow; Write-Host \"✅ Verificação completa!\" -ForegroundColor Green",
-      "description": "Verifica Integridade do Sistema."
+      "description": "Verifica Integridade do Sistema.",
+      "requerAdmin": true
     },
     {
       "id": "verificar_atualizacoes_pendentes",
@@ -980,17 +1005,17 @@
       "id": "desativar_anuncios_na_tela_de_bloqueio",
       "title": "Desativar Anúncios na Tela de Bloqueio",
       "category": "Outros",
-      "destructive": false,
-      "command": "Set-ItemProperty \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager\" -Name \"RotatingLockScreenOverlaysEnabled\" -Value 0; Write-Host \"✅ Anúncios desativados!\" -ForegroundColor Green",
-      "description": "Desativa Anúncios na Tela de Bloqueio."
+      "destructive": true,
+      "command": "$bk = Join-Path $env:LOCALAPPDATA 'MestreDoPC\\backup-registro'; New-Item -ItemType Directory -Force -Path $bk | Out-Null; $ts = Get-Date -Format 'yyyyMMdd-HHmmss'; $n = 0; foreach ($c in @('HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager')) { $n++; if (Test-Path -LiteralPath ('Registry::' + $c)) { $arq = Join-Path $bk ('desativar_anuncios_na_tela_de_bloqueio-' + $n + '-' + $ts + '.reg'); reg export $c $arq /y | Out-Null; if ($LASTEXITCODE -ne 0) { Write-Host '[ERRO] Backup do registro falhou; nada foi alterado.' -ForegroundColor Red; exit 1 } } }; Write-Host ('Backup do registro em ' + $bk) -ForegroundColor DarkGray; Set-ItemProperty \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager\" -Name \"RotatingLockScreenOverlaysEnabled\" -Value 0; Write-Host \"✅ Anúncios desativados!\" -ForegroundColor Green",
+      "description": "Desativa Anúncios na Tela de Bloqueio. Antes de alterar, salva um backup .reg da chave em %LOCALAPPDATA%\\MestreDoPC\\backup-registro."
     },
     {
       "id": "desativar_sugestoes_no_menu_iniciar",
       "title": "Desativar Sugestões no Menu Iniciar",
       "category": "Outros",
-      "destructive": false,
-      "command": "Set-ItemProperty \"HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager\" -Name \"SystemPaneSuggestionsEnabled\" -Value 0; Write-Host \"✅ Sugestões desativadas!\" -ForegroundColor Green",
-      "description": "Desativa Sugestões no Menu Iniciar."
+      "destructive": true,
+      "command": "$bk = Join-Path $env:LOCALAPPDATA 'MestreDoPC\\backup-registro'; New-Item -ItemType Directory -Force -Path $bk | Out-Null; $ts = Get-Date -Format 'yyyyMMdd-HHmmss'; $n = 0; foreach ($c in @('HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager')) { $n++; if (Test-Path -LiteralPath ('Registry::' + $c)) { $arq = Join-Path $bk ('desativar_sugestoes_no_menu_iniciar-' + $n + '-' + $ts + '.reg'); reg export $c $arq /y | Out-Null; if ($LASTEXITCODE -ne 0) { Write-Host '[ERRO] Backup do registro falhou; nada foi alterado.' -ForegroundColor Red; exit 1 } } }; Write-Host ('Backup do registro em ' + $bk) -ForegroundColor DarkGray; Set-ItemProperty \"HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager\" -Name \"SystemPaneSuggestionsEnabled\" -Value 0; Write-Host \"✅ Sugestões desativadas!\" -ForegroundColor Green",
+      "description": "Desativa Sugestões no Menu Iniciar. Antes de alterar, salva um backup .reg da chave em %LOCALAPPDATA%\\MestreDoPC\\backup-registro."
     },
     {
       "id": "desinstalar_onedrive",
@@ -1148,17 +1173,17 @@
       "id": "ativar_modo_jogo_game_mode",
       "title": "Ativar Modo Jogo (Game Mode)",
       "category": "Performance",
-      "destructive": false,
-      "command": "Set-ItemProperty 'HKCU:\\Software\\Microsoft\\GameBar' -Name 'AllowAutoGameMode' -Value 1; Set-ItemProperty 'HKCU:\\Software\\Microsoft\\GameBar' -Name 'AutoGameModeEnabled' -Value 1; Write-Host '✅ Modo Jogo ativado!' -ForegroundColor Green",
-      "description": "Ativar Modo Jogo."
+      "destructive": true,
+      "command": "$bk = Join-Path $env:LOCALAPPDATA 'MestreDoPC\\backup-registro'; New-Item -ItemType Directory -Force -Path $bk | Out-Null; $ts = Get-Date -Format 'yyyyMMdd-HHmmss'; $n = 0; foreach ($c in @('HKCU\\Software\\Microsoft\\GameBar')) { $n++; if (Test-Path -LiteralPath ('Registry::' + $c)) { $arq = Join-Path $bk ('ativar_modo_jogo_game_mode-' + $n + '-' + $ts + '.reg'); reg export $c $arq /y | Out-Null; if ($LASTEXITCODE -ne 0) { Write-Host '[ERRO] Backup do registro falhou; nada foi alterado.' -ForegroundColor Red; exit 1 } } }; Write-Host ('Backup do registro em ' + $bk) -ForegroundColor DarkGray; Set-ItemProperty 'HKCU:\\Software\\Microsoft\\GameBar' -Name 'AllowAutoGameMode' -Value 1; Set-ItemProperty 'HKCU:\\Software\\Microsoft\\GameBar' -Name 'AutoGameModeEnabled' -Value 1; Write-Host '✅ Modo Jogo ativado!' -ForegroundColor Green",
+      "description": "Ativar Modo Jogo. Antes de alterar, salva um backup .reg da chave em %LOCALAPPDATA%\\MestreDoPC\\backup-registro."
     },
     {
       "id": "desativar_modo_jogo",
       "title": "Desativar Modo Jogo",
       "category": "Performance",
-      "destructive": false,
-      "command": "Set-ItemProperty 'HKCU:\\Software\\Microsoft\\GameBar' -Name 'AutoGameModeEnabled' -Value 0; Write-Host '✅ Modo Jogo desativado!' -ForegroundColor Green",
-      "description": "Desativa Modo Jogo."
+      "destructive": true,
+      "command": "$bk = Join-Path $env:LOCALAPPDATA 'MestreDoPC\\backup-registro'; New-Item -ItemType Directory -Force -Path $bk | Out-Null; $ts = Get-Date -Format 'yyyyMMdd-HHmmss'; $n = 0; foreach ($c in @('HKCU\\Software\\Microsoft\\GameBar')) { $n++; if (Test-Path -LiteralPath ('Registry::' + $c)) { $arq = Join-Path $bk ('desativar_modo_jogo-' + $n + '-' + $ts + '.reg'); reg export $c $arq /y | Out-Null; if ($LASTEXITCODE -ne 0) { Write-Host '[ERRO] Backup do registro falhou; nada foi alterado.' -ForegroundColor Red; exit 1 } } }; Write-Host ('Backup do registro em ' + $bk) -ForegroundColor DarkGray; Set-ItemProperty 'HKCU:\\Software\\Microsoft\\GameBar' -Name 'AutoGameModeEnabled' -Value 0; Write-Host '✅ Modo Jogo desativado!' -ForegroundColor Green",
+      "description": "Desativa Modo Jogo. Antes de alterar, salva um backup .reg da chave em %LOCALAPPDATA%\\MestreDoPC\\backup-registro."
     },
     {
       "id": "plano_de_energia_alto_desempenho",
@@ -1188,25 +1213,25 @@
       "id": "desativar_efeitos_visuais_performance",
       "title": "Desativar Efeitos Visuais (Performance)",
       "category": "Performance",
-      "destructive": false,
-      "command": "Set-ItemProperty 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\VisualEffects' -Name 'VisualFXSetting' -Value 2; Write-Host '✅ Efeitos visuais otimizados para performance!' -ForegroundColor Green",
-      "description": "Desativa Efeitos Visuais."
+      "destructive": true,
+      "command": "$bk = Join-Path $env:LOCALAPPDATA 'MestreDoPC\\backup-registro'; New-Item -ItemType Directory -Force -Path $bk | Out-Null; $ts = Get-Date -Format 'yyyyMMdd-HHmmss'; $n = 0; foreach ($c in @('HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\VisualEffects')) { $n++; if (Test-Path -LiteralPath ('Registry::' + $c)) { $arq = Join-Path $bk ('desativar_efeitos_visuais_performance-' + $n + '-' + $ts + '.reg'); reg export $c $arq /y | Out-Null; if ($LASTEXITCODE -ne 0) { Write-Host '[ERRO] Backup do registro falhou; nada foi alterado.' -ForegroundColor Red; exit 1 } } }; Write-Host ('Backup do registro em ' + $bk) -ForegroundColor DarkGray; Set-ItemProperty 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\VisualEffects' -Name 'VisualFXSetting' -Value 2; Write-Host '✅ Efeitos visuais otimizados para performance!' -ForegroundColor Green",
+      "description": "Desativa Efeitos Visuais. Antes de alterar, salva um backup .reg da chave em %LOCALAPPDATA%\\MestreDoPC\\backup-registro."
     },
     {
       "id": "restaurar_efeitos_visuais_padrao",
       "title": "Restaurar Efeitos Visuais (Padrão)",
       "category": "Performance",
-      "destructive": false,
-      "command": "Set-ItemProperty 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\VisualEffects' -Name 'VisualFXSetting' -Value 0; Write-Host '✅ Efeitos visuais restaurados!' -ForegroundColor Green",
-      "description": "Restaura Efeitos Visuais."
+      "destructive": true,
+      "command": "$bk = Join-Path $env:LOCALAPPDATA 'MestreDoPC\\backup-registro'; New-Item -ItemType Directory -Force -Path $bk | Out-Null; $ts = Get-Date -Format 'yyyyMMdd-HHmmss'; $n = 0; foreach ($c in @('HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\VisualEffects')) { $n++; if (Test-Path -LiteralPath ('Registry::' + $c)) { $arq = Join-Path $bk ('restaurar_efeitos_visuais_padrao-' + $n + '-' + $ts + '.reg'); reg export $c $arq /y | Out-Null; if ($LASTEXITCODE -ne 0) { Write-Host '[ERRO] Backup do registro falhou; nada foi alterado.' -ForegroundColor Red; exit 1 } } }; Write-Host ('Backup do registro em ' + $bk) -ForegroundColor DarkGray; Set-ItemProperty 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\VisualEffects' -Name 'VisualFXSetting' -Value 0; Write-Host '✅ Efeitos visuais restaurados!' -ForegroundColor Green",
+      "description": "Restaura Efeitos Visuais. Antes de alterar, salva um backup .reg da chave em %LOCALAPPDATA%\\MestreDoPC\\backup-registro."
     },
     {
       "id": "desativar_animacoes_do_windows",
       "title": "Desativar Animacoes do Windows",
       "category": "Performance",
-      "destructive": false,
-      "command": "Set-ItemProperty 'HKCU:\\Control Panel\\Desktop\\WindowMetrics' -Name 'MinAnimate' -Value 0; Write-Host '✅ Animacoes desativadas!' -ForegroundColor Green",
-      "description": "Desativa Animacoes do Windows."
+      "destructive": true,
+      "command": "$bk = Join-Path $env:LOCALAPPDATA 'MestreDoPC\\backup-registro'; New-Item -ItemType Directory -Force -Path $bk | Out-Null; $ts = Get-Date -Format 'yyyyMMdd-HHmmss'; $n = 0; foreach ($c in @('HKCU\\Control Panel\\Desktop\\WindowMetrics')) { $n++; if (Test-Path -LiteralPath ('Registry::' + $c)) { $arq = Join-Path $bk ('desativar_animacoes_do_windows-' + $n + '-' + $ts + '.reg'); reg export $c $arq /y | Out-Null; if ($LASTEXITCODE -ne 0) { Write-Host '[ERRO] Backup do registro falhou; nada foi alterado.' -ForegroundColor Red; exit 1 } } }; Write-Host ('Backup do registro em ' + $bk) -ForegroundColor DarkGray; Set-ItemProperty 'HKCU:\\Control Panel\\Desktop\\WindowMetrics' -Name 'MinAnimate' -Value 0; Write-Host '✅ Animacoes desativadas!' -ForegroundColor Green",
+      "description": "Desativa Animacoes do Windows. Antes de alterar, salva um backup .reg da chave em %LOCALAPPDATA%\\MestreDoPC\\backup-registro."
     },
     {
       "id": "prioridade_de_cpu_para_jogos_temp",
@@ -1230,7 +1255,8 @@
       "category": "Backup",
       "destructive": false,
       "command": "Enable-ComputerRestore -Drive 'C:\\'; Checkpoint-Computer -Description 'Mestre do PC - Ponto Manual' -RestorePointType 'MODIFY_SETTINGS'; Write-Host '✅ Ponto de restauração criado!' -ForegroundColor Green",
-      "description": "Cria Ponto de Restauração."
+      "description": "Cria Ponto de Restauração.",
+      "requerAdmin": true
     },
     {
       "id": "listar_pontos_de_restauracao",
@@ -1292,17 +1318,19 @@
       "id": "pausar_windows_update_35_dias",
       "title": "Pausar Windows Update (35 dias)",
       "category": "Atualizações",
-      "destructive": false,
-      "command": "Set-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\WindowsUpdate\\UX\\Settings' -Name 'PauseFeatureUpdatesStartTime' -Value (Get-Date).ToString('yyyy-MM-dd'); Write-Host '✅ Windows Update pausado!' -ForegroundColor Green",
-      "description": "Pausar Windows Update."
+      "destructive": true,
+      "command": "$bk = Join-Path $env:LOCALAPPDATA 'MestreDoPC\\backup-registro'; New-Item -ItemType Directory -Force -Path $bk | Out-Null; $ts = Get-Date -Format 'yyyyMMdd-HHmmss'; $n = 0; foreach ($c in @('HKLM\\SOFTWARE\\Microsoft\\WindowsUpdate\\UX\\Settings')) { $n++; if (Test-Path -LiteralPath ('Registry::' + $c)) { $arq = Join-Path $bk ('pausar_windows_update_35_dias-' + $n + '-' + $ts + '.reg'); reg export $c $arq /y | Out-Null; if ($LASTEXITCODE -ne 0) { Write-Host '[ERRO] Backup do registro falhou; nada foi alterado.' -ForegroundColor Red; exit 1 } } }; Write-Host ('Backup do registro em ' + $bk) -ForegroundColor DarkGray; Set-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\WindowsUpdate\\UX\\Settings' -Name 'PauseFeatureUpdatesStartTime' -Value (Get-Date).ToString('yyyy-MM-dd'); Write-Host '✅ Windows Update pausado!' -ForegroundColor Green",
+      "description": "Pausar Windows Update. Antes de alterar, salva um backup .reg da chave em %LOCALAPPDATA%\\MestreDoPC\\backup-registro.",
+      "requerAdmin": true
     },
     {
       "id": "retomar_windows_update",
       "title": "Retomar Windows Update",
       "category": "Atualizações",
       "destructive": true,
-      "command": "Remove-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\WindowsUpdate\\UX\\Settings' -Name 'PauseFeatureUpdatesStartTime' -EA 0; Write-Host '✅ Windows Update retomado!' -ForegroundColor Green",
-      "description": "Retomar Windows Update."
+      "command": "$bk = Join-Path $env:LOCALAPPDATA 'MestreDoPC\\backup-registro'; New-Item -ItemType Directory -Force -Path $bk | Out-Null; $ts = Get-Date -Format 'yyyyMMdd-HHmmss'; $n = 0; foreach ($c in @('HKLM\\SOFTWARE\\Microsoft\\WindowsUpdate\\UX\\Settings')) { $n++; if (Test-Path -LiteralPath ('Registry::' + $c)) { $arq = Join-Path $bk ('retomar_windows_update-' + $n + '-' + $ts + '.reg'); reg export $c $arq /y | Out-Null; if ($LASTEXITCODE -ne 0) { Write-Host '[ERRO] Backup do registro falhou; nada foi alterado.' -ForegroundColor Red; exit 1 } } }; Write-Host ('Backup do registro em ' + $bk) -ForegroundColor DarkGray; Remove-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\WindowsUpdate\\UX\\Settings' -Name 'PauseFeatureUpdatesStartTime' -EA 0; Write-Host '✅ Windows Update retomado!' -ForegroundColor Green",
+      "description": "Retomar Windows Update. Antes de alterar, salva um backup .reg da chave em %LOCALAPPDATA%\\MestreDoPC\\backup-registro.",
+      "requerAdmin": true
     },
     {
       "id": "historico_de_atualizacoes",
@@ -1420,65 +1448,68 @@
       "id": "desativar_telemetria_diagtrack",
       "title": "Desativar Telemetria (DiagTrack)",
       "category": "Privacidade",
-      "destructive": false,
-      "command": "Set-ItemProperty 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection' -Name 'AllowTelemetry' -Value 0 -EA 0; Write-Host '✅ Telemetria desativada!' -ForegroundColor Green",
-      "description": "Desativa Telemetria."
+      "destructive": true,
+      "command": "$bk = Join-Path $env:LOCALAPPDATA 'MestreDoPC\\backup-registro'; New-Item -ItemType Directory -Force -Path $bk | Out-Null; $ts = Get-Date -Format 'yyyyMMdd-HHmmss'; $n = 0; foreach ($c in @('HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection')) { $n++; if (Test-Path -LiteralPath ('Registry::' + $c)) { $arq = Join-Path $bk ('desativar_telemetria_diagtrack-' + $n + '-' + $ts + '.reg'); reg export $c $arq /y | Out-Null; if ($LASTEXITCODE -ne 0) { Write-Host '[ERRO] Backup do registro falhou; nada foi alterado.' -ForegroundColor Red; exit 1 } } }; Write-Host ('Backup do registro em ' + $bk) -ForegroundColor DarkGray; Set-ItemProperty 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection' -Name 'AllowTelemetry' -Value 0 -EA 0; Write-Host '✅ Telemetria desativada!' -ForegroundColor Green",
+      "description": "Desativa Telemetria. Antes de alterar, salva um backup .reg da chave em %LOCALAPPDATA%\\MestreDoPC\\backup-registro.",
+      "requerAdmin": true
     },
     {
       "id": "restaurar_telemetria_padrao",
       "title": "Restaurar Telemetria (Padrão)",
       "category": "Privacidade",
-      "destructive": false,
-      "command": "Set-ItemProperty 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection' -Name 'AllowTelemetry' -Value 3 -EA 0; Write-Host '✅ Telemetria restaurada!' -ForegroundColor Green",
-      "description": "Restaura Telemetria."
+      "destructive": true,
+      "command": "$bk = Join-Path $env:LOCALAPPDATA 'MestreDoPC\\backup-registro'; New-Item -ItemType Directory -Force -Path $bk | Out-Null; $ts = Get-Date -Format 'yyyyMMdd-HHmmss'; $n = 0; foreach ($c in @('HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection')) { $n++; if (Test-Path -LiteralPath ('Registry::' + $c)) { $arq = Join-Path $bk ('restaurar_telemetria_padrao-' + $n + '-' + $ts + '.reg'); reg export $c $arq /y | Out-Null; if ($LASTEXITCODE -ne 0) { Write-Host '[ERRO] Backup do registro falhou; nada foi alterado.' -ForegroundColor Red; exit 1 } } }; Write-Host ('Backup do registro em ' + $bk) -ForegroundColor DarkGray; Set-ItemProperty 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection' -Name 'AllowTelemetry' -Value 3 -EA 0; Write-Host '✅ Telemetria restaurada!' -ForegroundColor Green",
+      "description": "Restaura Telemetria. Antes de alterar, salva um backup .reg da chave em %LOCALAPPDATA%\\MestreDoPC\\backup-registro.",
+      "requerAdmin": true
     },
     {
       "id": "desativar_id_de_publicidade",
       "title": "Desativar ID de Publicidade",
       "category": "Privacidade",
-      "destructive": false,
-      "command": "Set-ItemProperty 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\AdvertisingInfo' -Name 'Enabled' -Value 0; Write-Host '✅ ID de publicidade desativado!' -ForegroundColor Green",
-      "description": "Desativa ID de Publicidade."
+      "destructive": true,
+      "command": "$bk = Join-Path $env:LOCALAPPDATA 'MestreDoPC\\backup-registro'; New-Item -ItemType Directory -Force -Path $bk | Out-Null; $ts = Get-Date -Format 'yyyyMMdd-HHmmss'; $n = 0; foreach ($c in @('HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\AdvertisingInfo')) { $n++; if (Test-Path -LiteralPath ('Registry::' + $c)) { $arq = Join-Path $bk ('desativar_id_de_publicidade-' + $n + '-' + $ts + '.reg'); reg export $c $arq /y | Out-Null; if ($LASTEXITCODE -ne 0) { Write-Host '[ERRO] Backup do registro falhou; nada foi alterado.' -ForegroundColor Red; exit 1 } } }; Write-Host ('Backup do registro em ' + $bk) -ForegroundColor DarkGray; Set-ItemProperty 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\AdvertisingInfo' -Name 'Enabled' -Value 0; Write-Host '✅ ID de publicidade desativado!' -ForegroundColor Green",
+      "description": "Desativa ID de Publicidade. Antes de alterar, salva um backup .reg da chave em %LOCALAPPDATA%\\MestreDoPC\\backup-registro."
     },
     {
       "id": "desativar_rastreamento_de_localizacao",
       "title": "Desativar Rastreamento de Localização",
       "category": "Privacidade",
-      "destructive": false,
-      "command": "Set-ItemProperty 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Privacy' -Name 'Location' -Value 0 -EA 0; Write-Host '✅ Rastreamento de localização desativado!' -ForegroundColor Green",
-      "description": "Desativa Rastreamento de Localização."
+      "destructive": true,
+      "command": "$bk = Join-Path $env:LOCALAPPDATA 'MestreDoPC\\backup-registro'; New-Item -ItemType Directory -Force -Path $bk | Out-Null; $ts = Get-Date -Format 'yyyyMMdd-HHmmss'; $n = 0; foreach ($c in @('HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Privacy')) { $n++; if (Test-Path -LiteralPath ('Registry::' + $c)) { $arq = Join-Path $bk ('desativar_rastreamento_de_localizacao-' + $n + '-' + $ts + '.reg'); reg export $c $arq /y | Out-Null; if ($LASTEXITCODE -ne 0) { Write-Host '[ERRO] Backup do registro falhou; nada foi alterado.' -ForegroundColor Red; exit 1 } } }; Write-Host ('Backup do registro em ' + $bk) -ForegroundColor DarkGray; Set-ItemProperty 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Privacy' -Name 'Location' -Value 0 -EA 0; Write-Host '✅ Rastreamento de localização desativado!' -ForegroundColor Green",
+      "description": "Desativa Rastreamento de Localização. Antes de alterar, salva um backup .reg da chave em %LOCALAPPDATA%\\MestreDoPC\\backup-registro."
     },
     {
       "id": "desativar_experiencias_tailored",
       "title": "Desativar Experiências Tailored",
       "category": "Outros",
-      "destructive": false,
-      "command": "Set-ItemProperty 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Privacy' -Name 'TailoredExperiencesWithDiagnosticDataEnabled' -Value 0 -EA 0; Write-Host '✅ Experiências personalizadas desativadas!' -ForegroundColor Green",
-      "description": "Desativa Experiências Tailored."
+      "destructive": true,
+      "command": "$bk = Join-Path $env:LOCALAPPDATA 'MestreDoPC\\backup-registro'; New-Item -ItemType Directory -Force -Path $bk | Out-Null; $ts = Get-Date -Format 'yyyyMMdd-HHmmss'; $n = 0; foreach ($c in @('HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Privacy')) { $n++; if (Test-Path -LiteralPath ('Registry::' + $c)) { $arq = Join-Path $bk ('desativar_experiencias_tailored-' + $n + '-' + $ts + '.reg'); reg export $c $arq /y | Out-Null; if ($LASTEXITCODE -ne 0) { Write-Host '[ERRO] Backup do registro falhou; nada foi alterado.' -ForegroundColor Red; exit 1 } } }; Write-Host ('Backup do registro em ' + $bk) -ForegroundColor DarkGray; Set-ItemProperty 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Privacy' -Name 'TailoredExperiencesWithDiagnosticDataEnabled' -Value 0 -EA 0; Write-Host '✅ Experiências personalizadas desativadas!' -ForegroundColor Green",
+      "description": "Desativa Experiências Tailored. Antes de alterar, salva um backup .reg da chave em %LOCALAPPDATA%\\MestreDoPC\\backup-registro."
     },
     {
       "id": "desativar_cortana",
       "title": "Desativar Cortana",
       "category": "Privacidade",
-      "destructive": false,
-      "command": "Set-ItemProperty 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search' -Name 'AllowCortana' -Value 0 -EA 0; Write-Host '✅ Cortana desativada!' -ForegroundColor Green",
-      "description": "Desativa Cortana."
+      "destructive": true,
+      "command": "$bk = Join-Path $env:LOCALAPPDATA 'MestreDoPC\\backup-registro'; New-Item -ItemType Directory -Force -Path $bk | Out-Null; $ts = Get-Date -Format 'yyyyMMdd-HHmmss'; $n = 0; foreach ($c in @('HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search')) { $n++; if (Test-Path -LiteralPath ('Registry::' + $c)) { $arq = Join-Path $bk ('desativar_cortana-' + $n + '-' + $ts + '.reg'); reg export $c $arq /y | Out-Null; if ($LASTEXITCODE -ne 0) { Write-Host '[ERRO] Backup do registro falhou; nada foi alterado.' -ForegroundColor Red; exit 1 } } }; Write-Host ('Backup do registro em ' + $bk) -ForegroundColor DarkGray; Set-ItemProperty 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search' -Name 'AllowCortana' -Value 0 -EA 0; Write-Host '✅ Cortana desativada!' -ForegroundColor Green",
+      "description": "Desativa Cortana. Antes de alterar, salva um backup .reg da chave em %LOCALAPPDATA%\\MestreDoPC\\backup-registro.",
+      "requerAdmin": true
     },
     {
       "id": "desativar_sugestoes_de_conteudo",
       "title": "Desativar Sugestões de Conteúdo",
       "category": "Outros",
-      "destructive": false,
-      "command": "Set-ItemProperty 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager' -Name 'SubscribedContent-338388Enabled' -Value 0; Write-Host '✅ Sugestões de conteúdo desativadas!' -ForegroundColor Green",
-      "description": "Desativa Sugestões de Conteúdo."
+      "destructive": true,
+      "command": "$bk = Join-Path $env:LOCALAPPDATA 'MestreDoPC\\backup-registro'; New-Item -ItemType Directory -Force -Path $bk | Out-Null; $ts = Get-Date -Format 'yyyyMMdd-HHmmss'; $n = 0; foreach ($c in @('HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager')) { $n++; if (Test-Path -LiteralPath ('Registry::' + $c)) { $arq = Join-Path $bk ('desativar_sugestoes_de_conteudo-' + $n + '-' + $ts + '.reg'); reg export $c $arq /y | Out-Null; if ($LASTEXITCODE -ne 0) { Write-Host '[ERRO] Backup do registro falhou; nada foi alterado.' -ForegroundColor Red; exit 1 } } }; Write-Host ('Backup do registro em ' + $bk) -ForegroundColor DarkGray; Set-ItemProperty 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager' -Name 'SubscribedContent-338388Enabled' -Value 0; Write-Host '✅ Sugestões de conteúdo desativadas!' -ForegroundColor Green",
+      "description": "Desativa Sugestões de Conteúdo. Antes de alterar, salva um backup .reg da chave em %LOCALAPPDATA%\\MestreDoPC\\backup-registro."
     },
     {
       "id": "bloquear_aplicativos_em_segundo_plano",
       "title": "Bloquear Aplicativos em Segundo Plano",
       "category": "Outros",
-      "destructive": false,
-      "command": "Set-ItemProperty 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\BackgroundAccessApplications' -Name 'GlobalUserDisabled' -Value 1 -EA 0; Write-Host '✅ Apps em segundo plano bloqueados!' -ForegroundColor Green",
-      "description": "Bloquear Aplicativos em Segundo Plano."
+      "destructive": true,
+      "command": "$bk = Join-Path $env:LOCALAPPDATA 'MestreDoPC\\backup-registro'; New-Item -ItemType Directory -Force -Path $bk | Out-Null; $ts = Get-Date -Format 'yyyyMMdd-HHmmss'; $n = 0; foreach ($c in @('HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\BackgroundAccessApplications')) { $n++; if (Test-Path -LiteralPath ('Registry::' + $c)) { $arq = Join-Path $bk ('bloquear_aplicativos_em_segundo_plano-' + $n + '-' + $ts + '.reg'); reg export $c $arq /y | Out-Null; if ($LASTEXITCODE -ne 0) { Write-Host '[ERRO] Backup do registro falhou; nada foi alterado.' -ForegroundColor Red; exit 1 } } }; Write-Host ('Backup do registro em ' + $bk) -ForegroundColor DarkGray; Set-ItemProperty 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\BackgroundAccessApplications' -Name 'GlobalUserDisabled' -Value 1 -EA 0; Write-Host '✅ Apps em segundo plano bloqueados!' -ForegroundColor Green",
+      "description": "Bloquear Aplicativos em Segundo Plano. Antes de alterar, salva um backup .reg da chave em %LOCALAPPDATA%\\MestreDoPC\\backup-registro."
     },
     {
       "id": "verificar_configuracoes_de_privacidade",
@@ -2093,8 +2124,8 @@
       "title": "Definir Windows Terminal como Padrão",
       "category": "Terminal",
       "destructive": true,
-      "command": "New-Item -Path \"HKCU:\\Console\\%%Startup\" -Force | Out-Null; Set-ItemProperty -Path \"HKCU:\\Console\\%%Startup\" -Name DelegationConsole -Value \"{2EACA947-7F5F-4CFA-BA87-8F7FBEEFBE69}\"; Set-ItemProperty -Path \"HKCU:\\Console\\%%Startup\" -Name DelegationTerminal -Value \"{2EACA947-7F5F-4CFA-BA87-8F7FBEEFBE69}\"; Write-Host \"✅ Windows Terminal definido como padrão!\" -ForegroundColor Green",
-      "description": "Define o Windows Terminal como o terminal padrão do sistema."
+      "command": "$bk = Join-Path $env:LOCALAPPDATA 'MestreDoPC\\backup-registro'; New-Item -ItemType Directory -Force -Path $bk | Out-Null; $ts = Get-Date -Format 'yyyyMMdd-HHmmss'; $n = 0; foreach ($c in @('HKCU\\Console\\%%Startup')) { $n++; if (Test-Path -LiteralPath ('Registry::' + $c)) { $arq = Join-Path $bk ('definir_windows_terminal_como_padrao-' + $n + '-' + $ts + '.reg'); reg export $c $arq /y | Out-Null; if ($LASTEXITCODE -ne 0) { Write-Host '[ERRO] Backup do registro falhou; nada foi alterado.' -ForegroundColor Red; exit 1 } } }; Write-Host ('Backup do registro em ' + $bk) -ForegroundColor DarkGray; New-Item -Path \"HKCU:\\Console\\%%Startup\" -Force | Out-Null; Set-ItemProperty -Path \"HKCU:\\Console\\%%Startup\" -Name DelegationConsole -Value \"{2EACA947-7F5F-4CFA-BA87-8F7FBEEFBE69}\"; Set-ItemProperty -Path \"HKCU:\\Console\\%%Startup\" -Name DelegationTerminal -Value \"{2EACA947-7F5F-4CFA-BA87-8F7FBEEFBE69}\"; Write-Host \"✅ Windows Terminal definido como padrão!\" -ForegroundColor Green",
+      "description": "Define o Windows Terminal como o terminal padrão do sistema. Antes de alterar, salva um backup .reg da chave em %LOCALAPPDATA%\\MestreDoPC\\backup-registro."
     },
     {
       "id": "listar_variaveis_de_ambiente_path",
@@ -3693,6 +3724,14 @@
       "destructive": false,
       "command": "vssadmin list shadows; vssadmin list shadowstorage",
       "description": "Lista as cópias de sombra (pontos de restauração) e o espaço reservado para elas."
+    },
+    {
+      "id": "listar_backups_registro",
+      "title": "Listar Backups do Registro",
+      "category": "Segurança",
+      "destructive": false,
+      "command": "$bk = Join-Path $env:LOCALAPPDATA 'MestreDoPC\\backup-registro'; $f = @(Get-ChildItem -LiteralPath $bk -Filter *.reg -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 30); if ($f.Count -eq 0) { Write-Host 'Nenhum backup do registro ainda.' -ForegroundColor Yellow } else { $f | Format-Table Name, LastWriteTime, Length -AutoSize }",
+      "description": "Lista os backups .reg que o Mestre salvou antes de alterar o registro (mais recentes primeiro)."
     }
   ],
   "templates": [
@@ -3728,7 +3767,8 @@
       "params": {
         "nome_servico": "^[a-zA-Z0-9_. -]{1,128}$"
       },
-      "description": "Desativa e para um serviço do Windows pelo nome. Informe 'nome_servico' (ex: wuauserv, SysMain, Spooler)."
+      "description": "Desativa e para um serviço do Windows pelo nome. Informe 'nome_servico' (ex: wuauserv, SysMain, Spooler).",
+      "requerAdmin": true
     },
     {
       "id": "desinstalar_atualizacao",
@@ -3860,7 +3900,8 @@
       "category": "Segurança",
       "destructive": true,
       "command": "Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart; Write-Host '✅ SMBv1 desativado! Reinicie o PC.' -ForegroundColor Green",
-      "description": "Desativa SMBv1."
+      "description": "Desativa SMBv1.",
+      "requerAdmin": true
     },
     {
       "id": "verificar_rdp_ativo",
@@ -3947,8 +3988,8 @@
       "title": "Desativar AutoRun/AutoPlay",
       "category": "Segurança",
       "destructive": true,
-      "command": "Set-ItemProperty 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\AutoplayHandlers' -Name 'DisableAutoplay' -Value 1 -EA 0; Write-Host '✅ AutoPlay desativado!' -ForegroundColor Green",
-      "description": "Desativa AutoRun/AutoPlay."
+      "command": "$bk = Join-Path $env:LOCALAPPDATA 'MestreDoPC\\backup-registro'; New-Item -ItemType Directory -Force -Path $bk | Out-Null; $ts = Get-Date -Format 'yyyyMMdd-HHmmss'; $n = 0; foreach ($c in @('HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\AutoplayHandlers')) { $n++; if (Test-Path -LiteralPath ('Registry::' + $c)) { $arq = Join-Path $bk ('desativar_autorun_autoplay-' + $n + '-' + $ts + '.reg'); reg export $c $arq /y | Out-Null; if ($LASTEXITCODE -ne 0) { Write-Host '[ERRO] Backup do registro falhou; nada foi alterado.' -ForegroundColor Red; exit 1 } } }; Write-Host ('Backup do registro em ' + $bk) -ForegroundColor DarkGray; Set-ItemProperty 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\AutoplayHandlers' -Name 'DisableAutoplay' -Value 1 -EA 0; Write-Host '✅ AutoPlay desativado!' -ForegroundColor Green",
+      "description": "Desativa AutoRun/AutoPlay. Antes de alterar, salva um backup .reg da chave em %LOCALAPPDATA%\\MestreDoPC\\backup-registro."
     },
     {
       "id": "configurar_bloqueio_conta",
@@ -4007,7 +4048,8 @@
       "params": {
         "ip_bloqueio": "^(\\d{1,3}\\.){3}\\d{1,3}$"
       },
-      "description": "Bloquear IP Específico no Firewall."
+      "description": "Bloquear IP Específico no Firewall.",
+      "requerAdmin": true
     },
     {
       "id": "remover_bloqueio_ip_firewall",
@@ -4018,7 +4060,8 @@
       "params": {
         "ip_desbloqueio": "^(\\d{1,3}\\.){3}\\d{1,3}$"
       },
-      "description": "Remove Regra de Bloqueio de IP."
+      "description": "Remove Regra de Bloqueio de IP.",
+      "requerAdmin": true
     },
     {
       "id": "verificar_hotfixes_instalados",
@@ -4060,8 +4103,9 @@
       "title": "Desativar Cache de Credenciais",
       "category": "Segurança",
       "destructive": true,
-      "command": "Set-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System' -Name 'CachedLogonsCount' -Value 0 -EA 0; Write-Host '✅ Cache de credenciais desativado!' -ForegroundColor Green",
-      "description": "Desativa Cache de Credenciais."
+      "command": "$bk = Join-Path $env:LOCALAPPDATA 'MestreDoPC\\backup-registro'; New-Item -ItemType Directory -Force -Path $bk | Out-Null; $ts = Get-Date -Format 'yyyyMMdd-HHmmss'; $n = 0; foreach ($c in @('HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon')) { $n++; if (Test-Path -LiteralPath ('Registry::' + $c)) { $arq = Join-Path $bk ('desativar_cache_credenciais-' + $n + '-' + $ts + '.reg'); reg export $c $arq /y | Out-Null; if ($LASTEXITCODE -ne 0) { Write-Host '[ERRO] Backup do registro falhou; nada foi alterado.' -ForegroundColor Red; exit 1 } } }; Write-Host ('Backup do registro em ' + $bk) -ForegroundColor DarkGray; Set-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon' -Name 'CachedLogonsCount' -Value '0' -Type String; Write-Host '✅ Cache de credenciais desativado (CachedLogonsCount = 0). Vale a partir do próximo login.' -ForegroundColor Green",
+      "description": "Zera o número de logins guardados em cache (CachedLogonsCount em HKLM\\...\\Winlogon, onde o Windows lê esse valor). Só muda algo em PC ligado a domínio: sem cache, o login de domínio sem rede deixa de funcionar. O padrão do Windows é 10. Antes de alterar, salva um backup .reg da chave em %LOCALAPPDATA%\\MestreDoPC\\backup-registro.",
+      "requerAdmin": true
     },
     {
       "id": "desativar_powershell_v2",
@@ -4069,7 +4113,8 @@
       "category": "Segurança",
       "destructive": true,
       "command": "Disable-WindowsOptionalFeature -Online -FeatureName MicrosoftWindowsPowerShellV2Root -NoRestart -EA 0; Write-Host '✅ PowerShell v2 desativado!' -ForegroundColor Green",
-      "description": "Desativa PowerShell v2."
+      "description": "Desativa PowerShell v2.",
+      "requerAdmin": true
     },
     {
       "id": "ativar_auditoria_arquivos",
@@ -4092,8 +4137,9 @@
       "title": "Desativar SMBv1 via Registro",
       "category": "Segurança",
       "destructive": true,
-      "command": "Set-ItemProperty 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\LanmanServer\\Parameters' -Name 'SMB1' -Value 0 -EA 0; Write-Host '✅ SMBv1 desativado via registro!' -ForegroundColor Green",
-      "description": "Desativa SMBv1 via Registro."
+      "command": "$bk = Join-Path $env:LOCALAPPDATA 'MestreDoPC\\backup-registro'; New-Item -ItemType Directory -Force -Path $bk | Out-Null; $ts = Get-Date -Format 'yyyyMMdd-HHmmss'; $n = 0; foreach ($c in @('HKLM\\SYSTEM\\CurrentControlSet\\Services\\LanmanServer\\Parameters')) { $n++; if (Test-Path -LiteralPath ('Registry::' + $c)) { $arq = Join-Path $bk ('desativar_smbv1_registro-' + $n + '-' + $ts + '.reg'); reg export $c $arq /y | Out-Null; if ($LASTEXITCODE -ne 0) { Write-Host '[ERRO] Backup do registro falhou; nada foi alterado.' -ForegroundColor Red; exit 1 } } }; Write-Host ('Backup do registro em ' + $bk) -ForegroundColor DarkGray; Set-ItemProperty 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\LanmanServer\\Parameters' -Name 'SMB1' -Value 0 -EA 0; Write-Host '✅ SMBv1 desativado via registro!' -ForegroundColor Green",
+      "description": "Desativa SMBv1 via Registro. Antes de alterar, salva um backup .reg da chave em %LOCALAPPDATA%\\MestreDoPC\\backup-registro.",
+      "requerAdmin": true
     },
     {
       "id": "ativar_bitlocker_c",
@@ -4682,8 +4728,9 @@
       "title": "Otimizar Windows para SSD",
       "category": "SSD",
       "destructive": true,
-      "command": "fsutil behavior query disabledeletenotify | Select-String '0' | ForEach-Object { Write-Host '✅ TRIM já está habilitado' -ForegroundColor Green }; Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management' -Name 'PrefetchParameters' -Value 3 -Force; Write-Host '✅ Prefetch otimizado para SSD' -ForegroundColor Green; Disable-ScheduledTask -TaskName 'Microsoft\\Windows\\Defrag\\ScheduledDefrag' -ErrorAction SilentlyContinue; Write-Host '✅ Desfragmentação automática desativada' -ForegroundColor Green",
-      "description": "Otimizar Windows para SSD."
+      "command": "$bk = Join-Path $env:LOCALAPPDATA 'MestreDoPC\\backup-registro'; New-Item -ItemType Directory -Force -Path $bk | Out-Null; $ts = Get-Date -Format 'yyyyMMdd-HHmmss'; $n = 0; foreach ($c in @('HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management\\PrefetchParameters')) { $n++; if (Test-Path -LiteralPath ('Registry::' + $c)) { $arq = Join-Path $bk ('ssd_configurar_prefetch_para_ssd-' + $n + '-' + $ts + '.reg'); reg export $c $arq /y | Out-Null; if ($LASTEXITCODE -ne 0) { Write-Host '[ERRO] Backup do registro falhou; nada foi alterado.' -ForegroundColor Red; exit 1 } } }; Write-Host ('Backup do registro em ' + $bk) -ForegroundColor DarkGray; fsutil behavior query disabledeletenotify | Select-String '0' | ForEach-Object { Write-Host '✅ TRIM já está habilitado' -ForegroundColor Green }; Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management\\PrefetchParameters' -Name 'EnablePrefetcher' -Value 3 -Type DWord; Write-Host '✅ Prefetch otimizado para SSD' -ForegroundColor Green; Disable-ScheduledTask -TaskName 'Microsoft\\Windows\\Defrag\\ScheduledDefrag' -ErrorAction SilentlyContinue; Write-Host '✅ Desfragmentação automática desativada' -ForegroundColor Green",
+      "description": "Otimizar Windows para SSD. Antes de alterar, salva um backup .reg da chave em %LOCALAPPDATA%\\MestreDoPC\\backup-registro.",
+      "requerAdmin": true
     },
     {
       "id": "monitorar_uso_de_cpu_ram_disk",
@@ -5122,7 +5169,8 @@
       "params": {
         "nome": "^[A-Za-z0-9 ._-]{1,128}$"
       },
-      "description": "Muda um serviço de Automático para Manual (reversível), reduzindo o peso no boot. Use o Name do serviço."
+      "description": "Muda um serviço de Automático para Manual (reversível), reduzindo o peso no boot. Use o Name do serviço.",
+      "requerAdmin": true
     },
     {
       "id": "seg_hash_arquivo",
@@ -5222,6 +5270,17 @@
         "tarefa": "^[A-Za-z0-9À-ÿ .,;:()\\/_-]{1,600}$"
       },
       "description": "Envia uma tarefa de código ao dsh (POST /dsh/run), acompanha o job (GET /dsh/job?id=) e imprime o texto final, o provedor que respondeu e as falhas de cada tentativa. Informe 'tarefa' com o objetivo autossuficiente. Uma tarefa por execução, sem follow-up."
+    },
+    {
+      "id": "restaurar_backup_registro",
+      "title": "Restaurar Backup do Registro",
+      "category": "Segurança",
+      "destructive": true,
+      "pattern": "$bk = Join-Path $env:LOCALAPPDATA 'MestreDoPC\\backup-registro'; $arq = Join-Path $bk '{{ARQUIVO}}'; if (-not (Test-Path -LiteralPath $arq)) { Write-Host '[ERRO] Backup não encontrado: {{ARQUIVO}}' -ForegroundColor Red; exit 1 }; reg import $arq; if ($LASTEXITCODE -ne 0) { Write-Host '[ERRO] Não consegui restaurar. Chaves HKLM exigem administrador.' -ForegroundColor Red; exit 1 }; Write-Host '✅ Registro restaurado a partir de {{ARQUIVO}}.' -ForegroundColor Green",
+      "params": {
+        "arquivo": "^[a-z0-9_]{1,80}-\\d{1,2}-\\d{8}-\\d{6}\\.reg$"
+      },
+      "description": "Restaura um backup .reg salvo pelo Mestre. Informe 'arquivo' com o nome exato mostrado em 'Listar Backups do Registro' (ex: desativar_cortana-1-20261128-071500.reg)."
     }
   ]
 }
