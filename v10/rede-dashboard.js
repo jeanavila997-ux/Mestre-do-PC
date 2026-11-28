@@ -176,9 +176,9 @@ const RedeDashboard = {
       document.head.appendChild(s);
     }
 
-    // Inserir no dashboard
-    const dash = document.getElementById('dashboard');
-    if (dash) dash.appendChild(div);
+    // Inserir na aba Rede (#redeHost); sem ela, cai no dashboard como antes.
+    const host = document.getElementById('redeHost') || document.getElementById('dashboard');
+    if (host) host.appendChild(div);
 
     // Refletir o intervalo persistido no botão de configuração
     const cfgLabel = document.getElementById('rd-cfg-label');
