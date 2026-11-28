@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Aspire + Azure Functions secret-storage pre-provisioning scan.
 .DESCRIPTION

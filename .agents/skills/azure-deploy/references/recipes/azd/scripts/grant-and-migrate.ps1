@@ -1,4 +1,4 @@
-# Grant Azure SQL data-plane access to the managed identity AND apply EF Core migrations.
+﻿# Grant Azure SQL data-plane access to the managed identity AND apply EF Core migrations.
 #
 # USAGE: Copy this file to scripts/grant-and-migrate.ps1 in your project root and add
 #        a postprovision hook in azure.yaml:

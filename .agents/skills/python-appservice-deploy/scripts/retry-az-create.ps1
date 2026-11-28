@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Wraps an idempotent `az ... show || az ... create` pair with silent
     retries against transient ARM frontend errors.

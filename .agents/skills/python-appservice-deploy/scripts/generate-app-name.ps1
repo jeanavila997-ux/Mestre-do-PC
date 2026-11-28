@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Generates a valid Azure App Service name from a folder name + 8 hex chars.
 .DESCRIPTION
