@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
+import { spawnSync } from "node:child_process";
 import {
   envolverComando,
   resultadoDoCodigo,
@@ -96,4 +97,50 @@ test("painel mostra ⚠️ para comando com erros e 🛡️ para janela de admin
   assert.match(s, /resultado === "aberto_como_admin"\) return "admin"/);
   assert.match(s, /aviso: \{ icon: "⚠️"/);
   assert.match(s, /admin: \{ icon: "🛡️"/);
+});
+
+// No runner Windows do CI o envelope roda de verdade no Windows PowerShell 5.1.
+
+function rodar(cmd) {
+  const r = spawnSync("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", envolverComando(cmd)], {
+    encoding: "utf8",
+    windowsHide: true,
+    timeout: 60000,
+  });
+  return { codigo: r.status, saida: `${r.stdout || ""}${r.stderr || ""}` };
+}
+
+const SO_WINDOWS = { skip: process.platform !== "win32" && "só roda no Windows" };
+
+test("Windows: saída com acento e emoji chega em UTF-8 e sai com 0", SO_WINDOWS, () => {
+  const r = rodar('Write-Host "Ação concluída ✅"');
+  assert.equal(r.codigo, CODIGO_SAIDA.OK, r.saida);
+  assert.match(r.saida, /Ação concluída ✅/);
+});
+
+test("Windows: erro não tratado antes do ✅ final vira COM_ERROS", SO_WINDOWS, () => {
+  const r = rodar('Get-Item "C:\\mestre-nao-existe-xyz"; Write-Host "✅ pronto"');
+  assert.equal(r.codigo, CODIGO_SAIDA.COM_ERROS, r.saida);
+  assert.match(r.saida, /\[ERRO\]/);
+  assert.match(r.saida, /Concluído com 1 erro/);
+});
+
+test("Windows: erro silenciado com -EA 0 ou tratado em try/catch não conta", SO_WINDOWS, () => {
+  assert.equal(rodar('Get-Item "C:\\mestre-nao-existe-xyz" -EA 0; Write-Host ok').codigo, CODIGO_SAIDA.OK);
+  assert.equal(rodar('try { Get-Item "C:\\mestre-nao-existe-xyz" -EA Stop } catch { Write-Host tratado }').codigo, CODIGO_SAIDA.OK);
+});
+
+test("Windows: erro fatal e programa nativo com código != 0 viram FALHOU", SO_WINDOWS, () => {
+  assert.equal(rodar('throw "quebrou"').codigo, CODIGO_SAIDA.FALHOU);
+  assert.equal(rodar('cmd /c exit 5').codigo, CODIGO_SAIDA.FALHOU);
+});
+
+test("Windows: stderr de programa nativo com sucesso não conta como erro", SO_WINDOWS, () => {
+  const r = rodar('cmd /c "echo aviso 1>&2"; Write-Host ok');
+  assert.equal(r.codigo, CODIGO_SAIDA.OK, r.saida);
+});
+
+test("Windows: exit do próprio comando e código 10 do admin-tools atravessam o envelope", SO_WINDOWS, () => {
+  assert.equal(rodar("exit 7").codigo, 7);
+  assert.equal(rodar("cmd /c exit 10").codigo, CODIGO_SAIDA.ABERTO_COMO_ADMIN);
 });
