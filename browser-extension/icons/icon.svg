@@ -1,15 +1,69 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <defs>
-    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#a200ff"/>
-      <stop offset="100%" stop-color="#00d4ff"/>
-    </linearGradient>
-  </defs>
-  <rect width="128" height="128" rx="24" fill="url(#g)"/>
-  <rect x="24" y="34" width="80" height="50" rx="6" fill="#0d1117"/>
-  <rect x="30" y="40" width="68" height="32" rx="3" fill="#161b22"/>
-  <circle cx="64" cy="86" r="4" fill="#00ff88"/>
-  <rect x="36" y="46" width="40" height="4" rx="2" fill="#00d4ff"/>
-  <rect x="36" y="54" width="56" height="4" rx="2" fill="#8b949e"/>
-  <rect x="36" y="62" width="32" height="4" rx="2" fill="#8b949e"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="128" height="128">
+  <!-- Gerado por build-icons.js. Edite o script, não este arquivo. -->
+  <defs><linearGradient id="g0" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="100"><stop offset="0" stop-color="rgb(0,217,255)"/><stop offset="1" stop-color="rgb(29,155,240)"/></linearGradient><linearGradient id="g1" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="100"><stop offset="0" stop-color="rgb(37,99,235)"/><stop offset="1" stop-color="rgb(30,58,138)"/></linearGradient><radialGradient id="g2" gradientUnits="userSpaceOnUse" cx="50" cy="42" r="60"><stop offset="0" stop-color="rgb(11,26,51)"/><stop offset="0.7" stop-color="rgb(5,11,22)"/><stop offset="1" stop-color="rgb(5,11,22)"/></radialGradient><linearGradient id="g3" gradientUnits="userSpaceOnUse" x1="0" y1="33" x2="0" y2="67"><stop offset="0" stop-color="rgb(0,217,255)"/><stop offset="1" stop-color="rgb(37,99,235)"/></linearGradient><linearGradient id="g4" gradientUnits="userSpaceOnUse" x1="0" y1="33" x2="0" y2="67"><stop offset="0" stop-color="rgb(12,25,48)"/><stop offset="1" stop-color="rgb(7,15,30)"/></linearGradient><linearGradient id="g5" gradientUnits="userSpaceOnUse" x1="0" y1="37.85" x2="0" y2="50"><stop offset="0" stop-color="rgb(0,217,255)"/><stop offset="1" stop-color="rgb(37,99,235)"/></linearGradient><linearGradient id="g6" gradientUnits="userSpaceOnUse" x1="0" y1="37.85" x2="0" y2="62.15"><stop offset="0" stop-color="rgb(255,255,255)"/><stop offset="0.55" stop-color="rgb(226,232,240)"/><stop offset="1" stop-color="rgb(148,163,184)"/></linearGradient><linearGradient id="g7" gradientUnits="userSpaceOnUse" x1="20" y1="62" x2="82" y2="38"><stop offset="0" stop-color="rgb(57,255,136)"/><stop offset="0.45" stop-color="rgb(0,217,255)"/><stop offset="1" stop-color="rgb(0,217,255)"/></linearGradient></defs>
+  <polygon points="50,1 92.44,25.5 92.44,74.5 50,99 7.56,74.5 7.56,25.5" fill="url(#g0)"/>
+  <polygon points="50,3.54 90.24,26.77 90.24,73.23 50,96.46 9.76,73.23 9.76,26.77" fill="url(#g1)"/>
+  <polygon points="50,10.24 84.44,30.12 84.44,69.88 50,89.76 15.56,69.88 15.56,30.12" fill="url(#g2)"/>
+  <line x1="26.12" y1="27.02" x2="35.67" y2="21.51" stroke-width="1.8" stroke-linecap="round" stroke="rgb(57,255,136)"/>
+  <line x1="64.33" y1="21.51" x2="73.88" y2="27.02" stroke-width="1.8" stroke-linecap="round" stroke="rgb(57,255,136)"/>
+  <line x1="62.1" y1="79.78" x2="50" y2="86.76" stroke-width="1.8" stroke-linecap="round" stroke="rgb(57,255,136)"/>
+  <line x1="50" y1="86.76" x2="37.9" y2="79.78" stroke-width="1.8" stroke-linecap="round" stroke="rgb(57,255,136)"/>
+  <line x1="28" y1="37.2" x2="24.5" y2="37.2" stroke-width="2" stroke-linecap="round" stroke="rgb(0,217,255)"/>
+  <line x1="24.5" y1="37.2" x2="21" y2="33.7" stroke-width="2" stroke-linecap="round" stroke="rgb(0,217,255)"/>
+  <circle cx="21" cy="33.7" r="3.2" fill="rgb(0,217,255)"/>
+  <circle cx="21" cy="33.7" r="1.5" fill="rgb(5,11,22)"/>
+  <line x1="28" y1="50" x2="20.5" y2="50" stroke-width="2" stroke-linecap="round" stroke="rgb(0,217,255)"/>
+  <circle cx="20.5" cy="50" r="3.2" fill="rgb(0,217,255)"/>
+  <circle cx="20.5" cy="50" r="1.5" fill="rgb(5,11,22)"/>
+  <line x1="28" y1="62.8" x2="24.5" y2="62.8" stroke-width="2" stroke-linecap="round" stroke="rgb(0,217,255)"/>
+  <line x1="24.5" y1="62.8" x2="21" y2="66.3" stroke-width="2" stroke-linecap="round" stroke="rgb(0,217,255)"/>
+  <circle cx="21" cy="66.3" r="3.2" fill="rgb(0,217,255)"/>
+  <circle cx="21" cy="66.3" r="1.5" fill="rgb(5,11,22)"/>
+  <line x1="72" y1="37.2" x2="75.5" y2="37.2" stroke-width="2" stroke-linecap="round" stroke="rgb(0,217,255)"/>
+  <line x1="75.5" y1="37.2" x2="79" y2="33.7" stroke-width="2" stroke-linecap="round" stroke="rgb(0,217,255)"/>
+  <circle cx="79" cy="33.7" r="3.2" fill="rgb(0,217,255)"/>
+  <circle cx="79" cy="33.7" r="1.5" fill="rgb(5,11,22)"/>
+  <line x1="72" y1="50" x2="79.5" y2="50" stroke-width="2" stroke-linecap="round" stroke="rgb(0,217,255)"/>
+  <circle cx="79.5" cy="50" r="3.2" fill="rgb(0,217,255)"/>
+  <circle cx="79.5" cy="50" r="1.5" fill="rgb(5,11,22)"/>
+  <line x1="72" y1="62.8" x2="75.5" y2="62.8" stroke-width="2" stroke-linecap="round" stroke="rgb(0,217,255)"/>
+  <line x1="75.5" y1="62.8" x2="79" y2="66.3" stroke-width="2" stroke-linecap="round" stroke="rgb(0,217,255)"/>
+  <circle cx="79" cy="66.3" r="3.2" fill="rgb(0,217,255)"/>
+  <circle cx="79" cy="66.3" r="1.5" fill="rgb(5,11,22)"/>
+  <line x1="43.6" y1="28" x2="43.6" y2="24" stroke-width="2" stroke-linecap="round" stroke="rgb(0,217,255)"/>
+  <line x1="43.6" y1="24" x2="40.5" y2="20.5" stroke-width="2" stroke-linecap="round" stroke="rgb(0,217,255)"/>
+  <circle cx="40.5" cy="20.5" r="3.2" fill="rgb(0,217,255)"/>
+  <circle cx="40.5" cy="20.5" r="1.5" fill="rgb(5,11,22)"/>
+  <line x1="56.4" y1="28" x2="56.4" y2="24" stroke-width="2" stroke-linecap="round" stroke="rgb(0,217,255)"/>
+  <line x1="56.4" y1="24" x2="59.5" y2="20.5" stroke-width="2" stroke-linecap="round" stroke="rgb(0,217,255)"/>
+  <circle cx="59.5" cy="20.5" r="3.2" fill="rgb(0,217,255)"/>
+  <circle cx="59.5" cy="20.5" r="1.5" fill="rgb(5,11,22)"/>
+  <line x1="50" y1="28" x2="50" y2="16.5" stroke-width="2" stroke-linecap="round" stroke="rgb(57,255,136)"/>
+  <circle cx="50" cy="16.5" r="3.2" fill="rgb(57,255,136)"/>
+  <circle cx="50" cy="16.5" r="1.5" fill="rgb(5,11,22)"/>
+  <rect x="35.6" y="28" width="3.2" height="6" rx="0.96" fill="rgb(203,213,225)"/>
+  <rect x="42" y="28" width="3.2" height="6" rx="0.96" fill="rgb(203,213,225)"/>
+  <rect x="48.4" y="28" width="3.2" height="6" rx="0.96" fill="rgb(203,213,225)"/>
+  <rect x="54.8" y="28" width="3.2" height="6" rx="0.96" fill="rgb(203,213,225)"/>
+  <rect x="61.2" y="28" width="3.2" height="6" rx="0.96" fill="rgb(203,213,225)"/>
+  <rect x="66" y="35.6" width="6" height="3.2" rx="0.96" fill="rgb(203,213,225)"/>
+  <rect x="66" y="42" width="6" height="3.2" rx="0.96" fill="rgb(203,213,225)"/>
+  <rect x="66" y="48.4" width="6" height="3.2" rx="0.96" fill="rgb(203,213,225)"/>
+  <rect x="66" y="54.8" width="6" height="3.2" rx="0.96" fill="rgb(203,213,225)"/>
+  <rect x="66" y="61.2" width="6" height="3.2" rx="0.96" fill="rgb(203,213,225)"/>
+  <rect x="61.2" y="66" width="3.2" height="6" rx="0.96" fill="rgb(203,213,225)"/>
+  <rect x="54.8" y="66" width="3.2" height="6" rx="0.96" fill="rgb(203,213,225)"/>
+  <rect x="48.4" y="66" width="3.2" height="6" rx="0.96" fill="rgb(203,213,225)"/>
+  <rect x="42" y="66" width="3.2" height="6" rx="0.96" fill="rgb(203,213,225)"/>
+  <rect x="35.6" y="66" width="3.2" height="6" rx="0.96" fill="rgb(203,213,225)"/>
+  <rect x="28" y="61.2" width="6" height="3.2" rx="0.96" fill="rgb(203,213,225)"/>
+  <rect x="28" y="54.8" width="6" height="3.2" rx="0.96" fill="rgb(203,213,225)"/>
+  <rect x="28" y="48.4" width="6" height="3.2" rx="0.96" fill="rgb(203,213,225)"/>
+  <rect x="28" y="42" width="6" height="3.2" rx="0.96" fill="rgb(203,213,225)"/>
+  <rect x="28" y="35.6" width="6" height="3.2" rx="0.96" fill="rgb(203,213,225)"/>
+  <rect x="31.4" y="31.4" width="37.2" height="37.2" rx="5.68" fill="url(#g3)"/>
+  <rect x="33" y="33" width="34" height="34" rx="4.08" fill="url(#g4)"/>
+  <polygon points="44.33,37.85 55.67,37.85 50,47.11" fill="url(#g5)"/>
+  <polygon points="36.5,62.15 36.5,37.85 42.98,37.85 50,49.27 57.02,37.85 63.5,37.85 63.5,62.15 57.02,62.15 57.02,48.06 50,58.75 42.98,48.06 42.98,62.15" fill="url(#g6)"/>
+  <polygon points="55.82,39.01 56.82,38.62 57.83,38.29 58.83,37.99 59.82,37.72 60.81,37.48 61.78,37.26 62.73,37.06 63.67,36.88 64.59,36.73 65.5,36.6 66.38,36.49 67.25,36.41 68.09,36.34 68.91,36.31 69.71,36.29 70.48,36.3 71.23,36.33 71.96,36.38 72.65,36.46 73.32,36.57 73.97,36.7 74.59,36.85 75.17,37.03 75.74,37.24 76.27,37.48 76.77,37.75 77.24,38.05 77.68,38.39 78.08,38.76 78.45,39.17 78.76,39.61 79.03,40.09 79.25,40.59 79.41,41.12 79.51,41.67 79.56,42.22 79.55,42.79 79.49,43.36 79.39,43.94 79.23,44.51 79.03,45.09 78.79,45.68 78.51,46.26 78.18,46.84 77.82,47.43 77.42,48.02 76.98,48.6 76.51,49.19 76,49.79 75.45,50.38 74.87,50.97 74.26,51.56 73.61,52.15 72.93,52.75 72.22,53.33 71.48,53.92 70.72,54.5 69.92,55.08 69.1,55.66 68.25,56.23 67.38,56.8 66.48,57.35 65.56,57.91 64.62,58.45 63.67,58.98 62.69,59.51 61.69,60.03 60.68,60.53 59.66,61.03 58.62,61.51 57.57,61.98 56.52,62.43 55.45,62.88 54.38,63.3 53.3,63.72 52.21,64.11 51.13,64.49 50.04,64.86 48.95,65.2 47.87,65.53 46.79,65.84 45.71,66.13 44.64,66.41 43.58,66.66 42.53,66.89 41.49,67.1 40.46,67.29 39.44,67.46 38.44,67.61 37.46,67.74 36.49,67.85 35.55,67.93 34.62,67.99 33.72,68.03 32.83,68.04 31.98,68.04 31.14,68.01 30.34,67.95 29.56,67.88 28.81,67.78 28.09,67.66 27.4,67.51 26.75,67.34 26.13,67.15 25.54,66.93 24.98,66.69 24.47,66.43 23.99,66.14 23.55,65.83 23.15,65.5 22.8,65.14 22.49,64.77 22.24,64.38 22.03,63.97 21.87,63.55 21.77,63.12 21.72,62.68 21.72,62.25 21.78,61.81 21.92,61.38 21.92,61.38 22.04,61.81 22.15,62.2 22.28,62.56 22.43,62.9 22.62,63.21 22.83,63.5 23.07,63.76 23.33,64.01 23.63,64.24 23.96,64.45 24.31,64.65 24.7,64.83 25.13,65 25.59,65.15 26.08,65.28 26.6,65.4 27.16,65.5 27.75,65.59 28.38,65.65 29.03,65.7 29.72,65.73 30.43,65.73 31.17,65.72 31.95,65.69 32.74,65.64 33.56,65.57 34.41,65.49 35.28,65.38 36.17,65.25 37.08,65.1 38,64.93 38.95,64.75 39.91,64.54 40.89,64.32 41.87,64.07 42.87,63.81 43.88,63.54 44.9,63.24 45.93,62.93 46.96,62.6 47.99,62.25 49.03,61.89 50.07,61.51 51.1,61.12 52.14,60.72 53.17,60.3 54.19,59.87 55.21,59.42 56.22,58.97 57.22,58.5 58.21,58.02 59.19,57.54 60.15,57.04 61.1,56.54 62.03,56.03 62.94,55.51 63.83,54.99 64.7,54.46 65.55,53.93 66.38,53.39 67.18,52.86 67.95,52.32 68.7,51.78 69.42,51.24 70.1,50.7 70.76,50.17 71.39,49.63 71.98,49.11 72.54,48.58 73.07,48.07 73.56,47.56 74.01,47.06 74.43,46.57 74.81,46.09 75.16,45.63 75.46,45.17 75.73,44.74 75.96,44.32 76.16,43.92 76.32,43.54 76.44,43.18 76.53,42.84 76.59,42.52 76.63,42.23 76.63,41.95 76.61,41.69 76.57,41.45 76.51,41.21 76.41,40.97 76.29,40.74 76.13,40.51 75.94,40.27 75.7,40.04 75.43,39.81 75.11,39.58 74.74,39.36 74.33,39.16 73.88,38.96 73.39,38.78 72.86,38.61 72.29,38.46 71.68,38.32 71.03,38.2 70.35,38.1 69.63,38.02 68.89,37.96 68.11,37.92 67.3,37.9 66.47,37.9 65.61,37.91 64.72,37.95 63.81,38.01 62.88,38.08 61.92,38.17 60.95,38.28 59.96,38.41 58.95,38.55 57.93,38.71 56.88,38.87 55.82,39.01" fill="url(#g7)"/>
 </svg>

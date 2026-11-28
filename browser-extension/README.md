@@ -89,12 +89,17 @@ $env:MESTRE_EXTENSION_ORIGINS="chrome-extension://ID_CHROME, moz-extension://ID_
 
 ### 2. Gerar ícones (se necessário)
 
-Os ícones PNG já estão em `icons/`, gerados a partir do logo oficial (`logo-mestre-transparent.png`). Para regenerá-los junto com `icon.ico`, favicons e ícones do PWA:
+Os ícones (`icons/icon16.png`, `icon32.png`, `icon48.png`, `icon128.png` e `icons/icon.svg`) seguem o
+**MESTRE Design System 1.0**: hexágono neon com o chip e o monograma "M". Eles saem de um único desenho
+vetorial em `icons/build-icons.js`, com um nível de detalhe por tamanho. Em 16 e 32 px fica só o hexágono com o "M".
+No 128 px a arte ocupa 96 px, com 16 px de margem transparente, como o Chrome recomenda. O script usa só módulos nativos do Node:
 
 ```bash
-python -m pip install pillow
-python scripts/gerar-icones.py
+node browser-extension/icons/build-icons.js
 ```
+
+Edite o script, não os PNGs nem o `icon.svg`. O `scripts/gerar-icones.py` continua gerando o favicon, o `icon.ico`
+e os ícones do PWA a partir do logo, mas não mexe nos ícones da extensão.
 
 ### 3. Carregar no Chrome / Edge
 

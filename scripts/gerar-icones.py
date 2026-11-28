@@ -64,8 +64,8 @@ def main():
     for size in (32, 48):
         save(transparent(logo, head, size), f"v10/chat-integrado/favicon-{size}.png")
 
-    for size in (16, 32, 48, 128):
-        save(transparent(logo, head, size), f"browser-extension/icons/icon{size}.png")
+    # Os ícones da extensão não saem daqui: seguem o Design System 1.0 e são gerados
+    # por browser-extension/icons/build-icons.js (desenho vetorial, legível em 16 px).
 
     ico_sizes = (16, 24, 32, 48, 64, 128, 256)
     frames = [transparent(logo, head, s) for s in ico_sizes]
