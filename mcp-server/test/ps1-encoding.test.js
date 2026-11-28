@@ -24,6 +24,10 @@ function trackedPs1Files() {
     .split("\n")
     .map((s) => s.trim())
     .filter(Boolean)
+    // .agents/skills são skills de terceiros instaladas via skills-lock.json
+    // (com hash); editar o BOM delas quebra a atualização. O invariante vale
+    // para os scripts do próprio Mestre do PC.
+    .filter((rel) => !rel.startsWith(".agents/"))
     .filter((rel) => existsSync(join(root, rel)));
 }
 
